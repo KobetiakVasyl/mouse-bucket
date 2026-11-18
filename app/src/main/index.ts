@@ -64,7 +64,11 @@ async function start(): Promise<void> {
   const vault = new KeyVaultService(safeStorage, process.platform)
   const s3 = new S3Service()
   const dialogs = new DialogService()
-  const settings = new SettingsService(join(userData, DATA_FILES.settings))
+  const settings = new SettingsService(
+    join(userData, DATA_FILES.settings),
+    app.getPath('downloads'),
+    dialogs
+  )
   const templates = new TemplateService(userData, vault, s3)
   const transfers = new TransferService({
     concurrency: TRANSFER_CONCURRENCY,
@@ -73,9 +77,7 @@ async function start(): Promise<void> {
     onChange: (list) => WindowService.sendToAll(TRANSFERS_CHANGED, list)
   })
   const uploads = new UploadService(templates, s3, transfers, dialogs)
-  const downloads = new DownloadService(templates, s3, transfers, dialogs, () =>
-    app.getPath('downloads')
-  )
+  const downloads = new DownloadService(templates, s3, transfers, settings)
   new IpcService(ipcMain, appUrl, process.platform).register({
     vault,
     settings,

@@ -63,7 +63,7 @@ The app's own files in that folder:
 
 | File | Holds |
 |---|---|
-| `settings.json` | The theme, whether the welcome page was seen, and the default storage class for uploads |
+| `settings.json` | The settings that were changed from their defaults: the theme, whether the welcome page was seen, the default storage class for uploads and the download folder |
 | `templates.json` | Each template's name, type, bucket, folder and region |
 | `credentials.bin` | Each template's IAM keys, encrypted by the OS (see [SECURITY.md](SECURITY.md#keys-at-rest)) |
 | `window-state.json` | The window's size, position and maximized state, saved when it closes (see [UI.md](UI.md#the-apps-window)) |

@@ -19,6 +19,9 @@ export class IpcService {
     this.handle(Channel.appStatus, async () => ({ encryptionAvailable: await vault.available() }))
     this.handle(Channel.settingsGet, () => settings.get())
     this.handle(Channel.settingsUpdate, (update) => settings.update(update))
+    this.handle(Channel.settingsChooseDownloadFolder, (_input, event) =>
+      settings.chooseDownloadFolder(event.sender)
+    )
     this.handle(Channel.templatesList, () => templates.list())
     this.handle(Channel.templatesCreate, (input) => templates.add(input))
     this.handle(Channel.templatesDelete, (id) => templates.delete(id))
@@ -26,9 +29,7 @@ export class IpcService {
       uploads.chooseFiles(request, event.sender)
     )
     this.handle(Channel.downloadList, (request) => downloads.listFolder(request))
-    this.handle(Channel.downloadFile, (request, event) =>
-      downloads.downloadFile(request, event.sender)
-    )
+    this.handle(Channel.downloadFile, (request) => downloads.downloadFile(request))
     this.handle(Channel.downloadDelete, (request) => downloads.deleteFile(request))
     this.handle(Channel.downloadRestore, (request) => downloads.restoreFile(request))
     this.handle(Channel.transfersList, async () => transfers.list())

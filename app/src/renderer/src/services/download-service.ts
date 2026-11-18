@@ -16,8 +16,8 @@ export class DownloadService {
     return this.api.listFolder(request)
   }
 
-  // Whether main queued the download; false when its Save dialog was cancelled.
-  download(request: DownloadRequest): Promise<boolean> {
+  // The name main saves the file under in the download folder.
+  download(request: DownloadRequest): Promise<string> {
     return this.api.downloadFile(request)
   }
 

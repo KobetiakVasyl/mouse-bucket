@@ -14,6 +14,7 @@ const api: Api = {
   getStatus: () => invoke(Channel.appStatus),
   getSettings: () => invoke(Channel.settingsGet),
   updateSettings: (update) => invoke(Channel.settingsUpdate, update),
+  chooseDownloadFolder: () => invoke(Channel.settingsChooseDownloadFolder),
   listTemplates: () => invoke(Channel.templatesList),
   createTemplate: (template) => invoke(Channel.templatesCreate, template),
   deleteTemplate: (id) => invoke(Channel.templatesDelete, id),

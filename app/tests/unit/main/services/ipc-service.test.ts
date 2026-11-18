@@ -22,8 +22,10 @@ function setup(): {
       update: vi.fn(async () => ({
         theme: 'light' as const,
         welcomeSeen: true,
-        defaultStorageClass: 'DEEP_ARCHIVE' as const
-      }))
+        defaultStorageClass: 'DEEP_ARCHIVE' as const,
+        downloadFolder: '/home/me/Downloads'
+      })),
+      chooseDownloadFolder: vi.fn()
     },
     templates: { list: vi.fn(async () => []), add: vi.fn(), delete: vi.fn(async () => undefined) },
     uploads: { chooseFiles: vi.fn(async () => 2) },
@@ -72,7 +74,12 @@ describe('IpcService', () => {
     ).toMatchObject({ ok: false })
     expect(await invoke(Channel.settingsUpdate, { theme: 'light' })).toEqual({
       ok: true,
-      value: { theme: 'light', welcomeSeen: true, defaultStorageClass: 'DEEP_ARCHIVE' }
+      value: {
+        theme: 'light',
+        welcomeSeen: true,
+        defaultStorageClass: 'DEEP_ARCHIVE',
+        downloadFolder: '/home/me/Downloads'
+      }
     })
   })
 
@@ -89,6 +96,9 @@ describe('IpcService', () => {
     const { invoke, services } = setup()
     expect(await invoke(Channel.templatesDelete, 'not-an-id')).toMatchObject({ ok: false })
     expect(await invoke(Channel.settingsUpdate, { theme: 'purple' })).toMatchObject({ ok: false })
+    expect(await invoke(Channel.settingsUpdate, { downloadFolder: '/etc' })).toMatchObject({
+      ok: false
+    })
     expect(services.templates.delete).not.toHaveBeenCalled()
     expect(services.settings.update).not.toHaveBeenCalled()
   })

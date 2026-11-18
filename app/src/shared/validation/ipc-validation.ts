@@ -18,6 +18,7 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.appStatus]: NoPayload,
   [Channel.settingsGet]: NoPayload,
   [Channel.settingsUpdate]: SettingsUpdateSchema,
+  [Channel.settingsChooseDownloadFolder]: NoPayload,
   [Channel.templatesList]: NoPayload,
   [Channel.templatesCreate]: NewTemplateSchema,
   [Channel.templatesDelete]: TemplateIdSchema,

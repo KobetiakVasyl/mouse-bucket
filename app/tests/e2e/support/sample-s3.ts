@@ -98,7 +98,7 @@ export function installSampleS3(
       status: 'done'
     })
     publish()
-    return true
+    return key.slice(key.lastIndexOf('/') + 1)
   })
   replace('upload:chooseFiles', () => {
     transfers.push(

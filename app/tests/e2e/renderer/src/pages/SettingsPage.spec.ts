@@ -27,3 +27,11 @@ test('sets the storage class the Upload page starts with', async ({ page }) => {
     'true'
   )
 })
+
+test("shows the system's Downloads folder as the download folder", async ({ app, page }) => {
+  const downloads = await app.evaluate(({ app: electronApp }) => electronApp.getPath('downloads'))
+  await menuItem(page, 'Settings').click()
+  const setting = page.getByRole('region', { name: 'Download folder' })
+  await expect(setting).toContainText(downloads)
+  await expect(setting.getByRole('button', { name: 'Change…' })).toBeEnabled()
+})

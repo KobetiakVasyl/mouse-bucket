@@ -49,3 +49,9 @@ export function appendListing(shown: FolderListing, next: FolderListing): Folder
     nextToken: next.nextToken
   }
 }
+
+// Says where a download goes, and its new name when the file's own name was taken.
+export function downloadStartedMessage(name: string, savedAs: string): string {
+  const as = savedAs === name ? '' : ` as ${savedAs}, since that name was taken`
+  return `Downloading ${name}${as}. It's in the transfers below.`
+}

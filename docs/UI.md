@@ -38,7 +38,7 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
 - **Download:**
   - Pick a download template, then browse its bucket: a breadcrumb for the folder path, then folders and files with their size, storage class and date. "Load more" fetches the next 1,000 entries.
   - Files in Glacier Flexible Retrieval or Glacier Deep Archive show whether they're archived, restoring, or restored until a date.
-  - **Download** is offered for files that can be downloaded now. It opens the system's Save dialog.
+  - **Download** is offered for files that can be downloaded now. It saves the file into the download folder at once, and says so. When the name is taken, the new file gets a number, such as `report (2).pdf`.
   - **Restore** is offered for archived files. It opens a dialog to choose the speed (Standard or Bulk, with the usual waiting time) and how many days, from 1 to 365, the restored copy stays.
   - **Delete**, in red, asks for confirmation in a dialog first.
 - **Templates:**
@@ -46,7 +46,7 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
-- **Settings:** the dark or light theme, and the storage class the Upload page starts with (Glacier Deep Archive unless changed).
+- **Settings:** the dark or light theme, the storage class the Upload page starts with (Glacier Deep Archive unless changed), and the download folder (the system's Downloads folder unless changed), with "Change…" opening the system's folder picker.
 
 Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 

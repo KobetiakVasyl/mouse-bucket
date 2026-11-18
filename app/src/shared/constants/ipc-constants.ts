@@ -3,6 +3,7 @@ export const Channel = {
   appStatus: 'app:status',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
+  settingsChooseDownloadFolder: 'settings:chooseDownloadFolder',
   templatesList: 'templates:list',
   templatesCreate: 'templates:create',
   templatesDelete: 'templates:delete',

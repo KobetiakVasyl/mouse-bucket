@@ -92,13 +92,14 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | Channel | Payload | Returns |
 |---|---|---|
 | `app:status` | none | whether OS encryption is available for keys |
-| `settings:get`, `settings:update` | none, or the settings to change | the settings |
+| `settings:get`, `settings:update` | none, or the settings to change, apart from the download folder | the settings |
+| `settings:chooseDownloadFolder` | none | the settings, after main's folder picker closed |
 | `templates:list` | none | the templates, without keys |
 | `templates:create` | name, type, S3 location, and either keys or the ID of a template to copy them from | the new template |
 | `templates:delete` | template ID | nothing |
 | `upload:chooseFiles` | upload template ID, and the storage class (Glacier Deep Archive or Standard) | how many files main queued after its file picker closed |
 | `download:list` | download template ID, folder prefix, continuation token | one page of subfolders, and of files with their storage class and restore state |
-| `download:file` | download template ID, S3 key | whether main queued it after its Save dialog closed |
+| `download:file` | download template ID, S3 key | the name main saves the file under in the download folder |
 | `download:delete` | download template ID, S3 key | nothing, once S3 deleted the file |
 | `download:restore` | download template ID, S3 key, speed (Standard or Bulk), days | nothing, once S3 accepted the restore |
 | `transfers:list`, `transfers:cancel` | none, or a transfer ID | the transfers, or nothing |
@@ -126,7 +127,8 @@ A new template can reuse another template's IAM user: main copies the keys from 
   - No encryption header, so the bucket's default encryption applies.
   - No tags and no metadata yet.
 - The app never changes a bucket's versioning. On a bucket with versioning off, an upload replaces an object with the same key.
-- Downloads stream into `<file>.part` next to the chosen file, which replaces the chosen file only once complete. A failed or cancelled download deletes the `.part` file.
+- Downloads go straight into the download folder from Settings, which is the system's Downloads folder until another is chosen. A file is saved under its key's last part, made safe for the disk (see [SECURITY.md](SECURITY.md#file-paths)). When a file, a partial download or a queued download already has that name, the new file gets a number before its extension, such as `report (2).pdf` or `backup (2).tar.gz`, so nothing is overwritten.
+- A download streams into `<file>.part` in that folder, which becomes the file only once complete. A failed or cancelled download deletes the `.part` file.
 - While any transfer is waiting or running, the computer doesn't go to sleep (`powerSaveBlocker` with `prevent-app-suspension`). The screen may still turn off.
 
 ## Archived files and deleting

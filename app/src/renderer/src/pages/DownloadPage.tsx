@@ -14,7 +14,7 @@ import { RestoreDialog } from '../theme/compositions/RestoreDialog'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
 import { TransferList } from '../theme/compositions/TransferList'
 import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-types'
-import { appendListing, samePlace } from '../utils/download-utils'
+import { appendListing, downloadStartedMessage, samePlace } from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
@@ -128,9 +128,8 @@ export function DownloadPage({
     setMessage(undefined)
     setError(undefined)
     try {
-      if (await downloadService.download({ templateId: template.id, key: file.key })) {
-        setMessage(`Downloading ${file.name}. It's in the transfers below.`)
-      }
+      const savedAs = await downloadService.download({ templateId: template.id, key: file.key })
+      setMessage(downloadStartedMessage(file.name, savedAs))
     } catch (reason) {
       setError(messageOf(reason))
     }
@@ -139,8 +138,8 @@ export function DownloadPage({
   return (
     <>
       <PageHeading title="Download">
-        Open folders to find a file. Download saves it where you choose; archived files need a
-        restore first.
+        Open folders to find a file. Download saves it in your download folder; archived files need
+        a restore first.
       </PageHeading>
       <TemplatePicker
         templates={templates}

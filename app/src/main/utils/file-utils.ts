@@ -1,6 +1,6 @@
 // Reads and atomically writes the app's files in its data folder, one write at a time. See docs/ENVIRONMENTS.md.
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { TEMPORARY_SUFFIX } from '../constants/data-file-constants'
 
@@ -10,6 +10,15 @@ export async function readIfExists(path: string): Promise<Buffer | undefined> {
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return undefined
     throw error
+  }
+}
+
+export async function pathExists(path: string): Promise<boolean> {
+  try {
+    await access(path)
+    return true
+  } catch {
+    return false
   }
 }
 

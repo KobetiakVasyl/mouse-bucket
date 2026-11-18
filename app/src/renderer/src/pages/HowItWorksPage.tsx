@@ -61,7 +61,8 @@ export function HowItWorksPage(): React.JSX.Element {
         <Card title="Downloading and restoring">
           <p>
             Pick a download template and open folders to find a file. The list shows each
-            file&apos;s size, storage class and date. Download asks where to save the file.
+            file&apos;s size, storage class and date. Download saves the file in the download folder
+            from Settings.
           </p>
           <p>
             Files in Glacier Deep Archive or Glacier Flexible Retrieval are archived, so they need a

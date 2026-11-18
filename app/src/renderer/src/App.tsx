@@ -100,7 +100,16 @@ export default function App(): React.JSX.Element {
       />
     ),
     'how-it-works': () => <HowItWorksPage />,
-    settings: () => <SettingsPage settings={settings} onChange={updateSettings} />
+    settings: () => (
+      <SettingsPage
+        settings={settings}
+        onChange={updateSettings}
+        onChooseDownloadFolder={async () => {
+          const next = await settingsService.chooseDownloadFolder()
+          changeData((data) => ({ ...data, settings: next }))
+        }}
+      />
+    )
   }
 
   return (

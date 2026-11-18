@@ -1,9 +1,9 @@
-// Shows the system's file dialogs and main's own questions, in front of the window they belong to. See docs/SECURITY.md.
+// Shows the system's file and folder pickers and main's own questions, in front of the window they belong to. See docs/SECURITY.md.
 import {
   BrowserWindow,
   dialog,
   type OpenDialogOptions,
-  type SaveDialogOptions,
+  type OpenDialogReturnValue,
   type WebContents
 } from 'electron'
 import { QUIT_BUTTON, QUIT_DIALOG } from '../constants/dialog-constants'
@@ -11,28 +11,22 @@ import { QUIT_BUTTON, QUIT_DIALOG } from '../constants/dialog-constants'
 export class DialogService {
   // The chosen files' paths; none when the picker was cancelled.
   async chooseFiles(sender: WebContents, title: string): Promise<string[]> {
-    const options: OpenDialogOptions = { title, properties: ['openFile', 'multiSelections'] }
-    const window = BrowserWindow.fromWebContents(sender)
-    const result =
-      window === null
-        ? await dialog.showOpenDialog(options)
-        : await dialog.showOpenDialog(window, options)
+    const result = await this.open(sender, { title, properties: ['openFile', 'multiSelections'] })
     return result.canceled ? [] : result.filePaths
   }
 
-  // The chosen path; null when the dialog was cancelled.
-  async chooseSavePath(
+  // The chosen folder's path; null when the picker was cancelled.
+  async chooseFolder(
     sender: WebContents,
     title: string,
-    defaultPath: string
+    defaultPath?: string
   ): Promise<string | null> {
-    const options: SaveDialogOptions = { title, defaultPath }
-    const window = BrowserWindow.fromWebContents(sender)
-    const result =
-      window === null
-        ? await dialog.showSaveDialog(options)
-        : await dialog.showSaveDialog(window, options)
-    return result.canceled ? null : result.filePath
+    const result = await this.open(sender, {
+      title,
+      defaultPath,
+      properties: ['openDirectory', 'createDirectory']
+    })
+    return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
   }
 
   // Whether to quit although transfers are pending. Synchronous, because the window is closing.
@@ -44,5 +38,10 @@ export class DialogService {
       cancelId: 0
     })
     return choice === QUIT_BUTTON
+  }
+
+  private open(sender: WebContents, options: OpenDialogOptions): Promise<OpenDialogReturnValue> {
+    const window = BrowserWindow.fromWebContents(sender)
+    return window === null ? dialog.showOpenDialog(options) : dialog.showOpenDialog(window, options)
   }
 }

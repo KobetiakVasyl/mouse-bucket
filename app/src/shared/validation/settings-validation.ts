@@ -8,7 +8,10 @@ export const SettingsSchema = z.object({
   theme: ThemeSchema,
   welcomeSeen: z.boolean(),
   // The storage class the Upload page starts with.
-  defaultStorageClass: UploadStorageClassSchema
+  defaultStorageClass: UploadStorageClassSchema,
+  // Where downloads are saved: the system's Downloads folder until another is chosen.
+  downloadFolder: z.string().min(1).max(4096)
 })
 
-export const SettingsUpdateSchema = SettingsSchema.partial().strict()
+// The page may show the download folder but not set it: only main's folder picker does.
+export const SettingsUpdateSchema = SettingsSchema.omit({ downloadFolder: true }).partial().strict()

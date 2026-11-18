@@ -41,8 +41,8 @@ A compromised renderer can therefore only call the typed IPC surface, with valid
 The renderer never handles a path on this computer:
 
 - Upload opens the system's file picker from main, and main reads the chosen files itself.
-- Download opens the system's Save dialog from main, and main writes to the path the user chose. The renderer sends only the S3 key.
-- The Save dialog's suggested name comes from the key's last part, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/utils/file-name-utils.ts`).
+- Download writes into the download folder from Settings, and the renderer sends only the S3 key. The page shows the folder but can't set it: `settings:update` rejects it, and only main's folder picker changes it. A stored folder that isn't a full path is ignored.
+- A downloaded file's name comes from the key's last part, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/utils/file-name-utils.ts`).
 
 ## Keys at rest
 
