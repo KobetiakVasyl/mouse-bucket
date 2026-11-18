@@ -1,0 +1,17 @@
+/* Black-and-white theme with Times New Roman everywhere. See docs/ARCHITECTURE.md. */
+@import 'tailwindcss';
+
+@theme {
+  --color-*: initial;
+  --color-black: #000;
+  --color-white: #fff;
+  --font-*: initial;
+  --font-serif: 'Times New Roman', Times, 'Liberation Serif', serif;
+  --default-font-family: var(--font-serif);
+}
+
+@layer base {
+  html {
+    @apply bg-white text-black;
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "name": "mousebucket",
+  "productName": "MouseBucket",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop app for browsing one S3 bucket and uploading and downloading files with your own IAM keys.",
+  "license": "MIT",
+  "author": "Kobetiak Vasyl",
+  "homepage": "https://github.com/KobetiakVasyl/aws-s3-desktop",
+  "engines": {
+    "node": "24.18.0"
+  },
+  "main": "./out/main/index.js",
+  "scripts": {
+    "staging": "electron-vite dev --mode staging",
+    "staging:preview": "electron-vite preview --mode staging",
+    "build:staging": "npm run typecheck && electron-vite build --mode staging",
+    "build:production": "npm run typecheck && electron-vite build --mode production",
+    "dist": "npm run build:production && node scripts/with-caches.mjs electron-builder",
+    "dist:staging": "npm run build:staging && node scripts/with-caches.mjs electron-builder --config electron-builder.staging.yml",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:scripts",
+    "lint": "eslint --cache .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "node scripts/test.mjs",
+    "audit": "node scripts/audit.mjs",
+    "launch-check": "node scripts/launch-check.mjs",
+    "actionlint": "node scripts/actionlint.mjs",
+    "postinstall": "node scripts/with-caches.mjs install-electron"
+  },
+  "devDependencies": {
+    "@electron-toolkit/eslint-config-prettier": "3.0.1",
+    "@electron-toolkit/eslint-config-ts": "4.0.0",
+    "@electron-toolkit/tsconfig": "2.0.0",
+    "@eslint-react/eslint-plugin": "5.30.4",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "24.19.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.3.0",
+    "electron": "45.3.4",
+    "electron-builder": "26.18.0",
+    "electron-vite": "6.0.0",
+    "eslint": "10.15.0",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "prettier": "3.10.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.5",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  },
+  "allowScripts": {
+    "electron-winstaller": false
+  }
+}
