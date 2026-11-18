@@ -12,10 +12,11 @@ const template = (kind: Template['kind']): Template => ({
 })
 
 describe('pageToShow', () => {
-  it('shows Templates instead of any page that needs a template, while there are none', () => {
-    for (const page of ['home', 'upload', 'download'] as const) {
-      expect(pageToShow(page, [])).toBe('templates')
-    }
+  it('shows Home instead of Upload or Browse while there are no templates', () => {
+    expect(pageToShow('home', [])).toBe('home')
+    expect(pageToShow('upload', [])).toBe('home')
+    expect(pageToShow('download', [])).toBe('home')
+    expect(pageToShow('templates', [])).toBe('templates')
     expect(pageToShow('settings', [])).toBe('settings')
     expect(pageToShow('how-it-works', [])).toBe('how-it-works')
   })

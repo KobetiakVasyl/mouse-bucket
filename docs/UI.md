@@ -27,10 +27,10 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 
 ## Layout and pages
 
-A side menu on the left starts with the app's icon and name, then lists Home, Templates and Settings. How it works and "Show welcome page again" are at its bottom. The icon is drawn inverted in the dark theme, so its lines stay light on dark. The page fills the rest of the window, and tables span its full width.
+A side menu on the left starts with the app's icon and name, then lists Home, Templates and Settings. How it works and "Show welcome page again" are at its bottom. The icon keeps its own colors in both themes. The page fills the rest of the window, and tables span its full width.
 
 - **Welcome:** a full-window page that describes the app, with Close and How it works buttons. It shows on the first start only, until it's closed or How it works is opened, and again from the side menu.
-- **Home:** an Upload tile and a Browse tile, side by side, each half the page wide and about two thirds of the window tall, then the transfers. A tile is disabled until a template of its type exists.
+- **Home:** an Upload tile and a Browse tile, side by side, each half the page wide and about two thirds of the window tall, then the transfers. A tile is disabled until a template of its type exists. While there are no templates, a notice above the tiles says to add the first one, with an "Add a template" button that opens Templates, which shows the same notice.
 - **Upload:**
   - Pick an upload template.
   - Choose the storage class from a drop-down: Glacier Deep Archive or Standard, with a line on what the chosen one means. It starts with the default from Settings.
@@ -58,7 +58,7 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
 
 Upload and Browse pick a template from large tiles: the first 6 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 
-While there are no templates, Home, Upload and Browse show Templates instead, so a new user lands there. Upload or Browse without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
+Home is always reachable, and a new user lands there. Upload or Browse without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
 
 The transfers list shows each upload and download with its template, status, size and a progress bar:
 

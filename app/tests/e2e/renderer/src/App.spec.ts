@@ -1,12 +1,13 @@
 import { downloadTemplate, expect, menuItem, test, uploadTemplate } from '../../support/app'
 
 test.describe('with no templates', () => {
-  test('lands on Templates, even when Home is chosen', async ({ page }) => {
-    const heading = page.getByRole('heading', { level: 1, name: 'Templates' })
-    await expect(heading).toBeVisible()
+  test('lands on Home, which leads to Templates', async ({ page }) => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
     await expect(page.getByText('Add your first template')).toBeVisible()
-    await menuItem(page, 'Home').click()
-    await expect(heading).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Upload/ })).toBeDisabled()
+    await page.getByRole('button', { name: 'Add a template' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Templates' })).toBeVisible()
+    await expect(page.getByText('Add your first template')).toBeVisible()
   })
 
   test('still opens How it works and Settings', async ({ page }) => {

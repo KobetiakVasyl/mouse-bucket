@@ -5,6 +5,9 @@ import type { KeySource, TemplateFormValues } from '../types/template-form-types
 
 export const PICKER_TILES = 6
 
+// Shown on Home and Templates while there are no templates.
+export const FIRST_TEMPLATE_MESSAGE = 'Add your first template to start uploading or downloading.'
+
 export const TEMPLATE_KIND_LABELS: Record<TemplateKind, string> = {
   upload: 'Upload',
   download: 'Download'

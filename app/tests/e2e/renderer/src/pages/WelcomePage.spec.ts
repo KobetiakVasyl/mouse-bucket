@@ -9,7 +9,7 @@ test('shows on the first start, and stays closed once closed', async ({ page }) 
   await expect(welcome).toBeHidden()
   await page.reload()
   await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
-  await expect(page.getByRole('heading', { level: 1, name: 'Templates' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()
   await expect(welcome).toBeHidden()
 })
 

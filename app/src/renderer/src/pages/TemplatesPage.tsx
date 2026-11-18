@@ -1,6 +1,7 @@
 // The Templates page: the saved templates, and the form that adds one or changes the one being edited. See docs/UI.md.
 import { useCallback, useState } from 'react'
 import type { NewTemplate, Template, TemplateEdit } from '../../../shared/types/template-types'
+import { FIRST_TEMPLATE_MESSAGE } from '../constants/template-constants'
 import { templateService } from '../services/template-service'
 import { Notice } from '../theme/components/Notice'
 import { PageHeading } from '../theme/components/PageHeading'
@@ -73,7 +74,7 @@ export function TemplatesPage({
         folder, download templates at a whole bucket.
       </PageHeading>
 
-      {firstRun && <Notice>Add your first template to start uploading or downloading.</Notice>}
+      {firstRun && <Notice>{FIRST_TEMPLATE_MESSAGE}</Notice>}
       {!encryptionAvailable && (
         <Notice>
           MouseBucket can&apos;t store keys securely on this computer, because no keyring is

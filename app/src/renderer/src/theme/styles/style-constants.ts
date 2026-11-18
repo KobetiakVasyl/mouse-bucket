@@ -23,4 +23,4 @@ export const CELL = 'px-4 py-2.5'
 export const PROGRESS_CLASS =
   'mt-2 h-2 w-full appearance-none overflow-hidden rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-hover [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-ink'
 
-export const MENU_ITEM_CLASS = `block w-full rounded-lg px-3 py-2 text-left ${FOCUS}`
+export const MENU_ITEM_CLASS = `block w-full rounded-lg px-4 py-2.5 text-left text-lg ${FOCUS}`
