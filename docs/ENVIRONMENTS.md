@@ -183,7 +183,7 @@ Production is what users install.
 
 ### Branch
 
-- The `production` branch holds production. A GitHub ruleset protects it. Read the current rules from `https://api.github.com/repos/KobetiakVasyl/aws-s3-desktop/rules/branches/production`.
+- The `production` branch holds production. A GitHub ruleset protects it. Read the current rules from `https://api.github.com/repos/KobetiakVasyl/mouse-bucket/rules/branches/production`.
 - Changes reach `production` through pull requests from `staging`, merged with **Squash and merge**, so each pull request becomes one commit on `production`.
 - Right after each merge, reset `staging` to `production`, so the next pull request starts from it. With a clean working tree, on the host:
 

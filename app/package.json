@@ -6,7 +6,7 @@
   "description": "Desktop app for browsing one S3 bucket and uploading and downloading files with your own IAM keys.",
   "license": "MIT",
   "author": "Kobetiak Vasyl",
-  "homepage": "https://github.com/KobetiakVasyl/aws-s3-desktop",
+  "homepage": "https://github.com/KobetiakVasyl/mouse-bucket",
   "engines": {
     "node": "24.18.0"
   },

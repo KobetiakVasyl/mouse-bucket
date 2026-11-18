@@ -1,4 +1,4 @@
-# aws-s3-desktop
+# mouse-bucket
 
 MouseBucket (`io.github.kobetiakvasyl.mousebucket`): an Electron desktop app for uploading files to S3 buckets and downloading files from them with the user's own IAM keys. There is no backend: the app talks to S3 directly. It targets Linux and Windows equally. TypeScript throughout, MIT licensed, public repo.
 
@@ -72,7 +72,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 
 ## Branches
 
-`production` and `staging` are protected by GitHub rulesets. Before committing or pushing, read a branch's current rules from `https://api.github.com/repos/KobetiakVasyl/aws-s3-desktop/rules/branches/<branch>` (public, no token needed) and follow them.
+`production` and `staging` are protected by GitHub rulesets. Before committing or pushing, read a branch's current rules from `https://api.github.com/repos/KobetiakVasyl/mouse-bucket/rules/branches/<branch>` (public, no token needed) and follow them.
 
 ## Working in this repo
 
