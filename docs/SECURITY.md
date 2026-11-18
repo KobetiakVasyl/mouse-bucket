@@ -52,6 +52,7 @@ The renderer never handles a path on this computer:
 - Keys in use exist only in main's memory and in the SigV4 signatures sent to AWS over HTTPS.
 - Keys never travel to the renderer, not even to reuse them: a new template that copies another template's IAM user names only that template's ID, and main copies the keys itself.
 - Threat model: any process running as the same OS user can decrypt the keys. That matches how browsers protect saved passwords and cookies.
+- The app has no lock of its own, such as a Windows Hello or password prompt at startup: the OS login and lock screen protect it. Anyone who can use the logged-in account can open the app, and such a prompt couldn't stop them from decrypting the keys anyway.
 
 ## Secrets
 
