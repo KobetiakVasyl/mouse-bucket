@@ -13,20 +13,21 @@ import {
 import { mockClient } from 'aws-sdk-client-mock'
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { S3Service } from '../../../../src/main/services/s3-service'
-import type { BucketAccess } from '../../../../src/main/types/credential-types'
+import type { S3Access } from '../../../../src/main/types/credential-types'
 import type {
   DownloadFileOptions,
   UploadFileOptions
-} from '../../../../src/main/types/s3-service-types'
+} from '../../../../src/main/types/storage-service-types'
 import type { UploadPart } from '../../../../src/main/types/transfer-queue-types'
 import { makeTempDir, removeTempDir } from '../../../support/temp-dir'
 
 const s3 = mockClient(S3Client)
 const service = new S3Service()
-const BUCKET: BucketAccess = {
+const BUCKET: S3Access = {
+  platform: 's3',
   bucket: 'bucket-one',
   region: 'eu-west-1',
-  credentials: { accessKeyId: 'AKIAEXAMPLEKEY000001', secretAccessKey: 'secret' }
+  credentials: { platform: 's3', accessKeyId: 'AKIAEXAMPLEKEY000001', secretAccessKey: 'secret' }
 }
 
 const body = (stream: Readable): GetObjectCommandOutput['Body'] =>

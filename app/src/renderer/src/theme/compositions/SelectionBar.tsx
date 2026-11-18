@@ -1,5 +1,5 @@
 // What can be done with the selected files: each button counts the files it applies to. See docs/UI.md.
-import type { S3File } from '../../../../shared/types/s3-types'
+import type { StoredFile } from '../../../../shared/types/storage-types'
 import { archivedFiles, downloadableFiles, fileCount } from '../../utils/download-utils'
 import { Button } from '../components/Button'
 import { CancelIcon, DeleteIcon, DownloadIcon, RestoreIcon } from '../components/icons'
@@ -11,10 +11,10 @@ export function SelectionBar({
   onDelete,
   onClear
 }: {
-  files: S3File[]
-  onDownload: (files: S3File[]) => void
-  onRestore: (files: S3File[]) => void
-  onDelete: (files: S3File[]) => void
+  files: StoredFile[]
+  onDownload: (files: StoredFile[]) => void
+  onRestore: (files: StoredFile[]) => void
+  onDelete: (files: StoredFile[]) => void
   onClear: () => void
 }): React.JSX.Element | null {
   if (files.length === 0) return null

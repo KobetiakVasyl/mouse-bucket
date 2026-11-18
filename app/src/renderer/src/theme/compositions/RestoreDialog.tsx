@@ -2,7 +2,7 @@
 // Settings. See docs/UI.md.
 import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
-import type { RestoreTier, S3File } from '../../../../shared/types/s3-types'
+import type { RestoreTier, StoredFile } from '../../../../shared/types/storage-types'
 import { RESTORE_TIER_HINTS, RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
 import { fileCount, restoreTimesFor } from '../../utils/download-utils'
 import { Button } from '../components/Button'
@@ -21,7 +21,7 @@ export function RestoreDialog({
   onRestore,
   onCancel
 }: {
-  files: S3File[]
+  files: StoredFile[]
   defaultTier: RestoreTier
   defaultDays: number
   busy: boolean

@@ -3,28 +3,10 @@ import {
   accessOf,
   bucketRegionHeader,
   filesOf,
-  foldersOf,
-  partCount,
-  partRange,
-  partsBytes,
-  partSizeFor
+  foldersOf
 } from '../../../../src/main/utils/s3-utils'
 
-const MiB = 1024 * 1024
 const MODIFIED = new Date('2026-11-01T10:00:00Z')
-
-describe('partSizeFor', () => {
-  it('uses 8 MiB parts up to about 78 GiB', () => {
-    expect(partSizeFor(0)).toBe(8 * MiB)
-    expect(partSizeFor(78 * 1024 * MiB)).toBe(8 * MiB)
-  })
-
-  it('grows parts so no file needs more than 10,000', () => {
-    const fiveTiB = 5 * 1024 * 1024 * MiB
-    expect(Math.ceil(fiveTiB / partSizeFor(fiveTiB))).toBeLessThanOrEqual(10_000)
-    expect(partSizeFor(fiveTiB) % MiB).toBe(0)
-  })
-})
 
 describe('accessOf', () => {
   it('needs no restore outside the archive classes', () => {
@@ -41,8 +23,8 @@ describe('accessOf', () => {
 
 describe('foldersOf and filesOf', () => {
   it('skips entries S3 sent without the fields they need', () => {
-    expect(foldersOf([{ Prefix: 'a/' }, {}])).toEqual(['a/'])
-    expect(foldersOf(undefined)).toEqual([])
+    expect(foldersOf([{ Prefix: 'a/b/' }, {}], 'a/')).toEqual([{ id: 'a/b/', name: 'b' }])
+    expect(foldersOf(undefined, '')).toEqual([])
     const files = filesOf([{ Key: 'x.txt', Size: 1, LastModified: MODIFIED }, { Key: 'y' }], '')
     expect(files.map((file) => file.key)).toEqual(['x.txt'])
     expect(filesOf(undefined, '')).toEqual([])
@@ -54,17 +36,5 @@ describe('bucketRegionHeader', () => {
     const failed = { $response: { headers: { 'x-amz-bucket-region': 'eu-north-1' } } }
     expect(bucketRegionHeader(failed)).toBe('eu-north-1')
     expect(bucketRegionHeader(new Error('no response'))).toBe('')
-  })
-})
-
-describe('parts', () => {
-  it('splits a file into parts where only the last may be shorter', () => {
-    expect(partCount(10, 4)).toBe(3)
-    expect(partCount(8, 4)).toBe(2)
-    expect(partCount(0, 4)).toBe(1)
-    expect(partRange(1, 4, 10)).toEqual({ start: 0, length: 4 })
-    expect(partRange(3, 4, 10)).toEqual({ start: 8, length: 2 })
-    expect(partsBytes([1, 3], 4, 10)).toBe(6)
-    expect(partsBytes([], 4, 10)).toBe(0)
   })
 })

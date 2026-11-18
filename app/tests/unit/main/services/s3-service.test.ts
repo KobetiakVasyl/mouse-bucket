@@ -9,13 +9,17 @@ import {
 import { mockClient } from 'aws-sdk-client-mock'
 import { afterAll, beforeEach, describe, expect, it } from 'vitest'
 import { S3Service } from '../../../../src/main/services/s3-service'
-import type { BucketAccess } from '../../../../src/main/types/credential-types'
+import type { S3Access } from '../../../../src/main/types/credential-types'
 import { describeError } from '../../../../src/main/utils/error-utils'
 
 const s3 = mockClient(S3Client)
 const service = new S3Service()
-const KEYS = { accessKeyId: 'AKIAEXAMPLEKEY000001', secretAccessKey: 'secret' }
-const BUCKET: BucketAccess = { bucket: 'b1', region: 'eu-west-1', credentials: KEYS }
+const KEYS = {
+  platform: 's3',
+  accessKeyId: 'AKIAEXAMPLEKEY000001',
+  secretAccessKey: 'secret'
+} as const
+const BUCKET: S3Access = { platform: 's3', bucket: 'b1', region: 'eu-west-1', credentials: KEYS }
 const MODIFIED = new Date('2026-11-01T10:00:00Z')
 
 const failure = (status: number, headers: Record<string, string>): Error =>
@@ -65,7 +69,7 @@ describe('listFolder', () => {
       IsTruncated: false
     })
     expect(await service.listFolder(BUCKET, 'a/', null)).toEqual({
-      folders: ['a/b/'],
+      folders: [{ id: 'a/b/', name: 'b' }],
       files: [
         {
           key: 'a/report.pdf',

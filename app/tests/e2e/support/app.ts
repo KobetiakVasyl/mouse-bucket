@@ -12,7 +12,7 @@ import {
 import type { Settings } from '../../../src/shared/types/settings-types'
 import type { Template } from '../../../src/shared/types/template-types'
 import { appPath, repoPath } from '../../support/paths'
-import { installSampleS3, SAMPLE } from './sample-s3'
+import { installSampleStorage, SAMPLE } from './sample-storage'
 
 export interface AppSetup {
   templates: Template[]
@@ -30,6 +30,7 @@ export function uploadTemplate(name: string, prefix = `${name.toLowerCase()}/`):
     id: randomUUID(),
     name,
     kind: 'upload',
+    platform: 's3',
     bucket: 'example-bucket',
     prefix,
     region: 'eu-west-1'
@@ -37,7 +38,38 @@ export function uploadTemplate(name: string, prefix = `${name.toLowerCase()}/`):
 }
 
 export function downloadTemplate(name: string, bucket = 'example-archive'): Template {
-  return { id: randomUUID(), name, kind: 'download', bucket, prefix: '', region: 'eu-west-1' }
+  return {
+    id: randomUUID(),
+    name,
+    kind: 'download',
+    platform: 's3',
+    bucket,
+    prefix: '',
+    region: 'eu-west-1'
+  }
+}
+
+export function azureTemplate(name: string, kind: Template['kind'] = 'download'): Template {
+  return {
+    id: randomUUID(),
+    name,
+    kind,
+    platform: 'azure',
+    account: 'exampleaccount',
+    container: 'backups',
+    prefix: kind === 'upload' ? 'photos/' : ''
+  }
+}
+
+export function driveTemplate(name: string, kind: Template['kind'] = 'download'): Template {
+  return {
+    id: randomUUID(),
+    name,
+    kind,
+    platform: 'google-drive',
+    folderId: '1AbCdEfGhIjKlMnOpQrStUvWxYz012345',
+    folderName: 'Family photos'
+  }
 }
 
 export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; page: Page }>({
@@ -69,7 +101,7 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
     const app = await electron.launch({ args: ['-r', QUIET_WINDOW, root], env })
     // Main registers its handlers before it opens the window, so swapping them earlier would race.
     await app.firstWindow()
-    await app.evaluate(installSampleS3, SAMPLE)
+    await app.evaluate(installSampleStorage, SAMPLE)
     await use(app)
     await app.close()
     await rm(root, { recursive: true, force: true })

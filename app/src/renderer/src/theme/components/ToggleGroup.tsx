@@ -1,8 +1,10 @@
-// Toggle buttons instead of radio buttons: at most one option is pressed. Anything else the choice needs, such as a box for
-// another value, goes beside the buttons, and an optional hint below them. See docs/UI.md.
+// Toggle buttons instead of radio buttons: at most one option is pressed, each with an optional badge. Anything else the
+// choice needs, such as a box for another value, goes beside the buttons, and an optional hint below them. See
+// docs/UI.md.
 import type { ReactNode } from 'react'
 import type { ChoiceOption } from '../../types/component-types'
 import { FOCUS } from '../styles/style-constants'
+import { Badge } from './Badge'
 
 export function ToggleGroup<T extends string>({
   label,
@@ -31,10 +33,11 @@ export function ToggleGroup<T extends string>({
                 key={option.value}
                 type="button"
                 aria-pressed={pressed}
-                className={`rounded-lg px-4 py-1.5 ${pressed ? 'bg-ink text-paper' : 'text-ink hover:bg-hover'} ${FOCUS}`}
+                className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 ${pressed ? 'bg-ink text-paper' : 'text-ink hover:bg-hover'} ${FOCUS}`}
                 onClick={() => onChange(option.value)}
               >
                 {option.label}
+                {option.badge !== undefined && <Badge label={option.badge} />}
               </button>
             )
           })}

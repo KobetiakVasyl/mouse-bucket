@@ -1,4 +1,12 @@
-import { downloadTemplate, expect, openFromHome, test, uploadTemplate } from '../../../support/app'
+import {
+  azureTemplate,
+  downloadTemplate,
+  driveTemplate,
+  expect,
+  openFromHome,
+  test,
+  uploadTemplate
+} from '../../../support/app'
 
 const NAMES = ['A01', 'A02', 'A03', 'A04', 'A05', 'A06', 'A07', 'A08', 'A09', 'A10', 'A11', 'A12']
 
@@ -89,4 +97,29 @@ test('queues nothing for a dropped file that isn’t on this computer', async ({
   await expect(page.getByRole('status')).toHaveText(
     'Nothing to upload. Drop files or folders from this computer.'
   )
+})
+
+test.describe('on other platforms', () => {
+  test.use({
+    setup: {
+      templates: [azureTemplate('Backups', 'upload'), driveTemplate('Family', 'upload')],
+      settings: { welcomeSeen: true }
+    }
+  })
+
+  test("offers Azure's access tiers, and nothing to choose on Google Drive", async ({ page }) => {
+    const picker = page.getByRole('region', { name: 'Template' })
+    await picker.getByRole('button', { name: /^Backups/ }).click()
+    const tier = page.getByRole('combobox', { name: 'Access tier' })
+    await expect(tier).toHaveText('Archive')
+    await expect(
+      page.getByText('Files must be rehydrated before they can be downloaded')
+    ).toBeVisible()
+    await expect(page.getByText('MD5, for each block')).toBeVisible()
+    await picker.getByRole('button', { name: /^Family/ }).click()
+    await expect(page.getByRole('combobox')).toHaveCount(0)
+    await expect(page.getByText('Google Drive keeps both files')).toBeVisible()
+    await page.getByRole('button', { name: 'Choose files…' }).click()
+    await expect(page.getByRole('status')).toHaveText('2 files added to the transfers.')
+  })
 })

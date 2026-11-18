@@ -1,10 +1,10 @@
-// Where the Download page's browser is, what it shows there, and which dialog is open. See docs/UI.md.
-import type { FolderListing, S3File } from '../../../shared/types/s3-types'
+// Where the Browse page is, what it shows there, and which dialog is open. See docs/UI.md.
+import type { FolderEntry, FolderListing, StoredFile } from '../../../shared/types/storage-types'
 
-// Which template's bucket, and which folder in it ('' for the top).
+// Which template, and the folders opened on the way from its top: none for the top itself.
 export interface FolderPlace {
   templateId: string
-  prefix: string
+  path: FolderEntry[]
 }
 
 // A listing remembers the place it belongs to, so a stale one is never shown.
@@ -14,10 +14,6 @@ export type ShownFolder =
 
 // The dialogs act on one file or on the selected files.
 export type FileDialog =
-  { kind: 'none' } | { kind: 'delete'; files: S3File[] } | { kind: 'restore'; files: S3File[] }
-
-// One folder of the breadcrumb: its name, and its full prefix.
-export interface FolderCrumb {
-  name: string
-  prefix: string
-}
+  | { kind: 'none' }
+  | { kind: 'delete'; files: StoredFile[] }
+  | { kind: 'restore'; files: StoredFile[] }

@@ -6,7 +6,7 @@ export class TemplateService {
   constructor(
     private readonly api: Pick<
       Api,
-      'listTemplates' | 'createTemplate' | 'updateTemplate' | 'deleteTemplate'
+      'listTemplates' | 'createTemplate' | 'updateTemplate' | 'deleteTemplate' | 'cancelSignIn'
     >
   ) {}
 
@@ -24,6 +24,11 @@ export class TemplateService {
 
   delete(id: string): Promise<void> {
     return this.api.deleteTemplate(id)
+  }
+
+  // Stops a Google sign-in that's waiting in the browser, so the template being added isn't saved.
+  cancelSignIn(): Promise<void> {
+    return this.api.cancelSignIn()
   }
 }
 

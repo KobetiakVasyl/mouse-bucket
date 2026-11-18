@@ -64,16 +64,16 @@ The app's own files in that folder:
 | File | Holds |
 |---|---|
 | `settings.json` | The settings that were changed from their defaults: the theme, whether the welcome page was seen, the defaults for uploads and restores, and the download folder |
-| `templates.json` | Each template's name, type, bucket, folder and region |
-| `credentials.bin` | Each template's IAM keys, encrypted by the OS (see [SECURITY.md](SECURITY.md#keys-at-rest)) |
+| `templates.json` | Each template's name, type, platform, and where it points: an S3 bucket, folder and region, an Azure storage account, container and folder, or a Google Drive folder's ID and name |
+| `credentials.bin` | Each template's keys, encrypted by the OS: S3's access keys, Azure's account key, or Google's OAuth client and refresh token (see [SECURITY.md](SECURITY.md#keys-at-rest)) |
 | `window-state.json` | The window's size, position and maximized state, saved when it closes (see [UI.md](UI.md#the-apps-window)) |
-| `transfers.json` | The uploads and downloads that haven't finished, so they can resume: their template, bucket, key, local path, and an upload's multipart upload ID and confirmed parts. No keys (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)) |
+| `transfers.json` | The uploads and downloads that haven't finished, so they can resume: their template, where it points, key, local path, and an upload's handle on the platform, such as S3's multipart upload ID or a Google Drive session URL, and confirmed parts. No keys (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)) |
 
 Each is written to a temporary file first and then renamed over the old one, so a crash never leaves a half-written file.
 
-## AWS resources
+## Cloud resources
 
-The environment doesn't decide which bucket or keys the app uses. In both environments the user enters them in the app.
+The environment doesn't decide which bucket, container, Drive folder or keys the app uses. In both environments the user enters them in the app.
 
 ## Env files
 

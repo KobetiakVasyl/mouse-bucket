@@ -29,7 +29,7 @@ describe('describeError', () => {
       'The disk is full.'
     )
     expect(describeError(Object.assign(new Error('x'), { code: 'ENOTFOUND' }))).toContain(
-      "Couldn't reach AWS"
+      "Couldn't reach the storage service"
     )
   })
 

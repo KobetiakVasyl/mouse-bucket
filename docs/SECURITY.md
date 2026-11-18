@@ -1,6 +1,6 @@
 # Security
 
-The IAM policy on the user is the whole authorization boundary. Inside the app, the renderer is treated as untrusted, and everything with side effects lives in main.
+What a template's keys allow on their platform is the whole authorization boundary: the IAM user's policy on S3, the storage account on Azure, and the signed-in Google account on Google Drive. Inside the app, the renderer is treated as untrusted, and everything with side effects lives in main.
 
 ## Window hardening
 
@@ -8,11 +8,11 @@ The IAM policy on the user is the whole authorization boundary. Inside the app, 
 - CSP: `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'`. `base-uri` and `form-action` are listed explicitly because they don't fall back to `default-src`. Every build and installer, staging or production, uses this CSP unchanged. Only while the hot-reload server runs (`npm run staging` on the host) does it also allow inline styles and the hot-reload WebSocket (`style-src 'self' 'unsafe-inline'`, `connect-src 'self' ws://localhost:*`). The plugin in `app/electron.vite.config.ts` that makes that change fails the run if the CSP no longer contains what it replaces.
 - The main process loads the hot-reload server's URL only in unpackaged staging runs, and only from `http://localhost` (`app/src/main/services/environment-service.ts`). Every other run loads the built files.
 - Every web contents the app creates blocks `will-navigate`, and its `setWindowOpenHandler` denies everything (`app.on('web-contents-created')` in `app/src/main/index.ts`).
-- The app opens no external links: nothing calls `shell.openExternal`.
+- The app opens one external page: Google's sign-in page, in the system browser, when a Google Drive template is added or given a new OAuth client (see [Google sign-in](#google-sign-in)). Main opens it only when its origin is `https://accounts.google.com`, and nothing else calls `shell.openExternal`.
 - Every permission request, such as the camera, microphone or notifications, is denied (`setPermissionRequestHandler` and `setPermissionCheckHandler` on the default session).
 - The window options, with the four `webPreferences` flags above, come from `app/src/main/utils/window-utils.ts`, and `app/tests/unit/main/utils/window-utils.test.ts` checks them.
 - No remote content is ever loaded. No telemetry, no crash reporting, no remote assets.
-- Apart from S3, main contacts only GitHub, and only when the user opens "Check for updates" from the side menu. Updates are checked against the SHA-512 in the release's metadata, not a signature, since the installers aren't signed (see [PACKAGING.md](PACKAGING.md#updates)).
+- Apart from the storage platforms (S3, Azure's `*.blob.core.windows.net` endpoints, and Google's Drive and sign-in APIs), main contacts only GitHub, and only when the user opens "Check for updates" from the side menu. Updates are checked against the SHA-512 in the release's metadata, not a signature, since the installers aren't signed (see [PACKAGING.md](PACKAGING.md#updates)).
 - Production builds set `webPreferences.devTools: false`. Staging builds allow DevTools (see [ENVIRONMENTS.md](ENVIRONMENTS.md)).
 
 ## Electron fuses
@@ -33,9 +33,9 @@ Every handler in main is registered by `app/src/main/services/ipc-service.ts`, w
 
 - **Sender check:** main answers only the app's own page, by its frame's URL: the built `index.html`, or the hot-reload server's origin in staging runs from source. On Windows the path is compared ignoring case, because Chromium may spell the drive letter differently than the app was started with. Anything else gets "Request refused."
 - **Payload check:** main checks the payload against the channel's zod schema before using it, and rejects anything else, including unknown fields.
-- **Safe errors:** failures reach the renderer as a short message from `app/src/main/utils/error-utils.ts`, with its texts in `app/src/main/constants/error-constants.ts`: the text of an error main raised on purpose, a fixed explanation of a known AWS or file error, or "Something went wrong" with the error's name. The raw message of an unknown error never reaches the renderer.
+- **Safe errors:** failures reach the renderer as a short message from `app/src/main/utils/error-utils.ts`, with its texts in `app/src/main/constants/error-constants.ts`: the text of an error main raised on purpose, a fixed explanation of a known AWS, Azure, Google or file error, or "Something went wrong" with the error's name. The raw message of an unknown error never reaches the renderer.
 
-A compromised renderer can therefore only call the typed IPC surface, with valid payloads.
+A compromised renderer can therefore only call the typed IPC surface, with valid payloads. On Google Drive, where a sign-in reaches the whole Drive but a template points at one folder, main also lets the page name only folders and files it listed under that template's folder during this run (`app/src/main/services/google-drive-service.ts`), so a page can't reach the rest of the Drive through a template.
 
 ## File paths
 
@@ -43,18 +43,29 @@ The renderer never handles a path on this computer:
 
 - Upload opens the system's file or folder picker from main, and main reads the chosen files itself.
 - Files and folders dropped on the Upload page reach main as paths, but the page never handles them: it passes the dropped `File` objects to the preload, which reads each path with Electron's `webUtils.getPathForFile` and sends only those. A `File` the page makes itself has no path, so a compromised page can't name a file to upload. Main still takes only full paths of files and folders that exist.
-- Download writes into the download folder from Settings, and the renderer sends only the S3 key. The page shows the folder but can't set it: `settings:update` rejects it, and only main's folder picker changes it. A stored folder that isn't a full path is ignored.
-- A downloaded file's name comes from the key's last part, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/utils/file-name-utils.ts`).
+- Download writes into the download folder from Settings, and the renderer sends only the file's key: an S3 key, an Azure blob name or a Google Drive file ID. The page shows the folder but can't set it: `settings:update` rejects it, and only main's folder picker changes it. A stored folder that isn't a full path is ignored.
+- A downloaded file's name comes from the key's last part, or the Google Drive file's name, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/utils/file-name-utils.ts`).
 
 ## Keys at rest
 
-- Each template's IAM keys are stored in `credentials.bin` in the app data folder, encrypted by the OS through Electron's `safeStorage`: DPAPI on Windows, and the desktop's secret service, such as GNOME Keyring or KWallet, on Linux. `templates.json` holds only the S3 locations.
+- Each template's keys are stored in `credentials.bin` in the app data folder, encrypted by the OS through Electron's `safeStorage`: DPAPI on Windows, and the desktop's secret service, such as GNOME Keyring or KWallet, on Linux. The keys are S3's access key pair, Azure's storage account key, or Google's OAuth client ID and secret with the refresh token from signing in. `templates.json` holds only where each template points, with a Drive folder's name.
 - The app refuses to save keys unless OS encryption is really available. On Linux, the `basic_text` backend means no keyring is in use, so it counts as unavailable, and the Templates page says why.
 - When the OS reports that its key was rotated, the app encrypts the keys again with the new one.
-- Keys in use exist only in main's memory and in the SigV4 signatures sent to AWS over HTTPS.
-- Keys never travel to the renderer, not even to reuse them: a new template that copies another template's IAM user names only that template's ID, and main copies the keys itself.
+- Keys in use exist only in main's memory and in what goes to their own platform over HTTPS: SigV4 signatures to AWS, Shared Key signatures to Azure, and the refresh token, traded for short-lived access tokens, to Google. Each call makes its own client from the keys, and drops it after.
+- Keys never travel to the renderer, not even to reuse them: a new template that copies another template's keys names only that template's ID, and main copies the keys itself, only between templates on the same platform, and for Azure only for the same storage account.
 - Threat model: any process running as the same OS user can decrypt the keys. That matches how browsers protect saved passwords and cookies.
 - The app has no lock of its own, such as a Windows Hello or password prompt at startup: the OS login and lock screen protect it. Anyone who can use the logged-in account can open the app, and such a prompt couldn't stop them from decrypting the keys anyway.
+
+## Google sign-in
+
+Google Drive has no keys to type in. Each user makes their own OAuth client in Google Cloud, of the Desktop app type, and the app signs in with it (`app/src/main/services/google-sign-in-service.ts`):
+
+- The app asks for the `https://www.googleapis.com/auth/drive` scope, full Drive access, which uploading anywhere in a folder and browsing it need. Google lets an unverified client use that scope for up to 100 users, with a warning at sign-in, which suits a client the user makes for themselves.
+- Main starts a one-time server on `127.0.0.1`, on a port the system picks, and opens Google's consent page in the system browser with PKCE (S256) and a random 32-byte state. The browser comes back to that server with a code, which main trades with Google for a refresh token.
+- The server answers only a `GET /` with its own `Host`, so a page that rebinds its name to `127.0.0.1` is turned away, and only a code with the matching state counts. Its page loads nothing (`default-src 'none'`).
+- It stops after the first answer, when the user cancels in the app, or after 5 minutes, whichever comes first. Only one sign-in runs at a time.
+- The refresh token, the client ID and the client secret are kept in `credentials.bin` with the other keys. The secret of a Desktop client isn't confidential by Google's own design, and is kept encrypted all the same.
+- While a Google Drive upload is unfinished, `transfers.json` holds its resumable session URL. That URL can only finish that one upload, for at most a week. Main sends to a session URL only when it's on `https://www.googleapis.com`.
 
 ## Secrets
 

@@ -11,18 +11,30 @@ const TEMPLATE: Template = {
   id: '7d1c3f5e-1b2a-4c3d-8e9f-0a1b2c3d4e5f',
   name: 'Reports',
   kind: 'upload',
+  platform: 's3',
   bucket: 'bucket-one',
   prefix: 'reports/',
   region: 'eu-west-1'
+}
+const DRIVE: Template = {
+  id: '8e2d4a6f-2c3b-4d4e-9fa0-1b2c3d4e5f60',
+  name: 'Family',
+  kind: 'upload',
+  platform: 'google-drive',
+  folderId: '1AbCdEfGhIjKlMnOp',
+  folderName: 'Family'
 }
 const SENDER = {} as WebContents
 const REQUEST = { templateId: TEMPLATE.id, storageClass: 'STANDARD' } as const
 
 let dir: string
 let queued: NewTransferRecord[]
-function service(picked: { files?: string[]; folder?: string | null } = {}): UploadService {
+function service(
+  picked: { files?: string[]; folder?: string | null } = {},
+  template = TEMPLATE
+): UploadService {
   return new UploadService(
-    { getOfKind: async () => TEMPLATE },
+    { getOfKind: async () => template },
     {
       add: (record) => {
         queued.push(record)
@@ -59,8 +71,7 @@ describe('UploadService', () => {
         kind: 'upload',
         templateId: TEMPLATE.id,
         templateName: 'Reports',
-        bucket: 'bucket-one',
-        region: 'eu-west-1',
+        place: { platform: 's3', bucket: 'bucket-one', region: 'eu-west-1' },
         key: 'reports/report.pdf',
         name: 'report.pdf',
         storageClass: 'STANDARD',
@@ -102,6 +113,30 @@ describe('UploadService', () => {
       'reports/Photos/2026/snow.jpg',
       'reports/Photos/beach.jpg'
     ])
+  })
+
+  it('keys a Google Drive upload by its path inside the folder, with no storage class', async () => {
+    const photos = join(dir, 'Photos')
+    const drive = service({ folder: photos }, DRIVE)
+    expect(await drive.chooseFolder({ templateId: DRIVE.id, storageClass: null }, SENDER)).toBe(2)
+    expect(keys()).toEqual(['Photos/2026/snow.jpg', 'Photos/beach.jpg'])
+    expect(queued[0]).toMatchObject({
+      place: { platform: 'google-drive', folderId: '1AbCdEfGhIjKlMnOp' },
+      storageClass: null
+    })
+  })
+
+  it("refuses a storage class the template's platform doesn't have, before any picker opens", async () => {
+    await expect(
+      service({ files: [join(dir, 'report.pdf')] }).chooseFiles(
+        { templateId: TEMPLATE.id, storageClass: 'Archive' },
+        SENDER
+      )
+    ).rejects.toThrow('S3 storage class')
+    await expect(
+      service({}, DRIVE).chooseFiles({ templateId: DRIVE.id, storageClass: 'STANDARD' }, SENDER)
+    ).rejects.toThrow('no storage classes')
+    expect(queued).toEqual([])
   })
 
   it('queues nothing when a picker is cancelled', async () => {

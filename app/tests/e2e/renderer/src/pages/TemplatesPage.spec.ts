@@ -82,3 +82,54 @@ test('stops editing with Cancel', async ({ page }) => {
     .click()
   await expect(page.getByRole('form', { name: 'New template' })).toBeVisible()
 })
+
+test('adds an Azure template with its account key, marked as beta', async ({ page }) => {
+  const platform = page.getByRole('group', { name: 'Platform' })
+  await platform.getByRole('button', { name: /Azure Blob Storage/ }).click()
+  await expect(platform.getByRole('button', { name: /Azure Blob Storage/ })).toContainText('Beta')
+  await expect(page.getByText('Azure Blob Storage is in beta')).toBeVisible()
+  await page.getByLabel('Name').fill('Backups')
+  await page
+    .getByLabel('Container URL')
+    .fill('https://myaccount.blob.core.windows.net/backups/photos')
+  await expect(
+    page.getByText('Uploads go to https://myaccount.blob.core.windows.net/backups/photos/')
+  ).toBeVisible()
+  await expect(page.getByLabel('Access key ID')).toBeHidden()
+  await page.getByLabel('Account key').fill(`${'A'.repeat(86)}==`)
+  await page.getByRole('button', { name: 'Add template' }).click()
+  await expect(page.getByRole('status')).toHaveText('Added "Backups".')
+  const row = page.getByRole('row', { name: /Backups/ })
+  await expect(row).toContainText('Azure Blob Storage')
+  await expect(row).toContainText('Beta')
+  await expect(row).toContainText('https://myaccount.blob.core.windows.net/backups/photos/')
+})
+
+test('adds a Google Drive template with an OAuth client of your own', async ({ page }) => {
+  await page
+    .getByRole('group', { name: 'Platform' })
+    .getByRole('button', { name: /Google Drive/ })
+    .click()
+  await page.getByLabel('Name').fill('Family')
+  await page.getByLabel('Google Drive folder').fill('My Drive')
+  await expect(page.getByText('Uploads go to My Drive')).toBeVisible()
+  await page.getByLabel('OAuth client ID').fill('1234-abc.apps.googleusercontent.com')
+  await page.getByLabel('Client secret').fill('client-secret')
+  await expect(page.getByText("Saving opens Google's sign-in page in your browser.")).toBeVisible()
+  await page.getByRole('button', { name: 'Add template' }).click()
+  await expect(page.getByRole('status')).toHaveText('Added "Family".')
+  await expect(page.getByRole('row', { name: /Family/ })).toContainText('Google Drive')
+})
+
+test('copies keys only from templates on the same platform', async ({ page }) => {
+  await page
+    .getByRole('group', { name: 'Platform' })
+    .getByRole('button', { name: /Google Drive/ })
+    .click()
+  await expect(
+    page
+      .getByRole('group', { name: 'Google sign-in' })
+      .getByRole('button', { name: 'Copy from a template' })
+  ).toBeHidden()
+  await expect(page.getByLabel('OAuth client ID')).toBeVisible()
+})

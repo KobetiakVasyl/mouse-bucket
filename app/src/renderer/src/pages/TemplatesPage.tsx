@@ -72,7 +72,7 @@ export function TemplatesPage({
   return (
     <PageLayout
       title="Templates"
-      description="A template is an S3 location plus the IAM keys that reach it. Upload templates point at a folder, download templates at a whole bucket."
+      description="A template is a place on Amazon S3, Azure Blob Storage or Google Drive, plus the keys that reach it. Upload templates point at a folder; download templates at a whole bucket or container, or any Drive folder."
     >
       {firstRun && <Notice>{FIRST_TEMPLATE_MESSAGE}</Notice>}
       {!encryptionAvailable && (
@@ -112,7 +112,7 @@ export function TemplatesPage({
           message={
             <p>
               <strong>{deleting.name}</strong> and its keys are deleted from this computer. Nothing
-              in the bucket changes.
+              in the cloud changes.
             </p>
           }
           confirmLabel="Delete"

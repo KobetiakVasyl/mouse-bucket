@@ -1,7 +1,7 @@
 import { readdir, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest'
-import type { S3Service } from '../../../../src/main/services/s3-service'
+import type { StorageService } from '../../../../src/main/services/storage-service'
 import { TransferRunnerService } from '../../../../src/main/services/transfer-runner-service'
 import type {
   DownloadRecord,
@@ -9,16 +9,21 @@ import type {
   TransferRunContext,
   UploadRecord
 } from '../../../../src/main/types/transfer-queue-types'
+import { UploadExpiredError } from '../../../../src/main/utils/error-utils'
 import { makeTempDir, removeTempDir } from '../../../support/temp-dir'
 
-const KEYS = { accessKeyId: 'AKIAEXAMPLEKEY000001', secretAccessKey: 'secret' }
-const ACCESS = { bucket: 'bucket-one', region: 'eu-west-1', credentials: KEYS }
+const KEYS = {
+  platform: 's3',
+  accessKeyId: 'AKIAEXAMPLEKEY000001',
+  secretAccessKey: 'secret'
+} as const
+const PLACE = { platform: 's3', bucket: 'bucket-one', region: 'eu-west-1' } as const
+const ACCESS = { ...PLACE, credentials: KEYS }
 const BASE = {
   id: '11111111-2222-4333-8444-555555555555',
   templateId: '7d1c3f5e-1b2a-4c3d-8e9f-0a1b2c3d4e5f',
   templateName: 'Reports',
-  bucket: 'bucket-one',
-  region: 'eu-west-1',
+  place: PLACE,
   key: 'a/notes.txt',
   name: 'notes.txt'
 }
@@ -26,12 +31,15 @@ const BASE = {
 let dir: string
 let saved: TransferRecord[]
 let s3: {
-  downloadFile: Mock<S3Service['downloadFile']>
-  uploadFile: Mock<S3Service['uploadFile']>
-  abortUpload: Mock<S3Service['abortUpload']>
+  downloadFile: Mock<StorageService['downloadFile']>
+  uploadFile: Mock<StorageService['uploadFile']>
+  abortUpload: Mock<StorageService['abortUpload']>
 }
+let credentials: () => Promise<
+  typeof KEYS | { platform: 'azure'; accountKey: string }
+> = async () => KEYS
 const runner = (): TransferRunnerService =>
-  new TransferRunnerService(s3, { credentialsFor: async () => KEYS })
+  new TransferRunnerService(s3, { credentialsFor: () => credentials() })
 const context = (): TransferRunContext => ({
   signal: new AbortController().signal,
   progress: () => undefined,
@@ -67,10 +75,11 @@ const downloadRecord = (etag: string | null): DownloadRecord => ({
 beforeEach(async () => {
   dir = await makeTempDir()
   saved = []
+  credentials = async () => KEYS
   s3 = {
-    downloadFile: vi.fn<S3Service['downloadFile']>(async () => undefined),
-    uploadFile: vi.fn<S3Service['uploadFile']>(async () => undefined),
-    abortUpload: vi.fn<S3Service['abortUpload']>(async () => undefined)
+    downloadFile: vi.fn<StorageService['downloadFile']>(async () => undefined),
+    uploadFile: vi.fn<StorageService['uploadFile']>(async () => undefined),
+    abortUpload: vi.fn<StorageService['abortUpload']>(async () => undefined)
   }
 })
 afterEach(async () => {
@@ -125,12 +134,18 @@ describe('TransferRunnerService', () => {
     })
   })
 
-  it('starts an upload over once when S3 no longer knows it', async () => {
+  it('starts an upload over once when the platform no longer has it', async () => {
     const record = await uploadRecord()
-    s3.uploadFile.mockRejectedValueOnce(Object.assign(new Error('gone'), { name: 'NoSuchUpload' }))
+    s3.uploadFile.mockRejectedValueOnce(new UploadExpiredError())
     await runner().run(record, context())
     expect(s3.uploadFile).toHaveBeenCalledTimes(2)
     expect(s3.uploadFile.mock.calls[1][1]).toMatchObject({ uploadId: null, parts: [] })
+  })
+
+  it("refuses to run when the template's keys are now for another platform", async () => {
+    credentials = async () => ({ platform: 'azure', accountKey: 'key' })
+    await expect(runner().run(downloadRecord(null), context())).rejects.toThrow('another platform')
+    expect(s3.downloadFile).not.toHaveBeenCalled()
   })
 
   it('stops a cancelled upload’s multipart upload, and does nothing before one started', async () => {

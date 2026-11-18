@@ -4,7 +4,10 @@ import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
 import type { Settings, SettingsUpdate } from '../../../../shared/types/settings-types'
 import { RESTORE_TIER_HINTS, RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
+import { BETA_LABEL } from '../../constants/platform-constants'
 import {
+  ACCESS_TIER_HINTS,
+  ACCESS_TIER_OPTIONS,
   UPLOAD_STORAGE_CLASS_HINTS,
   UPLOAD_STORAGE_CLASS_OPTIONS
 } from '../../constants/storage-class-constants'
@@ -26,21 +29,29 @@ export function DefaultsSettings({
     <Section title="Defaults" description="Uploads and restores start with these.">
       <div className="space-y-6">
         <Select
-          label="Storage class for new uploads"
+          label="S3 storage class for new uploads"
           options={UPLOAD_STORAGE_CLASS_OPTIONS}
           value={settings.defaultStorageClass}
           hint={`The Upload page starts with this, and can change it for each upload. ${UPLOAD_STORAGE_CLASS_HINTS[settings.defaultStorageClass]}`}
           onChange={(defaultStorageClass) => onChange({ defaultStorageClass })}
         />
+        <Select
+          label="Azure access tier for new uploads"
+          labelBadge={BETA_LABEL}
+          options={ACCESS_TIER_OPTIONS}
+          value={settings.defaultAccessTier}
+          hint={`The Upload page starts with this for Azure templates, and can change it for each upload. ${ACCESS_TIER_HINTS[settings.defaultAccessTier]}`}
+          onChange={(defaultAccessTier) => onChange({ defaultAccessTier })}
+        />
         <ToggleGroup
-          label="Restore speed"
+          label="S3 restore speed"
           options={RESTORE_TIER_OPTIONS}
           value={settings.defaultRestoreTier}
           hint={`${RESTORE_TIER_HINTS[settings.defaultRestoreTier]} Each restore starts with this, and its dialog can change it.`}
           onChange={(defaultRestoreTier) => onChange({ defaultRestoreTier })}
         />
         <RestoreDaysPicker
-          label="Days to keep a restored copy"
+          label="Days to keep a restored S3 copy"
           days={days}
           hint={`From ${RESTORE_DAYS.min} to ${RESTORE_DAYS.max}. Each restore starts with this, and its dialog can change it.`}
           onChange={(next) => {

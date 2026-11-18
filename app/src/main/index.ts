@@ -1,11 +1,13 @@
 // Starts the app: one copy per data folder, main's services wired together, and the main window. See docs/ARCHITECTURE.md and docs/SECURITY.md.
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { app, ipcMain, powerSaveBlocker, safeStorage, screen, session } from 'electron'
+import { app, ipcMain, powerSaveBlocker, safeStorage, screen, session, shell } from 'electron'
 import { autoUpdater } from 'electron-updater'
+import { OAuth2Client } from 'google-auth-library'
 import icon from '../../resources/icon.png?asset'
 import { TRANSFERS_CHANGED, UPDATES_CHANGED } from '../shared/constants/ipc-constants'
 import { DATA_FILES } from './constants/data-file-constants'
+import { SIGN_IN_TIMEOUT_MS } from './constants/drive-constants'
 import { LAUNCH_CHECK_SWITCH, LaunchCheckExit } from './constants/launch-check-constants'
 import {
   PROGRESS_INTERVAL_MS,
@@ -13,15 +15,19 @@ import {
   SAVE_INTERVAL_MS,
   TRANSFER_CONCURRENCY
 } from './constants/transfer-constants'
+import { AzureBlobService } from './services/azure-blob-service'
 import { DialogService } from './services/dialog-service'
 import { DownloadService } from './services/download-service'
 import { EnvironmentService } from './services/environment-service'
+import { GoogleDriveService } from './services/google-drive-service'
+import { GoogleSignInService } from './services/google-sign-in-service'
 import { IpcService } from './services/ipc-service'
 import { KeepAwakeService } from './services/keep-awake-service'
 import { KeyVaultService } from './services/key-vault-service'
 import { LaunchCheckService } from './services/launch-check-service'
 import { S3Service } from './services/s3-service'
 import { SettingsService } from './services/settings-service'
+import { StorageService } from './services/storage-service'
 import { TemplateService } from './services/template-service'
 import { TransferRunnerService } from './services/transfer-runner-service'
 import { TransferService } from './services/transfer-service'
@@ -30,6 +36,7 @@ import { UpdateService } from './services/update-service'
 import { UploadService } from './services/upload-service'
 import { WindowService } from './services/window-service'
 import { WindowStateService } from './services/window-state-service'
+import { connectContainer, connectDrive } from './utils/connect-utils'
 import { canUpdate } from './utils/update-utils'
 import { windowPlacement } from './utils/window-utils'
 
@@ -72,27 +79,37 @@ async function start(): Promise<void> {
   denyAllPermissions()
   const userData = app.getPath('userData')
   const vault = new KeyVaultService(safeStorage, process.platform)
-  const s3 = new S3Service()
+  const storage = new StorageService(
+    new S3Service(),
+    new AzureBlobService(connectContainer),
+    new GoogleDriveService(connectDrive, (url, init) => fetch(url, init))
+  )
+  // Google's consent page opens in the system browser, never in the app. See docs/SECURITY.md.
+  const google = new GoogleSignInService(
+    (options) => new OAuth2Client(options),
+    (url) => shell.openExternal(url),
+    SIGN_IN_TIMEOUT_MS
+  )
   const dialogs = new DialogService()
   const settings = new SettingsService(
     join(userData, DATA_FILES.settings),
     app.getPath('downloads'),
     dialogs
   )
-  const templates = new TemplateService(userData, vault, s3)
+  const templates = new TemplateService(userData, vault, storage, google)
   const transfers = new TransferService({
     concurrency: TRANSFER_CONCURRENCY,
     progressIntervalMs: PROGRESS_INTERVAL_MS,
     saveIntervalMs: SAVE_INTERVAL_MS,
     retryDelaysMs: RETRY_DELAYS_MS,
     keepAwake: new KeepAwakeService(powerSaveBlocker),
-    runner: new TransferRunnerService(s3, templates),
+    runner: new TransferRunnerService(storage, templates),
     store: new TransferStoreService(join(userData, DATA_FILES.transfers)),
     onChange: (list) => WindowService.sendToAll(TRANSFERS_CHANGED, list)
   })
   await transfers.restore()
   const uploads = new UploadService(templates, transfers, dialogs)
-  const downloads = new DownloadService(templates, s3, transfers, settings)
+  const downloads = new DownloadService(templates, storage, transfers, settings)
   const updatable = canUpdate({
     isPackaged: app.isPackaged,
     platform: process.platform,
@@ -107,6 +124,7 @@ async function start(): Promise<void> {
     vault,
     settings,
     templates,
+    google,
     uploads,
     downloads,
     transfers,

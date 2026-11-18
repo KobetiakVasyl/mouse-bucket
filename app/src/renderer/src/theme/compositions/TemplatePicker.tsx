@@ -1,10 +1,12 @@
-// Picks a template: the first 6 by name as large tiles, any others in a drop-down. See docs/UI.md.
+// Picks a template: the first 6 by name as large tiles with their platform and location, any others in a drop-down.
+// See docs/UI.md.
 import type { Template } from '../../../../shared/types/template-types'
-import { formatS3Location } from '../../utils/s3-location-utils'
+import { templateLocation } from '../../utils/location-utils'
 import { splitForPicker } from '../../utils/template-utils'
 import { Section } from '../components/Section'
 import { Select } from '../components/Select'
 import { FOCUS } from '../styles/style-constants'
+import { PlatformLabel } from './PlatformLabel'
 
 export function TemplatePicker({
   templates,
@@ -31,8 +33,11 @@ export function TemplatePicker({
               className={`rounded-xl border p-6 text-left ${selected ? 'border-ink bg-hover' : 'border-line bg-surface hover:border-muted hover:bg-hover'} ${FOCUS}`}
             >
               <span className="mb-1 block text-xl font-semibold">{template.name}</span>
+              <span className="mb-1 block text-sm">
+                <PlatformLabel platform={template.platform} />
+              </span>
               <span className="block truncate text-sm text-muted">
-                {formatS3Location(template)}
+                {templateLocation(template)}
               </span>
             </button>
           )
@@ -45,7 +50,7 @@ export function TemplatePicker({
           options={more.map((template) => ({
             value: template.id,
             label: template.name,
-            detail: formatS3Location(template)
+            detail: templateLocation(template)
           }))}
           value={chosenFromMore ? selectedId : null}
           placeholder="Choose another template…"

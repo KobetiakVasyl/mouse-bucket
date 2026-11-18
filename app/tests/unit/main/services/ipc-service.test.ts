@@ -23,6 +23,7 @@ function setup(): {
         theme: 'light' as const,
         welcomeSeen: true,
         defaultStorageClass: 'DEEP_ARCHIVE' as const,
+        defaultAccessTier: 'Archive' as const,
         defaultRestoreTier: 'Bulk' as const,
         defaultRestoreDays: 7,
         downloadFolder: '/home/me/Downloads'
@@ -35,6 +36,7 @@ function setup(): {
       update: vi.fn(),
       delete: vi.fn(async () => undefined)
     },
+    google: { cancel: vi.fn() },
     uploads: { chooseFiles: vi.fn(async () => 2), chooseFolder: vi.fn(), uploadPaths: vi.fn() },
     downloads: {
       listFolder: vi.fn(),
@@ -92,11 +94,21 @@ describe('IpcService', () => {
         theme: 'light',
         welcomeSeen: true,
         defaultStorageClass: 'DEEP_ARCHIVE',
+        defaultAccessTier: 'Archive',
         defaultRestoreTier: 'Bulk',
         defaultRestoreDays: 7,
         downloadFolder: '/home/me/Downloads'
       }
     })
+  })
+
+  it('cancels a Google sign-in waiting in the browser', async () => {
+    const { invoke, services } = setup()
+    expect(await invoke(Channel.templatesCancelSignIn, undefined)).toEqual({
+      ok: true,
+      value: undefined
+    })
+    expect(services.google.cancel).toHaveBeenCalledOnce()
   })
 
   it('refuses requests from any page but the app’s own', async () => {

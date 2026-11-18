@@ -2,6 +2,7 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { InvokeChannel, Requests, Responses } from '../../shared/types/ipc-types'
 import type { DownloadService } from '../services/download-service'
+import type { GoogleSignInService } from '../services/google-sign-in-service'
 import type { SettingsService } from '../services/settings-service'
 import type { TemplateService } from '../services/template-service'
 import type { TransferService } from '../services/transfer-service'
@@ -20,6 +21,7 @@ export interface IpcServices {
   vault: Pick<KeyVault, 'available'>
   settings: Pick<SettingsService, 'get' | 'update' | 'chooseDownloadFolder'>
   templates: Pick<TemplateService, 'list' | 'add' | 'update' | 'delete'>
+  google: Pick<GoogleSignInService, 'cancel'>
   uploads: Pick<UploadService, 'chooseFiles' | 'chooseFolder' | 'uploadPaths'>
   downloads: Pick<DownloadService, 'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'>
   transfers: Pick<TransferService, 'list' | 'pause' | 'resume' | 'cancel'>

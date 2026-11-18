@@ -5,7 +5,7 @@ import type {
   FolderListing,
   FolderRequest,
   RestoreRequest
-} from '../../../shared/types/s3-types'
+} from '../../../shared/types/storage-types'
 
 export class DownloadService {
   constructor(

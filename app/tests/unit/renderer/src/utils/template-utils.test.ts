@@ -13,6 +13,7 @@ const template = (name: string, kind: Template['kind'] = 'upload'): Template => 
   id: crypto.randomUUID(),
   name,
   kind,
+  platform: 's3',
   bucket: 'b1',
   prefix: '',
   region: 'eu-west-1'

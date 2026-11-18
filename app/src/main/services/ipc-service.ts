@@ -15,7 +15,8 @@ export class IpcService {
   ) {}
 
   register(services: IpcServices): void {
-    const { vault, settings, templates, uploads, downloads, transfers, updates, version } = services
+    const { vault, settings, templates, google, uploads, downloads, transfers, updates, version } =
+      services
     this.handle(Channel.appStatus, async () => ({
       encryptionAvailable: await vault.available(),
       version
@@ -29,6 +30,7 @@ export class IpcService {
     this.handle(Channel.templatesCreate, (input) => templates.add(input))
     this.handle(Channel.templatesUpdate, (edit) => templates.update(edit))
     this.handle(Channel.templatesDelete, (id) => templates.delete(id))
+    this.handle(Channel.templatesCancelSignIn, async () => google.cancel())
     this.handle(Channel.uploadChooseFiles, (request, event) =>
       uploads.chooseFiles(request, event.sender)
     )

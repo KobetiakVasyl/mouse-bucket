@@ -1,18 +1,21 @@
-// Adds, changes, lists and deletes templates: their S3 location in templates.json, their IAM keys encrypted in credentials.bin. See docs/SECURITY.md.
+// Adds, changes, lists and deletes templates: where they point in templates.json, their keys encrypted in
+// credentials.bin. See docs/SECURITY.md.
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { WHOLE_BUCKET_MESSAGE } from '../../shared/constants/s3-location-constants'
+import type { StorageLocation } from '../../shared/types/location-types'
 import type {
   NewTemplate,
+  Platform,
   Template,
   TemplateEdit,
   TemplateKind
 } from '../../shared/types/template-types'
-import { parseS3Location } from '../../shared/validation/s3-location-validation'
+import { kindProblem, parseLocation } from '../../shared/validation/location-validation'
 import { DATA_FILES } from '../constants/data-file-constants'
 import { NO_ENCRYPTION_MESSAGE } from '../constants/error-constants'
-import type { BucketAccess, Credentials, CredentialsFile } from '../types/credential-types'
+import type { Credentials, CredentialsFile, StorageAccess } from '../types/credential-types'
 import type { Decrypted, KeyVault } from '../types/key-vault-types'
+import type { TemplateDetails } from '../types/storage-service-types'
 import { UserError } from '../utils/error-utils'
 import {
   parseJson,
@@ -21,8 +24,10 @@ import {
   toJsonFile,
   writeAtomically
 } from '../utils/file-utils'
+import { accessFor, keptTarget, placeOf } from '../utils/storage-utils'
 import { CredentialsFileSchema, TemplatesFileSchema } from '../validation/data-file-validation'
-import type { S3Service } from './s3-service'
+import type { GoogleSignInService } from './google-sign-in-service'
+import type { StorageService } from './storage-service'
 
 export class TemplateService {
   private readonly templatesPath: string
@@ -32,7 +37,8 @@ export class TemplateService {
   constructor(
     dataDir: string,
     private readonly vault: KeyVault,
-    private readonly s3: Pick<S3Service, 'findRegion'>
+    private readonly storage: Pick<StorageService, 'resolve'>,
+    private readonly google: Pick<GoogleSignInService, 'signIn'>
   ) {
     this.templatesPath = join(dataDir, DATA_FILES.templates)
     this.credentialsPath = join(dataDir, DATA_FILES.credentials)
@@ -68,46 +74,43 @@ export class TemplateService {
     })
   }
 
-  // Everything an S3 call needs to reach the template's bucket.
-  async accessFor(template: Template): Promise<BucketAccess> {
-    const credentials = await this.credentialsFor(template.id)
-    return { bucket: template.bucket, region: template.region, credentials }
+  // Everything a platform's calls need to reach the template's location.
+  async accessFor(template: Template): Promise<StorageAccess> {
+    return accessFor(placeOf(template), await this.credentialsFor(template.id))
   }
 
-  // Checks the location, takes the keys as typed or copied from another template, and asks S3 for the bucket's region.
+  // Checks the location, takes the keys as typed, signed in for, or copied from another template, and checks with the
+  // platform that they reach it.
   async add(input: NewTemplate): Promise<Template> {
     if (!(await this.vault.available())) throw new UserError(NO_ENCRYPTION_MESSAGE)
-    const { bucket, prefix } = this.locationOf(input)
-    const credentials = await this.keysOf(input.keys)
-    const region = await this.s3.findRegion(credentials, bucket)
-    return this.save(
-      null,
-      { name: input.name, kind: input.kind, bucket, prefix, region },
-      credentials
-    )
+    const location = this.locationOf(input)
+    const credentials = await this.keysOf(input.platform, input.keys, location)
+    const target = await this.storage.resolve(location, credentials)
+    return this.save(null, { name: input.name, kind: input.kind, ...target }, credentials)
   }
 
-  // Changes a template, which may keep its keys. S3 is asked for the bucket's region again only when the bucket or
-  // the keys changed, and OS encryption is needed only for new keys, so renaming works anywhere.
+  // Changes a template, which may keep its keys on the same platform. The platform is asked again only when the bucket,
+  // container, Drive folder or keys changed, and OS encryption is needed only for new keys, so renaming works anywhere.
   async update(edit: TemplateEdit): Promise<Template> {
     const current = await this.get(edit.id)
-    const { bucket, prefix } = this.locationOf(edit)
-    const credentials = edit.keys.source === 'kept' ? null : await this.keysOf(edit.keys)
-    if (credentials !== null && !(await this.vault.available())) {
-      throw new UserError(NO_ENCRYPTION_MESSAGE)
+    const location = this.locationOf(edit)
+    let credentials: Credentials | null = null
+    if (edit.keys.source === 'kept') {
+      if (edit.platform !== current.platform) {
+        throw new UserError('Enter keys for the new platform, or copy them from a template.')
+      }
+    } else {
+      if (!(await this.vault.available())) throw new UserError(NO_ENCRYPTION_MESSAGE)
+      credentials = await this.keysOf(edit.platform, edit.keys, location)
     }
-    const region =
-      credentials === null && bucket === current.bucket
-        ? current.region
-        : await this.s3.findRegion(
-            credentials === null ? await this.credentialsFor(edit.id) : credentials,
-            bucket
-          )
-    return this.save(
-      edit.id,
-      { name: edit.name, kind: edit.kind, bucket, prefix, region },
-      credentials
-    )
+    const kept = credentials === null ? keptTarget(current, location) : null
+    const target =
+      kept ??
+      (await this.storage.resolve(
+        location,
+        credentials === null ? await this.credentialsFor(edit.id) : credentials
+      ))
+    return this.save(edit.id, { name: edit.name, kind: edit.kind, ...target }, credentials)
   }
 
   delete(id: string): Promise<void> {
@@ -121,32 +124,58 @@ export class TemplateService {
     })
   }
 
-  // A download template points at a whole bucket, an upload template at a folder or a whole bucket.
-  private locationOf(details: { kind: TemplateKind; location: string }): {
-    bucket: string
-    prefix: string
-  } {
-    const parsed = parseS3Location(details.location)
+  // A download template points at a whole bucket or container, or any Drive folder; an upload template at any folder.
+  private locationOf(details: {
+    platform: Platform
+    kind: TemplateKind
+    location: string
+  }): StorageLocation {
+    const parsed = parseLocation(details.platform, details.location)
     if ('error' in parsed) throw new UserError(parsed.error)
-    if (details.kind === 'download' && parsed.location.prefix !== '') {
-      throw new UserError(WHOLE_BUCKET_MESSAGE)
-    }
+    const problem = kindProblem(parsed.location, details.kind)
+    if (problem !== null) throw new UserError(problem)
     return parsed.location
   }
 
-  // Copied keys stay in main: the page only names the template to copy them from.
-  private async keysOf(keys: NewTemplate['keys']): Promise<Credentials> {
+  // Typed-in Google keys are the user's own OAuth client, which signs in through the browser for a refresh token.
+  // Copied keys stay in main: the page only names the template to copy them from, which must be on the same platform,
+  // and on Azure for the same storage account.
+  private async keysOf(
+    platform: Platform,
+    keys: NewTemplate['keys'],
+    location: StorageLocation
+  ): Promise<Credentials> {
     if (keys.source === 'entered') {
-      return { accessKeyId: keys.accessKeyId, secretAccessKey: keys.secretAccessKey }
+      const { secrets } = keys
+      if (secrets.platform === 's3') {
+        const { accessKeyId, secretAccessKey } = secrets
+        return { platform: 's3', accessKeyId, secretAccessKey }
+      }
+      if (secrets.platform === 'azure') {
+        return { platform: 'azure', accountKey: secrets.accountKey }
+      }
+      const { clientId, clientSecret } = secrets
+      const refreshToken = await this.google.signIn(clientId, clientSecret)
+      return { platform: 'google-drive', clientId, clientSecret, refreshToken }
     }
-    return this.credentialsFor(keys.templateId)
+    const credentials = await this.credentialsFor(keys.templateId)
+    if (credentials.platform !== platform) {
+      throw new UserError("That template's keys are for another platform.")
+    }
+    const source = await this.get(keys.templateId)
+    if (source.platform === 'azure' && location.platform === 'azure') {
+      if (source.account !== location.account) {
+        throw new UserError(`Those keys are for the storage account "${source.account}".`)
+      }
+    }
+    return credentials
   }
 
   // Saves a new template (id null) or replaces one, with new keys or, for a changed one, its own (credentials null).
   // Names are unique, ignoring case.
   private save(
     id: string | null,
-    details: Omit<Template, 'id'>,
+    details: TemplateDetails,
     credentials: Credentials | null
   ): Promise<Template> {
     return this.serial(async () => {

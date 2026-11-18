@@ -6,6 +6,7 @@ const template = (kind: Template['kind']): Template => ({
   id: crypto.randomUUID(),
   name: kind,
   kind,
+  platform: 's3',
   bucket: 'b1',
   prefix: '',
   region: 'eu-west-1'

@@ -60,7 +60,7 @@ test.describe('with a download template', () => {
     )
     await expect(page.getByText('Bulk is cheaper than Standard')).toBeVisible()
     await speed.getByRole('button', { name: 'Standard' }).click()
-    const days = page.getByRole('group', { name: 'Days to keep a restored copy' })
+    const days = page.getByRole('group', { name: 'Days to keep a restored S3 copy' })
     await expect(days.getByRole('button', { name: '7', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true'
@@ -86,7 +86,7 @@ test.describe('with a download template', () => {
 
   test('saves another number of days, typed in', async ({ page }) => {
     await menuItem(page, 'Settings').click()
-    const days = page.getByRole('group', { name: 'Days to keep a restored copy' })
+    const days = page.getByRole('group', { name: 'Days to keep a restored S3 copy' })
     const other = days.getByLabel('Other number of days')
     await other.fill('400')
     await expect(other).toHaveAttribute('aria-invalid', 'true')

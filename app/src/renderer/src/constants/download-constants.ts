@@ -1,5 +1,10 @@
 // Which files the Browse page offers to download, restore times, and the choices of a restore. See docs/UI.md.
-import type { FileAccess, RestoreTier } from '../../../shared/types/s3-types'
+import type {
+  FileAccess,
+  RehydratePriority,
+  RehydrateTier,
+  RestoreTier
+} from '../../../shared/types/storage-types'
 import type { ChoiceOption } from '../types/component-types'
 
 export const DOWNLOADABLE_STATES: ReadonlySet<FileAccess['state']> = new Set([
@@ -31,6 +36,29 @@ export const RESTORE_TIER_OPTIONS: ChoiceOption<RestoreTier>[] = [
 export const RESTORE_TIER_HINTS: Record<RestoreTier, string> = {
   Standard: 'Standard is faster than Bulk, and costs more.',
   Bulk: 'Bulk is cheaper than Standard, and takes longer.'
+}
+
+// The tiers an archived Azure blob can be rehydrated into, and how fast.
+export const REHYDRATE_TIER_OPTIONS: ChoiceOption<RehydrateTier>[] = [
+  { value: 'Hot', label: 'Hot' },
+  { value: 'Cool', label: 'Cool' },
+  { value: 'Cold', label: 'Cold' }
+]
+
+export const REHYDRATE_PRIORITY_OPTIONS: ChoiceOption<RehydratePriority>[] = [
+  { value: 'Standard', label: 'Standard' },
+  { value: 'High', label: 'High' }
+]
+
+export const REHYDRATE_PRIORITY_HINTS: Record<RehydratePriority, string> = {
+  Standard: 'Usually ready within 15 hours.',
+  High: 'Usually ready within an hour for files under 10 GB, and costs more.'
+}
+
+// The rehydrate dialog starts with these.
+export const REHYDRATE_DEFAULTS: { tier: RehydrateTier; priority: RehydratePriority } = {
+  tier: 'Hot',
+  priority: 'Standard'
 }
 
 // The days a restored copy stays that have buttons of their own; any other number is typed in.

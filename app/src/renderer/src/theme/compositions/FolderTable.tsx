@@ -1,7 +1,8 @@
-// One folder of a bucket: its subfolders, and its files with a checkbox, size, storage class, date and actions. See docs/UI.md.
-import type { FolderListing, S3File } from '../../../../shared/types/s3-types'
+// One folder of a bucket, container or Drive folder: its subfolders, and its files with a checkbox, size, storage class or
+// access tier where the platform has one, date and actions. See docs/UI.md.
+import type { FolderEntry, FolderListing, StoredFile } from '../../../../shared/types/storage-types'
 import { formatBytes, formatDate } from '../../utils/format-utils'
-import { accessNote, folderName, isDownloadable, isEmptyFolder } from '../../utils/download-utils'
+import { accessNote, isDownloadable, isEmptyFolder } from '../../utils/download-utils'
 import { storageClassLabel } from '../../utils/storage-utils'
 import { Button } from '../components/Button'
 import { Checkbox } from '../components/Checkbox'
@@ -19,7 +20,7 @@ import {
 
 export function FolderTable({
   listing,
-  prefix,
+  storageHeading,
   loadingMore,
   selected,
   onSelect,
@@ -31,15 +32,16 @@ export function FolderTable({
   onLoadMore
 }: {
   listing: FolderListing
-  prefix: string
+  // The storage column's heading, or null for a platform without storage classes, which shows file notes by the name.
+  storageHeading: string | null
   loadingMore: boolean
   selected: ReadonlySet<string>
   onSelect: (key: string, selected: boolean) => void
   onSelectAll: (selected: boolean) => void
-  onOpenFolder: (prefix: string) => void
-  onDownload: (file: S3File) => void
-  onRestore: (file: S3File) => void
-  onDelete: (file: S3File) => void
+  onOpenFolder: (folder: FolderEntry) => void
+  onDownload: (file: StoredFile) => void
+  onRestore: (file: StoredFile) => void
+  onDelete: (file: StoredFile) => void
   onLoadMore: (continuationToken: string) => void
 }): React.JSX.Element {
   if (isEmptyFolder(listing)) return <p className="text-muted">This folder is empty.</p>
@@ -58,23 +60,23 @@ export function FolderTable({
             </th>
             <th className={CELL}>Name</th>
             <th className={CELL}>Size</th>
-            <th className={CELL}>Storage class</th>
+            {storageHeading !== null && <th className={CELL}>{storageHeading}</th>}
             <th className={CELL}>Modified</th>
             <th className={CELL} />
           </tr>
         </thead>
         <tbody>
           {listing.folders.map((folder) => (
-            <tr key={folder} className={TABLE_ROW}>
+            <tr key={folder.id} className={TABLE_ROW}>
               <td className={CELL} />
               <td className={CELL}>
                 <LinkButton onClick={() => onOpenFolder(folder)}>
                   <FolderIcon className="text-muted" />
-                  {folderName(folder, prefix)}
+                  {folder.name}
                 </LinkButton>
               </td>
               <td className={`${CELL} text-muted`}>Folder</td>
-              <td className={CELL} />
+              {storageHeading !== null && <td className={CELL} />}
               <td className={CELL} />
               <td className={CELL} />
             </tr>
@@ -93,14 +95,19 @@ export function FolderTable({
                   <FileIcon className="text-muted" />
                   <span className="break-words">{file.name}</span>
                 </span>
-              </td>
-              <td className={`${CELL} whitespace-nowrap`}>{formatBytes(file.size)}</td>
-              <td className={CELL}>
-                {storageClassLabel(file.storageClass)}
-                {file.access.state !== 'available' && (
+                {storageHeading === null && file.access.state !== 'available' && (
                   <span className="block text-sm text-muted">{accessNote(file.access)}</span>
                 )}
               </td>
+              <td className={`${CELL} whitespace-nowrap`}>{formatBytes(file.size)}</td>
+              {storageHeading !== null && (
+                <td className={CELL}>
+                  {storageClassLabel(file.storageClass)}
+                  {file.access.state !== 'available' && (
+                    <span className="block text-sm text-muted">{accessNote(file.access)}</span>
+                  )}
+                </td>
+              )}
               <td className={`${CELL} whitespace-nowrap`}>{formatDate(file.lastModified)}</td>
               <td className={CELL}>
                 <div className="flex flex-wrap justify-end gap-2">

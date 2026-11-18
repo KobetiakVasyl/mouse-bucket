@@ -1,10 +1,10 @@
 # mouse-bucket
 
-MouseBucket (`io.github.kobetiakvasyl.mousebucket`): an Electron desktop app for uploading files to S3 buckets and downloading files from them with the user's own IAM keys. There is no backend: the app talks to S3 directly. It targets Linux and Windows equally. TypeScript throughout, MIT licensed, public repo.
+MouseBucket (`io.github.kobetiakvasyl.mousebucket`): an Electron desktop app for uploading files to Amazon S3, Azure Blob Storage and Google Drive, and downloading files from them, with the user's own keys. Azure and Google Drive are in beta. There is no backend: the app talks to each platform directly. It targets Linux and Windows equally. TypeScript throughout, MIT licensed, public repo.
 
 ## Status
 
-The app in `app/` uploads and downloads through templates: an S3 location plus the IAM keys that reach it. It has a welcome page, Home with Upload and Download tiles, Templates and Settings with a dark or light theme (see [UI.md](docs/UI.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+The app in `app/` uploads and downloads through templates: a place on S3, Azure Blob Storage or Google Drive plus the keys that reach it (an IAM user's keys, a storage account key, or a Google sign-in with the user's own OAuth client). It has a welcome page, Home with Upload and Download tiles, Templates and Settings with a dark or light theme (see [UI.md](docs/UI.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 ## Docs
 
@@ -50,10 +50,10 @@ The app lives in `app/`. `app/src/` has four parts with hard boundaries:
 
 - `renderer/` (React) is UI only. It never imports `electron` or Node modules, and it never touches the network or the file system. It reaches main only through `window.api`.
 - `preload/` is the only code that uses `ipcRenderer`. It exposes one narrow, typed `api` object through `contextBridge`. Never expose `ipcRenderer` itself or a generic send/invoke.
-- `main/` owns every side effect: credentials, settings, S3 calls, disk I/O, dialogs and the transfer queue.
+- `main/` owns every side effect: credentials, settings, the storage platforms' calls, Google sign-in, disk I/O, dialogs and the transfer queue.
 - `shared/` holds the types and the IPC channel map that the other three use. Change a contract here, never on one side only.
 
-Inside each part, code is split into folders by kind: `services/` (classes), `constants/`, `types/`, `validation/` and `utils/`, plus `pages/` and `theme/` (`styles/`, `components/`, `compositions/`) in the renderer. File names end in their kind, such as `s3-service.ts`, and React components are one per file in PascalCase. Module-level constants and named types live only in their folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#code-organization)).
+Inside each part, code is split into folders by kind: `services/` (classes), `constants/`, `types/`, `validation/` and `utils/`, plus `pages/` and `theme/` (`styles/`, `components/`, `compositions/`) in the renderer. File names end in their kind, such as `storage-service.ts`, and React components are one per file in PascalCase. Module-level constants and named types live only in their folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#code-organization)).
 
 Keep Electron-specific code out of the renderer, so that moving to Tauri later stays possible.
 
@@ -63,7 +63,8 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 - Don't loosen the production CSP, load remote content or add telemetry.
 - Treat the renderer as untrusted: every IPC handler validates its payload in main.
 - Never log credentials or include them in error messages sent to the renderer.
-- Sanitize file paths on disk built from S3 keys and check that they stay inside the target directory.
+- Sanitize file paths on disk built from S3 keys, Azure blob names or Google Drive file names, and check that they stay inside the target directory.
+- Google sign-in opens only Google's own sign-in page in the browser, and its one-time loopback server stays as described in [SECURITY.md](docs/SECURITY.md#google-sign-in).
 
 ## Code conventions
 
@@ -71,7 +72,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 - Style with Tailwind CSS, using only the theme's color roles. The theme is grayscale (black, white and shades of gray), with red only for deleting and errors and green only for restoring, rounded corners everywhere, toggle buttons instead of radio buttons, the bundled Montserrat as the font everywhere, and icons only from `app/src/renderer/src/theme/components/icons/`, outlined by default and always next to text (see [UI.md](docs/UI.md)). Ask before adding a UI component library.
 - Page structure: every page uses `PageLayout`, centered within a maximum width. Headers and sections show the title, then an optional subtitle, then a horizontal divider (`PageLayout`, `Section`, `Card`, `Modal`). Action buttons go on the right (see [UI.md](docs/UI.md#page-structure)).
 - Ask before adding a dependency, and pin exact versions.
-- Tests live in `app/tests/`: `unit/`, `integration/` (real files in temporary folders) and `e2e/` (Playwright), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test at its mirrored path.
+- Tests live in `app/tests/`: `unit/`, `integration/` (real files in temporary folders) and `e2e/` (Playwright), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests, `aws-sdk-client-mock` to mock S3, and small fakes passed to the services' constructors for Azure and Google. New main-process logic gets a unit test at its mirrored path.
 - Comments are a short summary plus a reference to the doc that explains the details, for example `// Blocks navigation away from the app. See docs/SECURITY.md.` The explanation lives in `docs/*.md`, not in the code.
 - Never keep legacy comments: commented-out code, notes about how something used to work, or comments that no longer match the code. Delete them whenever you touch that code.
 
@@ -82,7 +83,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 ## Working in this repo
 
 - Don't read, print or copy credentials, such as `~/.ssh`, `~/.aws`, the `.env*` files (the `.env.example` template is the one exception) or the app's `credentials.bin`. If a task needs one, ask the user where it is.
-- Ask before running anything against any AWS bucket, staging or production (list, upload, download, delete).
+- Ask before running anything against any S3 bucket, Azure container or Google Drive, staging or production (list, upload, download, delete, sign in).
 - Commit or push only when asked. Commits and pushes happen on the host. The Linux container has no SSH key.
 - Never push throwaway branches to try out CI. Check workflows locally with `npm run actionlint` and wait for a real push or pull request to run them.
 - To read GitHub PRs, branches and commits, use the read-only `github` MCP server from `.mcp.json`. It can't write. For anything that changes GitHub, ask the user. Its token is read from `.env.staging` by `scripts/github-mcp-headers.mjs`. Never run that script yourself, because it prints the token.

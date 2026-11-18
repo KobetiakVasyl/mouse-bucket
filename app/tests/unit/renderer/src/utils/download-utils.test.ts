@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import type { FolderListing, S3File } from '../../../../../src/shared/types/s3-types'
+import type { FolderListing, StoredFile } from '../../../../../src/shared/types/storage-types'
 import {
   accessNote,
   appendListing,
   archivedFiles,
   deletedMessage,
+  deleteWarning,
   downloadableFiles,
   fileCount,
-  folderCrumbs,
-  folderName,
+  folderOf,
   isDownloadable,
   isEmptyFolder,
   namesWithMore,
@@ -18,7 +18,7 @@ import {
   selectedFiles
 } from '../../../../../src/renderer/src/utils/download-utils'
 
-const file = (key: string, access: S3File['access'] = { state: 'available' }): S3File => ({
+const file = (key: string, access: StoredFile['access'] = { state: 'available' }): StoredFile => ({
   key,
   name: key,
   size: 1,
@@ -27,12 +27,20 @@ const file = (key: string, access: S3File['access'] = { state: 'available' }): S
   access
 })
 
-describe('samePlace', () => {
+describe('folderOf and samePlace', () => {
+  const photos = { id: 'photos/', name: 'photos' }
+  const year = { id: 'photos/2025/', name: '2025' }
+
+  it('lists the last folder opened, or the top', () => {
+    expect(folderOf({ templateId: 'a', path: [] })).toBe('')
+    expect(folderOf({ templateId: 'a', path: [photos, year] })).toBe('photos/2025/')
+  })
+
   it('matches the template and the folder', () => {
-    const place = { templateId: 'a', prefix: 'photos/' }
+    const place = { templateId: 'a', path: [photos] }
     expect(samePlace(place, { ...place })).toBe(true)
-    expect(samePlace(place, { templateId: 'b', prefix: 'photos/' })).toBe(false)
-    expect(samePlace(place, { templateId: 'a', prefix: '' })).toBe(false)
+    expect(samePlace(place, { templateId: 'b', path: [photos] })).toBe(false)
+    expect(samePlace(place, { templateId: 'a', path: [] })).toBe(false)
   })
 })
 
@@ -55,33 +63,19 @@ describe('accessNote', () => {
     expect(accessNote({ state: 'restored', until: '2026-12-01T00:00:00.000Z' })).toMatch(
       /^Restored until /
     )
-  })
-})
-
-describe('folderCrumbs', () => {
-  it('lists each folder on the way with its full prefix', () => {
-    expect(folderCrumbs('')).toEqual([])
-    expect(folderCrumbs('photos/2025/')).toEqual([
-      { name: 'photos', prefix: 'photos/' },
-      { name: '2025', prefix: 'photos/2025/' }
-    ])
-  })
-})
-
-describe('folderName', () => {
-  it('drops the open folder from a subfolder', () => {
-    expect(folderName('photos/2025/', 'photos/')).toBe('2025/')
+    expect(accessNote({ state: 'unavailable', reason: 'No content.' })).toBe('No content.')
   })
 })
 
 describe('isEmptyFolder and appendListing', () => {
   it('tell an empty folder apart, and add the next page to the shown ones', () => {
-    const first: FolderListing = { folders: ['a/'], files: [file('x')], nextToken: 'next' }
+    const folder = { id: 'a/', name: 'a' }
+    const first: FolderListing = { folders: [folder], files: [file('x')], nextToken: 'next' }
     const second: FolderListing = { folders: [], files: [file('y')], nextToken: null }
     expect(isEmptyFolder({ folders: [], files: [], nextToken: null })).toBe(true)
     expect(isEmptyFolder(first)).toBe(false)
     expect(appendListing(first, second)).toEqual({
-      folders: ['a/'],
+      folders: [folder],
       files: [file('x'), file('y')],
       nextToken: null
     })
@@ -109,9 +103,21 @@ describe('selected files', () => {
   it('names one file or counts several', () => {
     expect(fileCount(1)).toBe('1 file')
     expect(fileCount(3)).toBe('3 files')
-    expect(deletedMessage([files[0]])).toBe('Deleted a.pdf.')
-    expect(deletedMessage(files)).toBe('Deleted 4 files.')
-    expect(restoringMessage(files.slice(0, 2))).toContain('restoring 2 files')
+    expect(deletedMessage([files[0]], 's3')).toBe('Deleted a.pdf.')
+    expect(deletedMessage(files, 'azure')).toBe('Deleted 4 files.')
+    expect(deletedMessage(files, 'google-drive')).toBe('Moved 4 files to the trash.')
+    expect(restoringMessage(files.slice(0, 2), 's3')).toContain('S3 is restoring 2 files')
+    expect(restoringMessage(files.slice(0, 1), 'azure')).toContain('Azure is rehydrating a.pdf')
+  })
+
+  it('says what deleting does on each platform', () => {
+    expect(deleteWarning('s3', 'archive', 1)).toBe(
+      "is deleted from the bucket archive. The app can't bring it back."
+    )
+    expect(deleteWarning('azure', 'backups', 2)).toContain('are deleted from the container backups')
+    expect(deleteWarning('google-drive', 'Photos', 1)).toBe(
+      'goes to the Google Drive trash, where it stays for 30 days.'
+    )
   })
 
   it('lists the first five names, then how many more', () => {

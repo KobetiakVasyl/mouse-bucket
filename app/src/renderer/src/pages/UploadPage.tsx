@@ -1,6 +1,11 @@
-// The Upload page: pick an upload template and a storage class, see the upload settings, then pick or drop files and folders. See docs/UI.md.
+// The Upload page: pick an upload template and, on S3 or Azure, a storage class or access tier, see the upload settings,
+// then pick or drop files and folders. See docs/UI.md.
 import { useState } from 'react'
-import type { UploadStorageClass } from '../../../shared/types/s3-types'
+import type {
+  AccessTier,
+  UploadClass,
+  UploadStorageClass
+} from '../../../shared/types/storage-types'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
 import { NOTHING_DROPPED_MESSAGE } from '../constants/upload-constants'
@@ -23,20 +28,25 @@ import { ChooseFilesIcon, ChooseFolderIcon } from '../theme/components/icons'
 export function UploadPage({
   templates,
   transfers,
-  defaultStorageClass
+  defaultStorageClass,
+  defaultAccessTier
 }: {
   templates: Template[]
   transfers: Transfer[]
   defaultStorageClass: UploadStorageClass
+  defaultAccessTier: AccessTier
 }): React.JSX.Element {
   const [selectedId, setSelectedId] = useState(() => sortByName(templates)[0].id)
   const [storageClass, setStorageClass] = useState(defaultStorageClass)
+  const [accessTier, setAccessTier] = useState(defaultAccessTier)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string>()
   const [error, setError] = useState<string>()
   const template = selectedTemplate(templates, selectedId)
 
-  const request = { templateId: template.id, storageClass }
+  const uploadClass: UploadClass =
+    template.platform === 's3' ? storageClass : template.platform === 'azure' ? accessTier : null
+  const request = { templateId: template.id, storageClass: uploadClass }
 
   // A cancelled picker queues nothing and says nothing; a drop that brought nothing says so.
   const queue = async (pick: () => Promise<number>, nothing?: string): Promise<void> => {
@@ -54,12 +64,14 @@ export function UploadPage({
   }
 
   return (
-    <PageLayout title="Upload" description="Files keep their names on the way to the bucket.">
+    <PageLayout title="Upload" description="Files keep their names on the way to the cloud.">
       <TemplatePicker templates={templates} selectedId={selectedId} onSelect={setSelectedId} />
       <UploadSettings
         template={template}
         storageClass={storageClass}
+        accessTier={accessTier}
         onStorageClassChange={setStorageClass}
+        onAccessTierChange={setAccessTier}
       />
 
       <DropZone

@@ -16,8 +16,7 @@ const UPLOAD: NewTransferRecord = {
   kind: 'upload',
   templateId: TEMPLATE_ID,
   templateName: 'Reports',
-  bucket: 'bucket-one',
-  region: 'eu-west-1',
+  place: { platform: 's3', bucket: 'bucket-one', region: 'eu-west-1' },
   key: 'reports/a.bin',
   name: 'a.bin',
   storageClass: 'DEEP_ARCHIVE',
@@ -32,8 +31,7 @@ const DOWNLOAD: Omit<DownloadRecord, 'id'> = {
   kind: 'download',
   templateId: TEMPLATE_ID,
   templateName: 'Archive',
-  bucket: 'bucket-two',
-  region: 'eu-west-1',
+  place: { platform: 's3', bucket: 'bucket-two', region: 'eu-west-1' },
   key: 'b.zip',
   name: 'b.zip',
   targetPath: '/home/me/Downloads/b.zip',
@@ -164,7 +162,7 @@ describe('TransferService', () => {
         { status: 'failed', error: 'That template no longer exists.' },
         {
           status: 'failed',
-          error: "Couldn't reach AWS. Check the internet connection and try again."
+          error: "Couldn't reach the storage service. Check the internet connection and try again."
         }
       ])
     )

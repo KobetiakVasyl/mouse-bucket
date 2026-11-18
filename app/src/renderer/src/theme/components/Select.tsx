@@ -1,12 +1,15 @@
 // A labelled drop-down drawn in the app's style instead of the system's: a box that shows the chosen option, and a list
-// below it that works with the mouse and the keyboard, with an optional hint below the box. See docs/UI.md.
+// below it that works with the mouse and the keyboard, with an optional hint below the box. The label and each option
+// may have a badge, such as Beta. See docs/UI.md.
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react'
 import type { ChoiceOption } from '../../types/component-types'
 import { FOCUS } from '../styles/style-constants'
+import { Badge } from './Badge'
 import { CaretDownIcon, CheckIcon } from './icons'
 
 export function Select<T extends string>({
   label,
+  labelBadge,
   options,
   value,
   placeholder = '',
@@ -15,6 +18,7 @@ export function Select<T extends string>({
   onChange
 }: {
   label: string
+  labelBadge?: string
   options: ChoiceOption<T>[]
   value: T | null
   placeholder?: string
@@ -76,8 +80,9 @@ export function Select<T extends string>({
 
   return (
     <div className={className}>
-      <span id={`${id}-label`} className="mb-1 block font-semibold">
+      <span id={`${id}-label`} className="mb-1 flex items-center gap-2 font-semibold">
         {label}
+        {labelBadge !== undefined && <Badge label={labelBadge} />}
       </span>
       <div className="relative max-w-md">
         <div
@@ -94,8 +99,11 @@ export function Select<T extends string>({
           onKeyDown={onKeyDown}
           onBlur={() => setOpen(false)}
         >
-          <span className={`min-w-0 truncate ${chosen === undefined ? 'text-muted' : ''}`}>
-            {chosen === undefined ? placeholder : chosen.label}
+          <span
+            className={`flex min-w-0 items-center gap-2 ${chosen === undefined ? 'text-muted' : ''}`}
+          >
+            <span className="truncate">{chosen === undefined ? placeholder : chosen.label}</span>
+            {chosen?.badge !== undefined && <Badge label={chosen.badge} />}
           </span>
           <CaretDownIcon className={`text-muted ${open ? 'rotate-180' : ''}`} />
         </div>
@@ -122,7 +130,10 @@ export function Select<T extends string>({
                 onClick={() => choose(index)}
               >
                 <span className="min-w-0 flex-1">
-                  <span className={`block ${selected ? 'font-semibold' : ''}`}>{option.label}</span>
+                  <span className={`flex items-center gap-2 ${selected ? 'font-semibold' : ''}`}>
+                    {option.label}
+                    {option.badge !== undefined && <Badge label={option.badge} />}
+                  </span>
                   {option.detail !== undefined && (
                     <span className="block truncate text-sm text-muted">{option.detail}</span>
                   )}

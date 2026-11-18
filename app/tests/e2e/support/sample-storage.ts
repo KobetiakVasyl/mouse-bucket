@@ -1,9 +1,10 @@
-// Sample S3 answers for end-to-end tests: main's S3 and transfer handlers are swapped for fixed data, so tests never reach AWS. See docs/ARCHITECTURE.md.
-import type { FolderListing, S3File } from '../../../src/shared/types/s3-types'
+// Sample storage answers for end-to-end tests: main's storage, template and transfer handlers are swapped for fixed
+// data, so tests never reach AWS, Azure or Google. See docs/ARCHITECTURE.md.
+import type { FolderListing, StoredFile } from '../../../src/shared/types/storage-types'
 import type { Transfer } from '../../../src/shared/types/transfer-types'
 
-export interface SampleS3 {
-  // Listings by folder prefix, '' for the top of the bucket.
+export interface SampleStorage {
+  // Listings by folder, '' for the top of the template.
   listings: Record<string, FolderListing>
 }
 
@@ -11,8 +12,8 @@ const file = (
   key: string,
   size: number,
   storageClass: string,
-  access: S3File['access']
-): S3File => ({
+  access: StoredFile['access']
+): StoredFile => ({
   key,
   name: key.slice(key.lastIndexOf('/') + 1),
   size,
@@ -21,10 +22,10 @@ const file = (
   access
 })
 
-export const SAMPLE: SampleS3 = {
+export const SAMPLE: SampleStorage = {
   listings: {
     '': {
-      folders: ['photos/'],
+      folders: [{ id: 'photos/', name: 'photos' }],
       files: [
         file('backup.tar.gz', 3_435_973_837, 'DEEP_ARCHIVE', { state: 'archived' }),
         file('contracts.zip', 545_259_520, 'GLACIER', {
@@ -45,9 +46,9 @@ export const SAMPLE: SampleS3 = {
 }
 
 // Runs inside the app's main process through Playwright, so it can use only its arguments.
-export function installSampleS3(
+export function installSampleStorage(
   { app, ipcMain, BrowserWindow }: typeof import('electron'),
-  sample: SampleS3
+  sample: SampleStorage
 ): void {
   const listings = structuredClone(sample.listings)
   const transfers: Transfer[] = []
@@ -65,7 +66,7 @@ export function installSampleS3(
       typeof payload === 'object' && payload !== null ? Reflect.get(payload, name) : undefined
     return typeof value === 'string' ? value : ''
   }
-  const changeFile = (key: string, change: (file: S3File) => S3File | null): void => {
+  const changeFile = (key: string, change: (file: StoredFile) => StoredFile | null): void => {
     for (const listing of Object.values(listings)) {
       listing.files = listing.files.flatMap((candidate) => {
         if (candidate.key !== key) return [candidate]
@@ -76,7 +77,7 @@ export function installSampleS3(
   }
 
   replace('download:list', (payload) => {
-    const listing = listings[field(payload, 'prefix')]
+    const listing = listings[field(payload, 'folder')]
     return listing === undefined ? { folders: [], files: [], nextToken: null } : listing
   })
   replace('download:delete', (payload) => {
@@ -164,15 +165,34 @@ export function installSampleS3(
   replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
   // CI's Linux runner has no keyring, so the app would refuse to store keys. The tests need the forms enabled.
   replace('app:status', () => ({ encryptionAvailable: true, version: app.getVersion() }))
+  // A new template as main would save it, without asking the platform; Google's sign-in is skipped too.
   replace('templates:create', (payload) => {
-    const location = field(payload, 'location').replace(/^s3:\/\//, '')
-    const slash = location.indexOf('/')
-    return {
+    const base = {
       id: crypto.randomUUID(),
       name: field(payload, 'name'),
-      kind: field(payload, 'kind'),
-      bucket: slash === -1 ? location : location.slice(0, slash),
-      prefix: slash === -1 ? '' : location.slice(slash + 1),
+      kind: field(payload, 'kind')
+    }
+    const parts = field(payload, 'location')
+      .replace(/^(s3|https?):\/\//, '')
+      .split('/')
+      .filter(Boolean)
+    if (field(payload, 'platform') === 'azure') {
+      return {
+        ...base,
+        platform: 'azure',
+        account: parts[0].split('.')[0],
+        container: parts[1],
+        prefix: parts.length > 2 ? `${parts.slice(2).join('/')}/` : ''
+      }
+    }
+    if (field(payload, 'platform') === 'google-drive') {
+      return { ...base, platform: 'google-drive', folderId: 'root', folderName: 'My Drive' }
+    }
+    return {
+      ...base,
+      platform: 's3',
+      bucket: parts[0],
+      prefix: parts.length > 1 ? `${parts.slice(1).join('/')}/` : '',
       region: 'eu-west-1'
     }
   })

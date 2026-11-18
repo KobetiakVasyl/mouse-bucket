@@ -7,13 +7,13 @@ import type {
   UploadRecordSchema
 } from '../validation/data-file-validation'
 
-// A download, enough to resume it: the S3 object's ETag and size are known once it starts.
+// A download, enough to resume it: the file's version and size are known once it starts.
 export type DownloadRecord = z.infer<typeof DownloadRecordSchema>
 
-// One part S3 confirmed of a multipart upload.
+// One part the platform confirmed of an upload.
 export type UploadPart = z.infer<typeof UploadPartSchema>
 
-// An upload, enough to resume it: its multipart upload and the parts S3 already has.
+// An upload, enough to resume it: the platform's handle on it and the parts the platform already has.
 export type UploadRecord = z.infer<typeof UploadRecordSchema>
 
 export type TransferRecord = DownloadRecord | UploadRecord
@@ -23,7 +23,7 @@ export type NewTransferRecord = Omit<DownloadRecord, 'id'> | Omit<UploadRecord, 
 export interface TransferRunContext {
   signal: AbortSignal
   progress(bytesDone: number, bytesTotal: number): void
-  // Keeps what the run learned, such as the ETag or a confirmed part, so a later run can resume from it.
+  // Keeps what the run learned, such as the file's version or a confirmed part, so a later run can resume from it.
   save(record: TransferRecord): void
 }
 

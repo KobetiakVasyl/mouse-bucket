@@ -20,6 +20,7 @@ const api: Api = {
   createTemplate: (template) => invoke(Channel.templatesCreate, template),
   updateTemplate: (edit) => invoke(Channel.templatesUpdate, edit),
   deleteTemplate: (id) => invoke(Channel.templatesDelete, id),
+  cancelSignIn: () => invoke(Channel.templatesCancelSignIn),
   chooseFilesToUpload: (request) => invoke(Channel.uploadChooseFiles, request),
   chooseFolderToUpload: (request) => invoke(Channel.uploadChooseFolder, request),
   // A dropped file's path comes from the file itself; a file the page made has none, and is left out. See docs/SECURITY.md.

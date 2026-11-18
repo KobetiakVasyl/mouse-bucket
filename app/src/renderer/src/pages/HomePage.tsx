@@ -43,7 +43,7 @@ export function HomePage({
           available={canUpload}
           description={
             canUpload
-              ? 'Send files from this computer to a bucket folder.'
+              ? 'Send files from this computer to a folder in the cloud.'
               : 'Add an upload template first.'
           }
           onClick={() => onNavigate('upload')}
@@ -54,7 +54,7 @@ export function HomePage({
           available={canDownload}
           description={
             canDownload
-              ? 'Browse a bucket, then download, restore or delete its files.'
+              ? 'Browse a bucket, container or Drive folder, then download, restore or delete its files.'
               : 'Add a download template first.'
           }
           onClick={() => onNavigate('download')}

@@ -1,6 +1,6 @@
 // Asks main to pick files or a folder, or to take dropped ones, and queue them for upload to a template. See docs/ARCHITECTURE.md.
 import type { Api } from '../../../shared/types/ipc-types'
-import type { UploadRequest } from '../../../shared/types/s3-types'
+import type { UploadRequest } from '../../../shared/types/storage-types'
 
 export class UploadService {
   constructor(

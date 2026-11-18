@@ -7,7 +7,7 @@ import type {
   RestoreRequest,
   UploadPathsRequest,
   UploadRequest
-} from './s3-types'
+} from './storage-types'
 import type { Settings, SettingsUpdate } from './settings-types'
 import type { NewTemplate, Template, TemplateEdit } from './template-types'
 import type { Transfer } from './transfer-types'
@@ -32,6 +32,7 @@ export interface Requests {
   'templates:create': NewTemplate
   'templates:update': TemplateEdit
   'templates:delete': string
+  'templates:cancelSignIn': undefined
   'upload:chooseFiles': UploadRequest
   'upload:chooseFolder': UploadRequest
   'upload:paths': UploadPathsRequest
@@ -59,6 +60,8 @@ export interface Responses {
   'templates:create': Template
   'templates:update': Template
   'templates:delete': void
+  // Stops a Google sign-in that's waiting in the browser, so adding the template fails.
+  'templates:cancelSignIn': void
   // How many files were queued; 0 when the dialog was cancelled.
   'upload:chooseFiles': number
   'upload:chooseFolder': number
@@ -90,6 +93,7 @@ export interface Api {
   createTemplate(template: NewTemplate): Promise<Template>
   updateTemplate(edit: TemplateEdit): Promise<Template>
   deleteTemplate(id: string): Promise<void>
+  cancelSignIn(): Promise<void>
   chooseFilesToUpload(request: UploadRequest): Promise<number>
   chooseFolderToUpload(request: UploadRequest): Promise<number>
   // The preload reads the dropped files' paths, so the page never handles them.

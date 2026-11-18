@@ -1,19 +1,30 @@
-// What the Download page shows for a place, a folder and a file. See docs/UI.md.
-import type { FileAccess, FolderListing, RestoreTier, S3File } from '../../../shared/types/s3-types'
+// What the Browse page shows for a place, a folder and a file, on each platform. See docs/UI.md.
+import type {
+  FileAccess,
+  FolderListing,
+  RestoreTier,
+  StoredFile
+} from '../../../shared/types/storage-types'
+import type { Platform } from '../../../shared/types/template-types'
 import {
   ARCHIVE_CLASSES_SLOWEST_FIRST,
   DOWNLOADABLE_STATES,
   LISTED_NAMES,
   RESTORE_TIMES
 } from '../constants/download-constants'
-import type { FolderCrumb, FolderPlace } from '../types/download-types'
+import type { FolderPlace } from '../types/download-types'
 import { formatDate } from './format-utils'
 
-export function samePlace(a: FolderPlace, b: FolderPlace): boolean {
-  return a.templateId === b.templateId && a.prefix === b.prefix
+// The folder a place lists: the last one opened, or '' for the template's top.
+export function folderOf(place: FolderPlace): string {
+  return place.path.length === 0 ? '' : place.path[place.path.length - 1].id
 }
 
-export function isDownloadable(file: S3File): boolean {
+export function samePlace(a: FolderPlace, b: FolderPlace): boolean {
+  return a.templateId === b.templateId && folderOf(a) === folderOf(b)
+}
+
+export function isDownloadable(file: StoredFile): boolean {
   return DOWNLOADABLE_STATES.has(file.access.state)
 }
 
@@ -28,18 +39,9 @@ export function accessNote(access: FileAccess): string {
       return 'Restoring…'
     case 'restored':
       return `Restored until ${formatDate(access.until)}`
+    case 'unavailable':
+      return access.reason
   }
-}
-
-// Each folder on the way to `prefix`, for the breadcrumb.
-export function folderCrumbs(prefix: string): FolderCrumb[] {
-  const parts = prefix.split('/').filter((part) => part !== '')
-  return parts.map((name, index) => ({ name, prefix: `${parts.slice(0, index + 1).join('/')}/` }))
-}
-
-// A subfolder's name inside the folder at `prefix`, such as "photos/".
-export function folderName(folder: string, prefix: string): string {
-  return folder.slice(prefix.length)
 }
 
 export function isEmptyFolder(listing: FolderListing): boolean {
@@ -65,28 +67,28 @@ export function fileCount(count: number): string {
   return count === 1 ? '1 file' : `${count} files`
 }
 
-export function downloadableFiles(files: S3File[]): S3File[] {
+export function downloadableFiles(files: StoredFile[]): StoredFile[] {
   return files.filter(isDownloadable)
 }
 
-export function archivedFiles(files: S3File[]): S3File[] {
+export function archivedFiles(files: StoredFile[]): StoredFile[] {
   return files.filter((file) => file.access.state === 'archived')
 }
 
 // The listed files whose keys are selected, in the listing's order.
-export function selectedFiles(files: S3File[], keys: ReadonlySet<string>): S3File[] {
+export function selectedFiles(files: StoredFile[], keys: ReadonlySet<string>): StoredFile[] {
   return files.filter((file) => keys.has(file.key))
 }
 
 // The usual restore times of the slowest class among the files, or undefined when none is archived.
-export function restoreTimesFor(files: S3File[]): Record<RestoreTier, string> | undefined {
+export function restoreTimesFor(files: StoredFile[]): Record<RestoreTier, string> | undefined {
   const classes = new Set(files.map((file) => file.storageClass))
   const slowest = ARCHIVE_CLASSES_SLOWEST_FIRST.find((storageClass) => classes.has(storageClass))
   return slowest === undefined ? undefined : RESTORE_TIMES.get(slowest)
 }
 
 // The first few names, then how many more there are.
-export function namesWithMore(files: S3File[]): string {
+export function namesWithMore(files: StoredFile[]): string {
   const names = files.slice(0, LISTED_NAMES).map((file) => file.name)
   const more = files.length - names.length
   return more === 0 ? names.join(', ') : `${names.join(', ')} and ${more} more`
@@ -96,12 +98,28 @@ export function downloadsStartedMessage(count: number): string {
   return `Downloading ${fileCount(count)}. They're in the transfers below.`
 }
 
-export function deletedMessage(files: S3File[]): string {
-  return files.length === 1 ? `Deleted ${files[0].name}.` : `Deleted ${fileCount(files.length)}.`
+// Google Drive moves deleted files to its trash.
+export function deletedMessage(files: StoredFile[], platform: Platform): string {
+  const what = files.length === 1 ? files[0].name : fileCount(files.length)
+  return platform === 'google-drive' ? `Moved ${what} to the trash.` : `Deleted ${what}.`
 }
 
-export function restoringMessage(files: S3File[]): string {
-  return files.length === 1
-    ? `S3 is restoring ${files[0].name}. Download it once the list shows it as restored.`
-    : `S3 is restoring ${fileCount(files.length)}. Download them once the list shows them as restored.`
+// What deleting does to the files on each platform, after their names in the Delete dialog.
+export function deleteWarning(platform: Platform, root: string, count: number): string {
+  const one = count === 1
+  if (platform === 'google-drive') {
+    return `${one ? 'goes' : 'go'} to the Google Drive trash, where ${one ? 'it stays' : 'they stay'} for 30 days.`
+  }
+  const where = platform === 's3' ? `the bucket ${root}` : `the container ${root}`
+  return `${one ? 'is' : 'are'} deleted from ${where}. The app can't bring ${one ? 'it' : 'them'} back.`
+}
+
+// S3 restores a temporary copy; Azure rehydrates the blob into another tier, after which it's simply available.
+export function restoringMessage(files: StoredFile[], platform: Platform): string {
+  const what = files.length === 1 ? files[0].name : fileCount(files.length)
+  const it = files.length === 1 ? 'it' : 'them'
+  if (platform === 'azure') {
+    return `Azure is rehydrating ${what}. Download ${it} once the list no longer shows ${it} as archived.`
+  }
+  return `S3 is restoring ${what}. Download ${it} once the list shows ${it} as restored.`
 }

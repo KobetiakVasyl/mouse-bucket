@@ -80,6 +80,7 @@ export default function App(): React.JSX.Element {
         templates={templatesOfKind(templates, 'upload')}
         transfers={transfers}
         defaultStorageClass={settings.defaultStorageClass}
+        defaultAccessTier={settings.defaultAccessTier}
       />
     ),
     download: () => (

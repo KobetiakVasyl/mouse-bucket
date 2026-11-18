@@ -1,4 +1,12 @@
-import { downloadTemplate, expect, openFromHome, test, uploadTemplate } from '../../../support/app'
+import {
+  azureTemplate,
+  downloadTemplate,
+  driveTemplate,
+  expect,
+  openFromHome,
+  test,
+  uploadTemplate
+} from '../../../support/app'
 
 test.use({
   setup: {
@@ -25,7 +33,7 @@ test('shows each file’s storage class and what archived files need', async ({ 
 })
 
 test('opens a folder', async ({ page }) => {
-  await page.getByRole('button', { name: 'photos/' }).click()
+  await page.getByRole('button', { name: 'photos', exact: true }).click()
   await expect(page.getByRole('row', { name: /beach\.jpg/ })).toBeVisible()
   await expect(page.getByRole('navigation', { name: 'Folder' })).toContainText('photos')
 })
@@ -96,4 +104,49 @@ test('downloads, restores and deletes the selected files', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Deleted 4 files.')
   await expect(page.getByRole('row', { name: /invoice\.pdf/ })).toBeHidden()
   await expect(bar).toBeHidden()
+})
+
+test.describe('on Azure', () => {
+  test.use({
+    setup: { templates: [azureTemplate('Backups')], settings: { welcomeSeen: true } }
+  })
+
+  test('shows access tiers, and rehydrates into a tier at a priority', async ({ page }) => {
+    await expect(page.getByRole('columnheader', { name: 'Access tier' })).toBeVisible()
+    await expect(page.getByRole('navigation', { name: 'Folder' })).toContainText('backups')
+    await page
+      .getByRole('row', { name: /backup\.tar\.gz/ })
+      .getByRole('button', { name: 'Restore' })
+      .click()
+    const dialog = page.getByRole('dialog', { name: 'Restore from the archive' })
+    await expect(
+      dialog.getByRole('group', { name: 'Tier' }).getByRole('button', { name: 'Hot' })
+    ).toHaveAttribute('aria-pressed', 'true')
+    await dialog
+      .getByRole('group', { name: 'Priority' })
+      .getByRole('button', { name: 'High' })
+      .click()
+    await expect(dialog.getByText('Usually ready within an hour')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Restore' }).click()
+    await expect(page.getByRole('status')).toContainText('Azure is rehydrating backup.tar.gz')
+  })
+})
+
+test.describe('on Google Drive', () => {
+  test.use({
+    setup: { templates: [driveTemplate('Family')], settings: { welcomeSeen: true } }
+  })
+
+  test('has no storage column, and moves deleted files to the trash', async ({ page }) => {
+    await expect(page.getByRole('columnheader', { name: 'Storage class' })).toBeHidden()
+    await expect(page.getByRole('navigation', { name: 'Folder' })).toContainText('Family photos')
+    await page
+      .getByRole('row', { name: /invoice\.pdf/ })
+      .getByRole('button', { name: 'Delete' })
+      .click()
+    const dialog = page.getByRole('dialog', { name: 'Delete this file?' })
+    await expect(dialog).toContainText('goes to the Google Drive trash')
+    await dialog.getByRole('button', { name: 'Delete' }).click()
+    await expect(page.getByRole('status')).toHaveText('Moved invoice.pdf to the trash.')
+  })
 })

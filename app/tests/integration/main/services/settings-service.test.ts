@@ -28,6 +28,7 @@ describe('SettingsService', () => {
       theme: 'dark',
       welcomeSeen: false,
       defaultStorageClass: 'DEEP_ARCHIVE',
+      defaultAccessTier: 'Archive',
       defaultRestoreTier: 'Bulk',
       defaultRestoreDays: 7,
       downloadFolder: downloads
@@ -41,6 +42,7 @@ describe('SettingsService', () => {
       theme: 'light',
       welcomeSeen: true,
       defaultStorageClass: 'STANDARD',
+      defaultAccessTier: 'Archive',
       defaultRestoreTier: 'Bulk',
       defaultRestoreDays: 7,
       downloadFolder: downloads
@@ -63,6 +65,7 @@ describe('SettingsService', () => {
       theme: 'light',
       welcomeSeen: true,
       defaultStorageClass: 'DEEP_ARCHIVE',
+      defaultAccessTier: 'Archive',
       defaultRestoreTier: 'Bulk',
       defaultRestoreDays: 7,
       downloadFolder: downloads

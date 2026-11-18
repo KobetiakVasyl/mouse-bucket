@@ -17,8 +17,7 @@ const record = (): TransferRecord => ({
   id: '11111111-2222-4333-8444-555555555555',
   templateId: '7d1c3f5e-1b2a-4c3d-8e9f-0a1b2c3d4e5f',
   templateName: 'Archive',
-  bucket: 'bucket-one',
-  region: 'eu-west-1',
+  place: { platform: 's3', bucket: 'bucket-one', region: 'eu-west-1' },
   key: 'big.iso',
   name: 'big.iso',
   kind: 'download',
@@ -35,6 +34,18 @@ describe('TransferStoreService', () => {
     expect(await store.load()).toEqual([record()])
     store.saveSync([])
     expect(await store.load()).toEqual([])
+  })
+
+  it('reads a transfer saved with only a bucket and region as an S3 one', async () => {
+    const path = join(dir, 'transfers.json')
+    const { place, ...rest } = record()
+    await writeFile(
+      path,
+      JSON.stringify([
+        { ...rest, bucket: place.platform === 's3' ? place.bucket : '', region: 'eu-west-1' }
+      ])
+    )
+    expect(await new TransferStoreService(path).load()).toEqual([record()])
   })
 
   it('treats a damaged or invalid file as no transfers', async () => {

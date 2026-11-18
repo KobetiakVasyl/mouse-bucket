@@ -1,9 +1,17 @@
-// The Browse page: pick a download template, browse its bucket, then download, restore or delete one file or the selected ones. See docs/UI.md.
+// The Browse page: pick a download template, browse its bucket, container or Drive folder, then download, restore or
+// delete one file or the selected ones. See docs/UI.md.
 import { useCallback, useEffect, useState } from 'react'
-import type { FolderListing, RestoreTier, S3File } from '../../../shared/types/s3-types'
+import type {
+  FolderEntry,
+  FolderListing,
+  RestoreOptions,
+  RestoreTier,
+  StoredFile
+} from '../../../shared/types/storage-types'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
 import { NO_SELECTION } from '../constants/download-constants'
+import { STORAGE_HEADINGS } from '../constants/platform-constants'
 import { downloadService } from '../services/download-service'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
 import { PageLayout } from '../theme/components/PageLayout'
@@ -12,6 +20,7 @@ import { StatusMessage } from '../theme/components/StatusMessage'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { FolderBreadcrumb } from '../theme/compositions/FolderBreadcrumb'
 import { FolderTable } from '../theme/compositions/FolderTable'
+import { RehydrateDialog } from '../theme/compositions/RehydrateDialog'
 import { RestoreDialog } from '../theme/compositions/RestoreDialog'
 import { SelectionBar } from '../theme/compositions/SelectionBar'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
@@ -20,15 +29,18 @@ import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-typ
 import {
   appendListing,
   deletedMessage,
+  deleteWarning,
   downloadsStartedMessage,
   downloadStartedMessage,
   fileCount,
+  folderOf,
   namesWithMore,
   restoringMessage,
   samePlace,
   selectedFiles
 } from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
+import { rootLabel } from '../utils/location-utils'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
 import { DeleteIcon } from '../theme/components/icons'
@@ -45,7 +57,7 @@ export function DownloadPage({
 }): React.JSX.Element {
   const [place, setPlace] = useState<FolderPlace>(() => ({
     templateId: sortByName(templates)[0].id,
-    prefix: ''
+    path: []
   }))
   const [shown, setShown] = useState<ShownFolder | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -62,7 +74,11 @@ export function DownloadPage({
   useEffect(() => {
     let active = true
     downloadService
-      .listFolder({ templateId: place.templateId, prefix: place.prefix, continuationToken: null })
+      .listFolder({
+        templateId: place.templateId,
+        folder: folderOf(place),
+        continuationToken: null
+      })
       .then(
         (listing) => {
           if (active) setShown({ place, state: 'loaded', listing })
@@ -82,9 +98,10 @@ export function DownloadPage({
     setSelected(NO_SELECTION)
     setPlace(next)
   }
-  const openFolder = (prefix: string): void => goTo({ templateId: place.templateId, prefix })
+  const openPath = (path: FolderEntry[]): void => goTo({ templateId: place.templateId, path })
+  const openFolder = (folder: FolderEntry): void => openPath([...place.path, folder])
 
-  const changeFiles = (change: (files: S3File[]) => S3File[]): void =>
+  const changeFiles = (change: (files: StoredFile[]) => StoredFile[]): void =>
     setShown((previous) =>
       previous !== null && previous.state === 'loaded'
         ? { ...previous, listing: { ...previous.listing, files: change(previous.listing.files) } }
@@ -106,10 +123,10 @@ export function DownloadPage({
 
   // Acts on each file in turn. If one fails, the files done so far are shown as done, and the dialog stays open with the rest.
   const runOnEach = async (
-    targets: S3File[],
-    act: (file: S3File) => Promise<void>,
+    targets: StoredFile[],
+    act: (file: StoredFile) => Promise<void>,
     showDone: (keys: ReadonlySet<string>) => void,
-    reopen: (rest: S3File[]) => void,
+    reopen: (rest: StoredFile[]) => void,
     done: string
   ): Promise<void> => {
     setDialogBusy(true)
@@ -131,7 +148,7 @@ export function DownloadPage({
     }
   }
 
-  const deleteFiles = (targets: S3File[]): Promise<void> =>
+  const deleteFiles = (targets: StoredFile[]): Promise<void> =>
     runOnEach(
       targets,
       (file) => downloadService.delete({ templateId: template.id, key: file.key }),
@@ -140,13 +157,13 @@ export function DownloadPage({
         setSelected((previous) => new Set([...previous].filter((key) => !keys.has(key))))
       },
       (rest) => setDialog({ kind: 'delete', files: rest }),
-      deletedMessage(targets)
+      deletedMessage(targets, template.platform)
     )
 
-  const restoreFiles = (targets: S3File[], tier: RestoreTier, days: number): Promise<void> =>
+  const restoreFiles = (targets: StoredFile[], options: RestoreOptions): Promise<void> =>
     runOnEach(
       targets,
-      (file) => downloadService.restore({ templateId: template.id, key: file.key, tier, days }),
+      (file) => downloadService.restore({ templateId: template.id, key: file.key, options }),
       (keys) =>
         changeFiles((listed) =>
           listed.map((file) =>
@@ -154,7 +171,7 @@ export function DownloadPage({
           )
         ),
       (rest) => setDialog({ kind: 'restore', files: rest }),
-      restoringMessage(targets)
+      restoringMessage(targets, template.platform)
     )
 
   const loadMore = async (listing: FolderListing, continuationToken: string): Promise<void> => {
@@ -162,7 +179,7 @@ export function DownloadPage({
     try {
       const next = await downloadService.listFolder({
         templateId: place.templateId,
-        prefix: place.prefix,
+        folder: folderOf(place),
         continuationToken
       })
       setShown({ place, state: 'loaded', listing: appendListing(listing, next) })
@@ -174,7 +191,7 @@ export function DownloadPage({
   }
 
   // Queues each file in turn, and stops at the first one main refuses.
-  const download = async (targets: S3File[]): Promise<void> => {
+  const download = async (targets: StoredFile[]): Promise<void> => {
     setMessage(undefined)
     setError(undefined)
     try {
@@ -200,16 +217,12 @@ export function DownloadPage({
       <TemplatePicker
         templates={templates}
         selectedId={template.id}
-        onSelect={(templateId) => goTo({ templateId, prefix: '' })}
+        onSelect={(templateId) => goTo({ templateId, path: [] })}
       />
       <Section
         title="Files"
         description={
-          <FolderBreadcrumb
-            bucket={template.bucket}
-            prefix={place.prefix}
-            onOpenFolder={openFolder}
-          />
+          <FolderBreadcrumb root={rootLabel(template)} path={place.path} onOpenPath={openPath} />
         }
         className="mt-10"
       >
@@ -226,7 +239,7 @@ export function DownloadPage({
             />
             <FolderTable
               listing={current.listing}
-              prefix={place.prefix}
+              storageHeading={STORAGE_HEADINGS[template.platform]}
               loadingMore={loadingMore}
               selected={selected}
               onSelect={select}
@@ -257,8 +270,7 @@ export function DownloadPage({
           message={
             <p>
               <strong>{namesWithMore(dialog.files)}</strong>{' '}
-              {dialog.files.length === 1 ? 'is' : 'are'} deleted from {template.bucket}. The app
-              can&apos;t bring {dialog.files.length === 1 ? 'it' : 'them'} back.
+              {deleteWarning(template.platform, rootLabel(template), dialog.files.length)}
             </p>
           }
           confirmLabel="Delete"
@@ -269,14 +281,27 @@ export function DownloadPage({
           onCancel={closeDialog}
         />
       )}
-      {dialog.kind === 'restore' && (
+      {dialog.kind === 'restore' && template.platform === 'azure' && (
+        <RehydrateDialog
+          files={dialog.files}
+          busy={dialogBusy}
+          error={dialogError}
+          onRestore={(tier, priority) =>
+            void restoreFiles(dialog.files, { platform: 'azure', tier, priority })
+          }
+          onCancel={closeDialog}
+        />
+      )}
+      {dialog.kind === 'restore' && template.platform === 's3' && (
         <RestoreDialog
           files={dialog.files}
           defaultTier={restoreDefaults.tier}
           defaultDays={restoreDefaults.days}
           busy={dialogBusy}
           error={dialogError}
-          onRestore={(tier, days) => void restoreFiles(dialog.files, tier, days)}
+          onRestore={(tier, days) =>
+            void restoreFiles(dialog.files, { platform: 's3', tier, days })
+          }
           onCancel={closeDialog}
         />
       )}

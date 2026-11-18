@@ -1,5 +1,6 @@
 // Reads and atomically writes the app's files in its data folder, one write at a time. See docs/ENVIRONMENTS.md.
-import { mkdirSync, renameSync, type Stats, writeFileSync } from 'node:fs'
+import { createHash, type Hash } from 'node:crypto'
+import { createReadStream, mkdirSync, renameSync, type Stats, writeFileSync } from 'node:fs'
 import {
   access,
   lstat,
@@ -79,6 +80,16 @@ export async function sizeOrZero(path: string): Promise<number> {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return 0
     throw error
   }
+}
+
+// An MD5 hash of the file's first `end` bytes, to go on hashing what follows them.
+export async function md5Through(path: string, end: number): Promise<Hash> {
+  const hash = createHash('md5')
+  if (end === 0) return hash
+  for await (const chunk of createReadStream(path, { start: 0, end: end - 1 })) {
+    hash.update(chunk as Buffer)
+  }
+  return hash
 }
 
 // `length` bytes of a file from `start`, for one part of an upload.

@@ -1,4 +1,5 @@
-// Browses a download template's bucket, and downloads, deletes or restores its files. See docs/ARCHITECTURE.md.
+// Browses a download template's bucket, container or Drive folder, and downloads, deletes or restores its files. See
+// docs/ARCHITECTURE.md.
 import { stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type {
@@ -6,47 +7,53 @@ import type {
   FolderListing,
   FolderRequest,
   RestoreRequest
-} from '../../shared/types/s3-types'
+} from '../../shared/types/storage-types'
 import { MAX_NAME_COPIES } from '../constants/file-name-constants'
-import { PART_FILE_SUFFIX } from '../constants/s3-constants'
-import type { BucketAccess } from '../types/credential-types'
+import type { StorageAccess } from '../types/credential-types'
+import { partPathOf } from '../utils/download-utils'
 import { UserError } from '../utils/error-utils'
 import { numberedName, saveNameFor } from '../utils/file-name-utils'
 import { pathExists } from '../utils/file-utils'
-import type { S3Service } from './s3-service'
+import { placeOf } from '../utils/storage-utils'
 import type { SettingsService } from './settings-service'
+import type { StorageService } from './storage-service'
 import type { TemplateService } from './template-service'
 import type { TransferService } from './transfer-service'
 
 export class DownloadService {
   constructor(
     private readonly templates: Pick<TemplateService, 'getOfKind' | 'accessFor'>,
-    private readonly s3: Pick<S3Service, 'listFolder' | 'deleteFile' | 'restoreFile'>,
+    private readonly storage: Pick<
+      StorageService,
+      'listFolder' | 'deleteFile' | 'restoreFile' | 'fileName'
+    >,
     private readonly transfers: Pick<TransferService, 'add' | 'downloadTargets'>,
     private readonly settings: Pick<SettingsService, 'get'>
   ) {}
 
   async listFolder({
     templateId,
-    prefix,
+    folder,
     continuationToken
   }: FolderRequest): Promise<FolderListing> {
-    return this.s3.listFolder(await this.bucketOf(templateId), prefix, continuationToken)
+    return this.storage.listFolder(await this.accessOf(templateId), folder, continuationToken)
   }
 
-  // Saves into the download folder from Settings, under a safe name from the key that no other file has. Returns that name.
+  // Saves into the download folder from Settings, under a safe name from the file's name that no other file has.
+  // Returns that name.
   async downloadFile({ templateId, key }: DownloadRequest): Promise<string> {
     const template = await this.templates.getOfKind(templateId, 'download')
+    const access = await this.templates.accessFor(template)
+    const fileName = await this.storage.fileName(access, key)
     const { downloadFolder } = await this.settings.get()
     await this.checkFolder(downloadFolder)
-    const targetPath = await this.freePath(downloadFolder, saveNameFor(key))
+    const targetPath = await this.freePath(downloadFolder, saveNameFor(fileName))
     const name = basename(targetPath)
     this.transfers.add({
       kind: 'download',
       templateId: template.id,
       templateName: template.name,
-      bucket: template.bucket,
-      region: template.region,
+      place: placeOf(template),
       key,
       name,
       targetPath,
@@ -57,14 +64,14 @@ export class DownloadService {
   }
 
   async deleteFile({ templateId, key }: DownloadRequest): Promise<void> {
-    await this.s3.deleteFile(await this.bucketOf(templateId), key)
+    await this.storage.deleteFile(await this.accessOf(templateId), key)
   }
 
-  async restoreFile({ templateId, key, tier, days }: RestoreRequest): Promise<void> {
-    await this.s3.restoreFile(await this.bucketOf(templateId), key, tier, days)
+  async restoreFile({ templateId, key, options }: RestoreRequest): Promise<void> {
+    await this.storage.restoreFile(await this.accessOf(templateId), key, options)
   }
 
-  private async bucketOf(templateId: string): Promise<BucketAccess> {
+  private async accessOf(templateId: string): Promise<StorageAccess> {
     return this.templates.accessFor(await this.templates.getOfKind(templateId, 'download'))
   }
 
@@ -85,7 +92,7 @@ export class DownloadService {
       const candidate = join(folder, numberedName(name, copy))
       if (taken.has(candidate.toLowerCase())) continue
       if (await pathExists(candidate)) continue
-      if (await pathExists(`${candidate}${PART_FILE_SUFFIX}`)) continue
+      if (await pathExists(partPathOf(candidate))) continue
       return candidate
     }
     throw new UserError(`The download folder already has too many files named ${name}.`)

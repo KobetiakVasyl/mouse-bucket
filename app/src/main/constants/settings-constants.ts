@@ -5,6 +5,7 @@ export const DEFAULT_SETTINGS: Omit<Settings, 'downloadFolder'> = {
   theme: 'dark',
   welcomeSeen: false,
   defaultStorageClass: 'DEEP_ARCHIVE',
+  defaultAccessTier: 'Archive',
   defaultRestoreTier: 'Bulk',
   defaultRestoreDays: 7
 }

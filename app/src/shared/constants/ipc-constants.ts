@@ -8,6 +8,7 @@ export const Channel = {
   templatesCreate: 'templates:create',
   templatesUpdate: 'templates:update',
   templatesDelete: 'templates:delete',
+  templatesCancelSignIn: 'templates:cancelSignIn',
   uploadChooseFiles: 'upload:chooseFiles',
   uploadChooseFolder: 'upload:chooseFolder',
   uploadPaths: 'upload:paths',

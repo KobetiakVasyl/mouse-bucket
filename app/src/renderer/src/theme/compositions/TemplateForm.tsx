@@ -1,22 +1,38 @@
-// The form that adds a template, or changes one: type, name, S3 location, and the IAM user's keys, typed in, copied,
-// or kept when changing. See docs/UI.md.
+// The form that adds a template, or changes one: platform, type, name, location, and the keys, typed in, copied from a
+// template on the same platform, or kept when changing. See docs/UI.md.
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
-import type { NewTemplate, Template, TemplateEdit } from '../../../../shared/types/template-types'
-import { PERMISSIONS } from '../../constants/permission-constants'
+import type {
+  NewTemplate,
+  Platform,
+  Template,
+  TemplateEdit
+} from '../../../../shared/types/template-types'
+import {
+  BETA_HINT,
+  ENTERED_KEYS_LABELS,
+  KEYS_LABELS,
+  LOCATION_LABELS,
+  PLATFORM_OPTIONS,
+  ROOT_NOUNS
+} from '../../constants/platform-constants'
 import {
   EDIT_KEY_SOURCE_OPTIONS,
   EMPTY_TEMPLATE_FORM,
   KEY_SOURCE_OPTIONS,
   TEMPLATE_KIND_OPTIONS
 } from '../../constants/template-constants'
+import { templateService } from '../../services/template-service'
 import type { TemplateFormTextField, TemplateFormValues } from '../../types/template-form-types'
 import { messageOf } from '../../utils/error-utils'
-import { formatS3Location } from '../../utils/s3-location-utils'
+import { templateLocation } from '../../utils/location-utils'
 import {
+  accessHint,
+  copySourcesFor,
   formFor,
   isCopyingKeys,
   locationHint,
   newTemplate,
+  signsIn,
   templateEdit
 } from '../../utils/template-form-utils'
 import { selectedTemplate, sortByName } from '../../utils/template-utils'
@@ -28,7 +44,8 @@ import { Select } from '../components/Select'
 import { StatusMessage } from '../components/StatusMessage'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
-import { AddIcon, SaveIcon } from '../components/icons'
+import { AddIcon, CancelIcon, SaveIcon } from '../components/icons'
+import { TemplateKeyFields } from './TemplateKeyFields'
 
 // onCreate and onUpdate throw when main refuses; the form then shows why and keeps what was typed.
 // The page gives the form a new key for each template it edits, so it starts from that template.
@@ -55,14 +72,16 @@ export function TemplateForm({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
   const formRef = useRef<HTMLFormElement>(null)
-  // A template can't copy its own keys; keeping them does that.
-  const copySources =
-    editing === null ? templates : templates.filter((template) => template.id !== editing.id)
+  // Keys copy only between templates on the same platform, and a template can't copy its own: keeping them does that.
+  const copySources = copySourcesFor(form, templates, editing === null ? null : editing.id)
   const copying = isCopyingKeys(form, copySources)
-  const keyOptions = (editing === null ? KEY_SOURCE_OPTIONS : EDIT_KEY_SOURCE_OPTIONS).filter(
-    (option) => option.value !== 'copied' || copySources.length > 0
-  )
-  const needsEncryption = editing === null || form.keySource !== 'kept'
+  const samePlatform = editing !== null && editing.platform === form.platform
+  const enteredLabel = ENTERED_KEYS_LABELS[form.platform][samePlatform ? 'changed' : 'added']
+  const keyOptions = (samePlatform ? EDIT_KEY_SOURCE_OPTIONS : KEY_SOURCE_OPTIONS)
+    .filter((option) => option.value !== 'copied' || copySources.length > 0)
+    .map((option) => (option.value === 'entered' ? { ...option, label: enteredLabel } : option))
+  const needsEncryption = !samePlatform || form.keySource !== 'kept'
+  const waitingForGoogle = saving && signsIn(form, copySources)
 
   // Scrolls to the section, so its title shows above the form.
   useEffect(() => {
@@ -74,6 +93,15 @@ export function TemplateForm({
     (event: ChangeEvent<HTMLInputElement>): void =>
       setForm((previous) => ({ ...previous, [field]: event.target.value }))
 
+  // Another platform needs its own keys; back on the template's own, it keeps them again.
+  const choosePlatform = (platform: Platform): void =>
+    setForm((previous) => ({
+      ...previous,
+      platform,
+      keySource: editing !== null && editing.platform === platform ? 'kept' : 'entered',
+      copyFrom: ''
+    }))
+
   const submit = async (event: FormEvent): Promise<void> => {
     event.preventDefault()
     setSaving(true)
@@ -81,7 +109,7 @@ export function TemplateForm({
     try {
       if (editing === null) {
         await onCreate(newTemplate(form, copySources))
-        setForm(EMPTY_TEMPLATE_FORM)
+        setForm({ ...EMPTY_TEMPLATE_FORM, platform: form.platform })
       } else {
         await onUpdate(templateEdit(form, editing.id, copySources))
       }
@@ -92,6 +120,10 @@ export function TemplateForm({
     }
   }
 
+  const savingLabel = waitingForGoogle
+    ? 'Waiting for Google sign-in in your browser…'
+    : `Checking the ${ROOT_NOUNS[form.platform]}…`
+
   return (
     <Section title={editing === null ? 'New template' : `Edit “${editing.name}”`}>
       <form
@@ -101,16 +133,23 @@ export function TemplateForm({
         onSubmit={(event) => void submit(event)}
       >
         <ToggleGroup
+          label="Platform"
+          options={PLATFORM_OPTIONS}
+          value={form.platform}
+          hint={BETA_HINT[form.platform]}
+          onChange={choosePlatform}
+        />
+        <ToggleGroup
           label="Type"
           options={TEMPLATE_KIND_OPTIONS}
           value={form.kind}
-          hint={`The IAM user needs ${PERMISSIONS[form.kind].summary}`}
+          hint={accessHint(form)}
           onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
         />
         <Field label="Name" hint="Shown when you choose a template, for example Reports.">
           <input className={INPUT_CLASS} value={form.name} onChange={update('name')} required />
         </Field>
-        <Field label="S3 location" hint={locationHint(form)}>
+        <Field label={LOCATION_LABELS[form.platform]} hint={locationHint(form)}>
           <input
             className={INPUT_CLASS}
             value={form.location}
@@ -122,7 +161,7 @@ export function TemplateForm({
 
         {keyOptions.length > 1 && (
           <ToggleGroup
-            label="IAM user"
+            label={KEYS_LABELS[form.platform]}
             options={keyOptions}
             value={form.keySource}
             onChange={(keySource) => setForm((previous) => ({ ...previous, keySource }))}
@@ -137,7 +176,7 @@ export function TemplateForm({
             options={sortByName(copySources).map((template) => ({
               value: template.id,
               label: template.name,
-              detail: formatS3Location(template)
+              detail: templateLocation(template)
             }))}
             value={selectedTemplate(copySources, form.copyFrom).id}
             hint="The keys are copied on this computer and never shown."
@@ -145,39 +184,24 @@ export function TemplateForm({
           />
         )}
         {form.keySource !== 'kept' && !copying && (
-          <>
-            <Field label="Access key ID">
-              <input
-                className={INPUT_CLASS}
-                value={form.accessKeyId}
-                onChange={update('accessKeyId')}
-                autoComplete="off"
-                spellCheck={false}
-                required
-              />
-            </Field>
-            <Field label="Secret access key">
-              <input
-                className={INPUT_CLASS}
-                type="password"
-                value={form.secretAccessKey}
-                onChange={update('secretAccessKey')}
-                autoComplete="off"
-                required
-              />
-            </Field>
-          </>
+          <TemplateKeyFields form={form} onChange={update} />
         )}
 
-        <div className="flex justify-end gap-3">
-          {editing !== null && <Button onClick={onCancelEdit}>Cancel</Button>}
+        <div className="flex flex-wrap justify-end gap-3">
+          {waitingForGoogle && (
+            <Button onClick={() => void templateService.cancelSignIn()}>
+              <CancelIcon />
+              Cancel sign-in
+            </Button>
+          )}
+          {editing !== null && !saving && <Button onClick={onCancelEdit}>Cancel</Button>}
           <Button
             type="submit"
             variant="primary"
             disabled={saving || (needsEncryption && !encryptionAvailable)}
           >
             {editing === null ? <AddIcon /> : <SaveIcon />}
-            {saving ? 'Checking the bucket…' : editing === null ? 'Add template' : 'Save changes'}
+            {saving ? savingLabel : editing === null ? 'Add template' : 'Save changes'}
           </Button>
         </div>
         <StatusMessage message={message} />

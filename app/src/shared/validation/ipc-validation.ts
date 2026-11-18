@@ -8,7 +8,7 @@ import {
   RestoreRequestSchema,
   UploadPathsRequestSchema,
   UploadRequestSchema
-} from './s3-validation'
+} from './storage-validation'
 import { SettingsUpdateSchema } from './settings-validation'
 import { NewTemplateSchema, TemplateEditSchema, TemplateIdSchema } from './template-validation'
 
@@ -25,6 +25,7 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.templatesCreate]: NewTemplateSchema,
   [Channel.templatesUpdate]: TemplateEditSchema,
   [Channel.templatesDelete]: TemplateIdSchema,
+  [Channel.templatesCancelSignIn]: NoPayload,
   [Channel.uploadChooseFiles]: UploadRequestSchema,
   [Channel.uploadChooseFolder]: UploadRequestSchema,
   [Channel.uploadPaths]: UploadPathsRequestSchema,
