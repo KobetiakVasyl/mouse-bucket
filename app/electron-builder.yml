@@ -1,0 +1,43 @@
+appId: io.github.kobetiakvasyl.mousebucket
+productName: MouseBucket
+directories:
+  buildResources: build
+files:
+  - '!src/*'
+  - '!data/**'
+  - '!scripts/*'
+  - '!vite-plugins/*'
+  - '!audit-allowlist.json'
+  - '!electron-builder*.yml'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml}'
+  - '!{.env,.env.*,.npmrc}'
+  - '!tsconfig*.json'
+asarUnpack:
+  - resources/**
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  enableCookieEncryption: true
+  loadBrowserProcessSpecificV8Snapshot: false
+win:
+  executableName: MouseBucket
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
+  artifactName: MouseBucket-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+linux:
+  target:
+    - AppImage
+  category: Utility
+appImage:
+  artifactName: MouseBucket-${version}.${ext}
+npmRebuild: false
