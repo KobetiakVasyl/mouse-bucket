@@ -28,9 +28,30 @@ Runs from source use the unmodified Electron binary, so the fuses don't apply th
 
 ## IPC
 
-- Every handler in main validates its payload (see the IPC rules in [ARCHITECTURE.md](ARCHITECTURE.md)). A compromised renderer can only call the typed IPC surface.
-- Error messages are redacted before they reach the renderer.
-- File paths on disk built from S3 keys are sanitized for the platform and must stay inside the target directory. Windows forbids `: * ? " < > |`, trailing dots and spaces, and reserved names such as `CON` and `NUL`. Linux forbids `/` and the NUL byte.
+Every handler in main goes through `app/src/main/ipc/guard.ts` (see the channels in [ARCHITECTURE.md](ARCHITECTURE.md#ipc)):
+
+- **Sender check:** main answers only the app's own page, by its frame's URL: the built `index.html`, or the hot-reload server's origin in staging runs from source. On Windows the path is compared ignoring case, because Chromium may spell the drive letter differently than the app was started with. Anything else gets "Request refused."
+- **Payload check:** main checks the payload against the channel's zod schema before using it, and rejects anything else, including unknown fields.
+- **Safe errors:** failures reach the renderer as a short message from `app/src/main/errors.ts`: the text of an error main raised on purpose, a fixed explanation of a known AWS or file error, or "Something went wrong" with the error's name. The raw message of an unknown error never reaches the renderer.
+
+A compromised renderer can therefore only call the typed IPC surface, with valid payloads.
+
+## File paths
+
+The renderer never handles a path on this computer:
+
+- Upload opens the system's file picker from main, and main reads the chosen files itself.
+- Download opens the system's Save dialog from main, and main writes to the path the user chose. The renderer sends only the S3 key.
+- The Save dialog's suggested name comes from the key's last part, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/file-names.ts`).
+
+## Keys at rest
+
+- Each template's IAM keys are stored in `credentials.bin` in the app data folder, encrypted by the OS through Electron's `safeStorage`: DPAPI on Windows, and the desktop's secret service, such as GNOME Keyring or KWallet, on Linux. `templates.json` holds only the S3 locations.
+- The app refuses to save keys unless OS encryption is really available. On Linux, the `basic_text` backend means no keyring is in use, so it counts as unavailable, and the Templates page says why.
+- When the OS reports that its key was rotated, the app encrypts the keys again with the new one.
+- Keys in use exist only in main's memory and in the SigV4 signatures sent to AWS over HTTPS.
+- Keys never travel to the renderer, not even to reuse them: a new template that copies another template's IAM user names only that template's ID, and main copies the keys itself.
+- Threat model: any process running as the same OS user can decrypt the keys. That matches how browsers protect saved passwords and cookies.
 
 ## Secrets
 

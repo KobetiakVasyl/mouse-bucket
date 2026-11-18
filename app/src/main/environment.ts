@@ -7,8 +7,14 @@ export type Environment = 'staging' | 'production'
 const PRODUCT_NAME = 'MouseBucket'
 const APP_ID = 'io.github.kobetiakvasyl.mousebucket'
 
+const ENVIRONMENTS: ReadonlySet<string> = new Set<Environment>(['staging', 'production'])
+
+function isEnvironment(mode: string): mode is Environment {
+  return ENVIRONMENTS.has(mode)
+}
+
 export function environmentFromMode(mode: string): Environment {
-  if (mode === 'staging' || mode === 'production') return mode
+  if (isEnvironment(mode)) return mode
   throw new Error(`Unknown build mode "${mode}". Build with --mode staging or --mode production.`)
 }
 
@@ -37,15 +43,14 @@ export interface DataDirInputs {
   appImagePath: string | undefined
 }
 
-// Where the app keeps its data: where it runs from, not the user profile. See docs/ENVIRONMENTS.md.
-export function appDataDir(inputs: DataDirInputs): string | undefined {
+// Where the app keeps its data: where it runs from, not the user profile. null means Electron's default. See docs/ENVIRONMENTS.md.
+export function appDataDir(inputs: DataDirInputs): string | null {
   const { environment, isPackaged, appPath, platform, exePath, appImagePath } = inputs
   if (!isPackaged) return join(appPath, 'data', environment)
   if (platform === 'win32') return win32.join(win32.dirname(exePath), 'data')
-  if (platform === 'linux' && appImagePath) {
-    return posix.join(posix.dirname(appImagePath), `${PRODUCT_NAME}-${environment}-data`)
-  }
-  return undefined
+  if (platform !== 'linux') return null
+  if (appImagePath === undefined) return null
+  return posix.join(posix.dirname(appImagePath), `${PRODUCT_NAME}-${environment}-data`)
 }
 
 // The hot-reload server's URL, honored only in unpackaged staging runs on localhost. See docs/SECURITY.md.
@@ -53,9 +58,11 @@ export function hotReloadUrl(
   environment: Environment,
   isPackaged: boolean,
   url: string | undefined
-): string | undefined {
-  if (environment !== 'staging' || isPackaged || !url) return undefined
+): string | null {
+  if (url === undefined) return null
+  if (isPackaged) return null
+  if (environment !== 'staging') return null
   const { protocol, hostname } = new URL(url)
-  if (protocol !== 'http:' || hostname !== 'localhost') return undefined
-  return url
+  const local = protocol === 'http:' && hostname === 'localhost'
+  return local ? url : null
 }

@@ -6,13 +6,18 @@ import { appId, productName } from './environment'
 const read = (path: string): string =>
   readFileSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)), 'utf8')
 
-function topLevel(yaml: string, key: string): string | undefined {
-  return new RegExp(`^${key}:[ \\t]*(.+)$`, 'm').exec(yaml)?.[1]?.trim()
+// A top-level YAML value, or '' when the key is missing.
+function topLevel(yaml: string, key: string): string {
+  const match = new RegExp(`^${key}:[ \\t]*(.+)$`, 'm').exec(yaml)
+  return match === null ? '' : match[1].trim()
 }
 
-function nested(yaml: string, section: string, key: string): string | undefined {
-  const block = new RegExp(`^${section}:\\r?\\n((?:[ \\t]+.*\\r?\\n?)*)`, 'm').exec(yaml)?.[1]
-  return block && new RegExp(`^[ \\t]+${key}:[ \\t]*(.+)$`, 'm').exec(block)?.[1]?.trim()
+// A value inside a top-level YAML section, or '' when either is missing.
+function nested(yaml: string, section: string, key: string): string {
+  const block = new RegExp(`^${section}:\\r?\\n((?:[ \\t]+.*\\r?\\n?)*)`, 'm').exec(yaml)
+  if (block === null) return ''
+  const match = new RegExp(`^[ \\t]+${key}:[ \\t]*(.+)$`, 'm').exec(block[1])
+  return match === null ? '' : match[1].trim()
 }
 
 describe('app identity', () => {

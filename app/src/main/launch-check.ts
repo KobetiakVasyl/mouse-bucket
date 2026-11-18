@@ -14,7 +14,7 @@ export const LaunchCheckExit = {
 
 export const LAUNCH_CHECK_TIMEOUT_MS = 30_000
 
-const RENDERED_CHECK = "document.getElementById('root')?.childElementCount > 0"
+const RENDERED_CHECK = "document.documentElement.dataset.state === 'ready'"
 
 // Polls until the page reports that React rendered something into #root.
 export async function waitUntilRendered(

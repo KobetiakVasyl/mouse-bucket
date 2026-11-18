@@ -54,6 +54,7 @@ export default defineConfig(
   },
   {
     files: ['src/renderer/**', 'src/shared/**'],
+    ignores: ['**/*.test.ts'],
     rules: { 'no-restricted-imports': ['error', noElectronOrNode] }
   },
   {

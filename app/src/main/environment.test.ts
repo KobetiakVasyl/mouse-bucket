@@ -82,7 +82,7 @@ describe('appDataDir', () => {
   })
 
   it("falls back to Electron's default folder for other packaged Linux builds", () => {
-    expect(appDataDir(base)).toBeUndefined()
+    expect(appDataDir(base)).toBeNull()
   })
 })
 
@@ -94,14 +94,14 @@ describe('hotReloadUrl', () => {
   })
 
   it('ignores it in production builds and packaged apps', () => {
-    expect(hotReloadUrl('production', false, url)).toBeUndefined()
-    expect(hotReloadUrl('staging', true, url)).toBeUndefined()
+    expect(hotReloadUrl('production', false, url)).toBeNull()
+    expect(hotReloadUrl('staging', true, url)).toBeNull()
   })
 
   it('ignores anything that is not http on localhost', () => {
-    expect(hotReloadUrl('staging', false, 'https://localhost:5173/')).toBeUndefined()
-    expect(hotReloadUrl('staging', false, 'http://example.com/')).toBeUndefined()
-    expect(hotReloadUrl('staging', false, 'http://127.0.0.1:5173/')).toBeUndefined()
-    expect(hotReloadUrl('staging', false, undefined)).toBeUndefined()
+    expect(hotReloadUrl('staging', false, 'https://localhost:5173/')).toBeNull()
+    expect(hotReloadUrl('staging', false, 'http://example.com/')).toBeNull()
+    expect(hotReloadUrl('staging', false, 'http://127.0.0.1:5173/')).toBeNull()
+    expect(hotReloadUrl('staging', false, undefined)).toBeNull()
   })
 })
