@@ -1,5 +1,6 @@
 // Starts the built app for each end-to-end test, in a throwaway folder of its own and with sample S3 data. See docs/ARCHITECTURE.md.
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import {
@@ -40,6 +41,9 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
   setup: [{ templates: [], settings: { welcomeSeen: true } }, { option: true }],
 
   app: async ({ setup }, use) => {
+    // Without a build, Electron would show an error dialog on the desktop instead of failing the test.
+    if (!existsSync(MAIN))
+      throw new Error("The app isn't built. Run the tests with npm run test:e2e.")
     await mkdir(RUNS, { recursive: true })
     const root = await mkdtemp(join(RUNS, 'run-'))
     // The app's folder decides its data folder, so this keeps tests away from app/data/ and its real keys.
