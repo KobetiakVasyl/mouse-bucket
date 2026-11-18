@@ -36,6 +36,7 @@ Run these in `app/` on the host. To check the Linux build, run the same commands
 | `npm run lint` | ESLint, including the import boundaries below |
 | `npm test` | Unit and integration tests with Vitest, started through `scripts/test.mjs` |
 | `npm run test:unit`, `npm run test:integration` | Only one of the two |
+| `npm run test:e2e` | Build in staging mode, then end-to-end tests with Playwright |
 | `npm run format`, `npm run format:check` | Prettier: rewrite, or only check (CI runs the check) |
 | `npm run audit` | npm audit, checked against `audit-allowlist.json` |
 | `npm run build:staging`, `npm run build:production` | Build without launching |
@@ -69,7 +70,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 - TypeScript strict mode. No `any`: use `unknown` and narrow it.
 - Style with Tailwind CSS, using only the theme's color roles. The theme is grayscale (black, white and shades of gray), with red only for deleting and errors, rounded corners everywhere, toggle buttons instead of radio buttons, and the bundled Montserrat as the font everywhere (see [UI.md](docs/UI.md)). Ask before adding a UI component library.
 - Ask before adding a dependency, and pin exact versions.
-- Tests live in `app/tests/`: `unit/` and `integration/` (real files in temporary folders), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test at its mirrored path.
+- Tests live in `app/tests/`: `unit/`, `integration/` (real files in temporary folders) and `e2e/` (Playwright), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test at its mirrored path.
 - Comments are a short summary plus a reference to the doc that explains the details, for example `// Blocks navigation away from the app. See docs/SECURITY.md.` The explanation lives in `docs/*.md`, not in the code.
 - Never keep legacy comments: commented-out code, notes about how something used to work, or comments that no longer match the code. Delete them whenever you touch that code.
 

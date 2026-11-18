@@ -11,7 +11,7 @@ files:
   - '!audit-allowlist.json'
   - '!electron-builder*.yml'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!vitest.config.ts'
+  - '!{vitest.config.ts,playwright.config.ts}'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml}'
   - '!{.env,.env.*,.npmrc}'
   - '!tsconfig*.json'

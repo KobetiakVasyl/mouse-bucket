@@ -48,7 +48,12 @@ jobs:
       - run: npm run lint
       - run: npm run format:check
       - run: npm test
-      - run: npx electron-vite build --mode staging
+      - name: End-to-end tests, on the staging build (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+      - name: End-to-end tests, on the staging build (Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:e2e
       - run: npx electron-vite build --mode production
 
   installers:

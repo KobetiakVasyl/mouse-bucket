@@ -5,7 +5,8 @@
     "src/**/*",
     "scripts/**/*.mjs",
     "vite-plugins/**/*",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "playwright.config.ts"
   ],
   "exclude": ["src/preload/index.ts"],
   "compilerOptions": {

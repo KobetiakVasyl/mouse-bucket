@@ -33,7 +33,7 @@ npm, Electron and electron-builder keep their download caches in `.cache/` at th
 - Electron and electron-builder: `app/scripts/with-caches.mjs` runs the `postinstall` and `dist` commands with `electron_config_cache` and `ELECTRON_BUILDER_CACHE` set to folders in `.cache/`, unless either is already set. When neither is set, it also points their temp files at `.cache/tmp/`.
 - The Linux container's image sets all three caches to its home folder (`/home/ubuntu/.cache`), so the container's temp files stay in the container too.
 - CI keeps `.cache/npm`, `.cache/electron` and `.cache/electron-builder` between runs (see [Continuous integration](#continuous-integration)).
-- Tests that write files use fresh folders under `.cache/tmp/tests/` (`app/tests/support/temp-dir.ts`), never the system's temp folder.
+- Tests that write files use fresh folders under `.cache/tmp/tests/` (`app/tests/support/temp-dir.ts`), never the system's temp folder. End-to-end tests run each copy of the app from a fresh folder under `.cache/tmp/e2e/`, and Playwright writes its output to `.cache/playwright/`.
 
 ## Separate app identity
 
@@ -92,7 +92,7 @@ The environment doesn't decide which bucket or keys the app uses. In both enviro
 
 ## Continuous integration
 
-[.github/workflows/ci.yml](../.github/workflows/ci.yml) runs on every push and pull request to `staging` and `production`, on Ubuntu 24.04 and Windows Server 2025. It runs `npm ci`, the typecheck, lint, format check and tests, and builds the app in both modes. Node comes from `.node-version`. The npm cache, and Electron's and electron-builder's downloads, are kept between runs and renewed when `app/package-lock.json` changes.
+[.github/workflows/ci.yml](../.github/workflows/ci.yml) runs on every push and pull request to `staging` and `production`, on Ubuntu 24.04 and Windows Server 2025. It runs `npm ci`, the typecheck, lint, format check, and the unit and integration tests. Then it runs the end-to-end tests, which build the app in staging mode, under `xvfb-run` on Ubuntu, and builds the app in production mode (see [ARCHITECTURE.md](ARCHITECTURE.md#tests)). Node comes from `.node-version`. The npm cache, and Electron's and electron-builder's downloads, are kept between runs and renewed when `app/package-lock.json` changes.
 
 On pushes and manual runs, CI then builds the installers for the branch's environment: staging installers from `staging`, and production installers from `production`. It builds the app with electron-vite and the installers with electron-builder, without the typecheck that `npm run dist` adds, because the first job already ran it. It builds the AppImage on Ubuntu and the Windows installer on Windows, and keeps both as workflow artifacts for 14 days. Pull requests skip this step.
 

@@ -59,7 +59,7 @@ app/                       the Electron app
   electron-builder.yml     production installers; electron-builder.staging.yml extends it for staging
   tsconfig.json            references tsconfig.node.json, tsconfig.web.json, tsconfig.scripts.json and tsconfig.tests.json
   eslint.config.mjs, .prettierrc.yaml, .prettierignore, .npmrc
-  vitest.config.ts
+  vitest.config.ts, playwright.config.ts
   audit-allowlist.json     reviewed npm audit advisories
   scripts/                 cache wrapper, test runner, launch check, dependency audit and actionlint
   vite-plugins/            build plugins, such as the third-party license notices
@@ -74,7 +74,7 @@ app/                       the Electron app
     renderer/index.html    the page, with its CSP
     renderer/src/          main.tsx, App.tsx, pages/, theme/, services/, constants/, types/, utils/,
                            validation/ and assets/fonts/
-  tests/                   unit/, integration/ and support/ (see [Tests](#tests))
+  tests/                   unit/, integration/, e2e/ and support/ (see [Tests](#tests))
 ```
 
 ## IPC
@@ -138,15 +138,22 @@ A new template can reuse another template's IAM user: main copies the keys from 
 
 ## Tests
 
-Tests live in `app/tests/`, apart from the code they test. There are two kinds, each in its own folder. Inside each one, the folders mirror `app/`, so a module's test sits at the same path: `app/src/main/services/s3-service.ts` is tested in `app/tests/unit/main/services/s3-service.test.ts`, and `app/scripts/audit-check.mjs` in `app/tests/unit/scripts/audit-check.test.ts`.
+Tests live in `app/tests/`, apart from the code they test. There are three kinds, each in its own folder. Inside each one, the folders mirror `app/`, so a module's test sits at the same path: `app/src/main/services/s3-service.ts` is tested in `app/tests/unit/main/services/s3-service.test.ts`, and `app/scripts/audit-check.mjs` in `app/tests/unit/scripts/audit-check.test.ts`.
 
 | Folder | Tests | Runs with | Command |
 |---|---|---|---|
 | `tests/unit/` | One module at a time, in memory, with S3 mocked by `aws-sdk-client-mock`. Also the checks that config files agree, such as the app's names and the Node version. | Vitest, project `unit` | `npm run test:unit` |
 | `tests/integration/` | Modules working with real files in fresh temporary folders: the settings, template and window-state services, and the uploads and downloads in `S3Service` | Vitest, project `integration` | `npm run test:integration` |
-| `tests/support/` | Helpers for both: paths into the repo, and temporary folders | | |
+| `tests/e2e/` | The built app, driven through its window the way a user would | Playwright | `npm run test:e2e` |
+| `tests/support/` | Helpers for all three: paths into the repo, and temporary folders | | |
 
-`npm test` runs the unit and integration tests. Unit and integration tests end in `.test.ts`. `app/tsconfig.tests.json` typechecks all of them.
+`npm test` runs the unit and integration tests. Unit and integration tests end in `.test.ts`, and end-to-end tests in `.spec.ts`. `app/tsconfig.tests.json` typechecks all of them.
+
+### End-to-end tests
+
+- `npm run test:e2e` builds the app in staging mode, then Playwright starts the build in `out/` with the Electron in `node_modules/`. It's the unpackaged build, because the packaged app's fuses block the debugger connection Playwright drives it through. The launch check covers the packaged app (see [ENVIRONMENTS.md](ENVIRONMENTS.md#continuous-integration)).
+- Each test starts its own copy of the app, one test at a time (`app/tests/e2e/support/app.ts`). Its app folder is a fresh folder under `.cache/tmp/e2e/` with a `package.json` that points at the build. The app keeps its data next to its folder, so each test starts with only the templates and settings it seeds, and never sees `app/data/`. The folder is deleted when the test ends.
+- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles` and `templates:create`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
 
 ## Stack
 
@@ -156,5 +163,5 @@ Tests live in `app/tests/`, apart from the code they test. There are two kinds, 
 - `@aws-sdk/client-s3` and `@aws-sdk/lib-storage`, in main only.
 - zod for the IPC payload schemas.
 - electron-builder for installers (see [PACKAGING.md](PACKAGING.md)).
-- Vitest, with `aws-sdk-client-mock` for S3.
+- Vitest, with `aws-sdk-client-mock` for S3, and Playwright for end-to-end tests.
 - ESLint (with typescript-eslint and the React plugins) and Prettier.
