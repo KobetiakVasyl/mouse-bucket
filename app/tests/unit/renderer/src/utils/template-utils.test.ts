@@ -28,16 +28,16 @@ describe('sortByName', () => {
 })
 
 describe('splitForPicker', () => {
-  it('shows up to 10 tiles and puts the rest in the drop-down', () => {
+  it('shows the first templates by name as tiles and puts the rest in the drop-down', () => {
     const many = Array.from({ length: 13 }, (_, index) =>
       template(`T${String(index).padStart(2, '0')}`)
     )
     const { tiles, more } = splitForPicker(many)
     expect(tiles).toHaveLength(PICKER_TILES)
-    expect(more.map((rest) => rest.name)).toEqual(['T10', 'T11', 'T12'])
+    expect(more.map((rest) => rest.name)).toEqual(many.slice(PICKER_TILES).map((rest) => rest.name))
   })
 
-  it('has no drop-down for 10 or fewer', () => {
+  it('has no drop-down when every template fits in the tiles', () => {
     expect(splitForPicker([template('A')]).more).toEqual([])
   })
 })

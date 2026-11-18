@@ -1,4 +1,4 @@
-// The Download page: pick a download template, browse its bucket, then download, restore or delete one file or the selected ones. See docs/UI.md.
+// The Browse page: pick a download template, browse its bucket, then download, restore or delete one file or the selected ones. See docs/UI.md.
 import { useCallback, useEffect, useState } from 'react'
 import type { FolderListing, RestoreTier, S3File } from '../../../shared/types/s3-types'
 import type { Template } from '../../../shared/types/template-types'
@@ -190,7 +190,7 @@ export function DownloadPage({
 
   return (
     <>
-      <PageHeading title="Download">
+      <PageHeading title="Browse">
         Open folders to find a file. Download saves it in your download folder; archived files need
         a restore first. Select several files to act on them together.
       </PageHeading>

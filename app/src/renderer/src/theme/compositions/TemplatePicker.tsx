@@ -1,4 +1,4 @@
-// Picks a template: the first 10 by name as tiles, any others in a drop-down. See docs/UI.md.
+// Picks a template: the first 6 by name as large tiles, any others in a drop-down. See docs/UI.md.
 import type { Template } from '../../../../shared/types/template-types'
 import { formatS3Location } from '../../utils/s3-location-utils'
 import { splitForPicker } from '../../utils/template-utils'
@@ -18,7 +18,7 @@ export function TemplatePicker({
   return (
     <section aria-label="Template">
       <h2 className="mb-3 text-xl font-semibold">Template</h2>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-4">
         {tiles.map((template) => {
           const selected = template.id === selectedId
           return (
@@ -27,9 +27,9 @@ export function TemplatePicker({
               type="button"
               aria-pressed={selected}
               onClick={() => onSelect(template.id)}
-              className={`rounded-xl border p-4 text-left ${selected ? 'border-ink bg-hover' : 'border-line bg-surface hover:border-muted hover:bg-hover'} ${FOCUS}`}
+              className={`rounded-xl border p-6 text-left ${selected ? 'border-ink bg-hover' : 'border-line bg-surface hover:border-muted hover:bg-hover'} ${FOCUS}`}
             >
-              <span className="block font-semibold">{template.name}</span>
+              <span className="mb-1 block text-xl font-semibold">{template.name}</span>
               <span className="block truncate text-sm text-muted">
                 {formatS3Location(template)}
               </span>

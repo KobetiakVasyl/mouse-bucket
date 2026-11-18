@@ -79,8 +79,8 @@ export function menuItem(page: Page, name: string): ReturnType<Page['getByRole']
   return page.getByRole('navigation', { name: 'Main menu' }).getByRole('button', { name })
 }
 
-// Opens Upload or Download through its tile on Home.
-export async function openFromHome(page: Page, tile: 'Upload' | 'Download'): Promise<void> {
+// Opens Upload or Browse through its tile on Home.
+export async function openFromHome(page: Page, tile: 'Upload' | 'Browse'): Promise<void> {
   await menuItem(page, 'Home').click()
   await page.getByRole('button', { name: new RegExp(`^${tile}`) }).click()
 }

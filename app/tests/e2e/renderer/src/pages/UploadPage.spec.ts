@@ -13,9 +13,9 @@ test.beforeEach(async ({ page }) => {
   await openFromHome(page, 'Upload')
 })
 
-test('shows ten template tiles and the rest in a drop-down', async ({ page }) => {
+test('shows six template tiles and the rest in a drop-down', async ({ page }) => {
   const picker = page.getByRole('region', { name: 'Template' })
-  await expect(picker.getByRole('button')).toHaveCount(10)
+  await expect(picker.getByRole('button')).toHaveCount(6)
   await expect(picker.getByRole('button', { name: /^A01/ })).toHaveAttribute('aria-pressed', 'true')
   await page.getByLabel('More templates').selectOption({ label: 'A12' })
   await expect(page.getByText('s3://example-bucket/a12/').last()).toBeVisible()

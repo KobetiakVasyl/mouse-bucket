@@ -26,16 +26,16 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 
 ## Layout and pages
 
-A side menu on the left lists Home, Templates, How it works and Settings, with "Show welcome page again" at the bottom. The page fills the rest of the window, and tables span its full width.
+A side menu on the left starts with the app's icon and name, then lists Home, Templates and Settings. How it works and "Show welcome page again" are at its bottom. The icon is drawn inverted in the dark theme, so its lines stay light on dark. The page fills the rest of the window, and tables span its full width.
 
 - **Welcome:** a full-window page that describes the app, with Close and How it works buttons. It shows on the first start only, until it's closed or How it works is opened, and again from the side menu.
-- **Home:** an Upload tile and a Download tile, and the transfers. A tile is disabled until a template of its type exists.
+- **Home:** an Upload tile and a Browse tile, side by side, each half the page wide and about two thirds of the window tall, then the transfers. A tile is disabled until a template of its type exists.
 - **Upload:**
   - Pick an upload template.
   - Choose the storage class with toggle buttons: Glacier Deep Archive or Standard, each with a line on what it means. It starts with the default from Settings.
   - The upload settings show where files go and how S3 stores them (see [ARCHITECTURE.md](ARCHITECTURE.md#transfers)). Tags and metadata are shown as coming soon.
   - "Choose files…" opens the system's file picker, and the chosen files join the transfers.
-- **Download:**
+- **Browse:** reached from the Browse tile.
   - Pick a download template, then browse its bucket: a breadcrumb for the folder path, then folders and files with their size, storage class and date. "Load more" fetches the next 1,000 entries.
   - Files in Glacier Flexible Retrieval or Glacier Deep Archive show whether they're archived, restoring, or restored until a date.
   - **Download** is offered for files that can be downloaded now. It saves the file into the download folder at once, and says so. When the name is taken, the new file gets a number, such as `report (2).pdf`.
@@ -50,9 +50,9 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
 - **Settings:** the dark or light theme, the storage class the Upload page starts with (Glacier Deep Archive unless changed), and the download folder (the system's Downloads folder unless changed), with "Change…" opening the system's folder picker.
 
-Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
+Upload and Browse pick a template from large tiles: the first 6 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 
-While there are no templates, Home, Upload and Download show Templates instead, so a new user lands there. Upload or Download without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
+While there are no templates, Home, Upload and Browse show Templates instead, so a new user lands there. Upload or Browse without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
 
 The transfers list shows each upload and download with its template, status, size and a progress bar:
 

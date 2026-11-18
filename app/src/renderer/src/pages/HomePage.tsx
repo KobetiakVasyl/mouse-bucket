@@ -1,4 +1,4 @@
-// The Home page: the Upload and Download tiles, and the transfers. See docs/UI.md.
+// The Home page: the Upload and Browse tiles, each half the page wide and about two thirds of the window tall, then the transfers. See docs/UI.md.
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
 import { PageHeading } from '../theme/components/PageHeading'
@@ -21,7 +21,7 @@ export function HomePage({
   return (
     <>
       <PageHeading title="Home" />
-      <div className="grid max-w-3xl grid-cols-2 gap-6">
+      <div className="grid h-[65vh] min-h-72 grid-cols-2 gap-6">
         <Tile
           title="Upload"
           available={canUpload}
@@ -33,11 +33,11 @@ export function HomePage({
           onClick={() => onNavigate('upload')}
         />
         <Tile
-          title="Download"
+          title="Browse"
           available={canDownload}
           description={
             canDownload
-              ? 'Browse a bucket and save a file to this computer.'
+              ? 'Browse a bucket, then download, restore or delete its files.'
               : 'Add a download template first.'
           }
           onClick={() => onNavigate('download')}

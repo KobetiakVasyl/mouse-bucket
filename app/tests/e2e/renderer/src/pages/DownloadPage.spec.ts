@@ -8,7 +8,7 @@ test.use({
 })
 
 test.beforeEach(async ({ page }) => {
-  await openFromHome(page, 'Download')
+  await openFromHome(page, 'Browse')
 })
 
 test('shows each file’s storage class and what archived files need', async ({ page }) => {

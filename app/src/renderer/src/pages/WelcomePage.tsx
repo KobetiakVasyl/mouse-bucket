@@ -29,7 +29,7 @@ export function WelcomePage({
             Add a template: an S3 location plus the IAM keys that reach it. Upload templates point
             at a folder, download templates at a whole bucket.
           </li>
-          <li>On the Home page, choose Upload or Download, then pick a template.</li>
+          <li>On the Home page, choose Upload or Browse, then pick a template.</li>
         </ol>
         <p className="mb-8">Your keys stay on this computer, encrypted by the operating system.</p>
         <div className="flex gap-3">

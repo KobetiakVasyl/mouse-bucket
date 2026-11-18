@@ -1,4 +1,4 @@
-// A large button with a title and a description, disabled while it isn't available. See docs/UI.md.
+// A large button that fills its space, with a title and a description, disabled while it isn't available. See docs/UI.md.
 import { FOCUS } from '../styles/style-constants'
 
 export function Tile({
@@ -17,10 +17,10 @@ export function Tile({
       type="button"
       disabled={!available}
       onClick={onClick}
-      className={`flex min-h-40 flex-col items-start rounded-2xl border border-line bg-surface p-6 text-left hover:border-muted hover:bg-hover disabled:pointer-events-none disabled:opacity-40 ${FOCUS}`}
+      className={`flex h-full flex-col items-center justify-center rounded-2xl border border-line bg-surface p-8 text-center hover:border-muted hover:bg-hover disabled:pointer-events-none disabled:opacity-40 ${FOCUS}`}
     >
-      <span className="mb-2 text-3xl font-semibold">{title}</span>
-      <span className="text-muted">{description}</span>
+      <span className="mb-3 text-4xl font-semibold">{title}</span>
+      <span className="max-w-sm text-muted">{description}</span>
     </button>
   )
 }

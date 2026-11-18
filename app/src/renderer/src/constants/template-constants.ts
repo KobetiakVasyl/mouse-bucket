@@ -3,7 +3,7 @@ import type { TemplateKind } from '../../../shared/types/template-types'
 import type { ToggleOption } from '../types/component-types'
 import type { KeySource, TemplateFormValues } from '../types/template-form-types'
 
-export const PICKER_TILES = 10
+export const PICKER_TILES = 6
 
 export const TEMPLATE_KIND_LABELS: Record<TemplateKind, string> = {
   upload: 'Upload',
