@@ -35,6 +35,19 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react(), tailwindcss(), hotReloadCsp, thirdPartyNotices({ required: true })]
+    plugins: [
+      react(),
+      tailwindcss(),
+      hotReloadCsp,
+      thirdPartyNotices({
+        required: true,
+        assets: [
+          {
+            title: 'Montserrat font 5.3.0 (OFL-1.1)',
+            licenseFile: resolve('src/renderer/src/assets/fonts/montserrat/OFL.txt')
+          }
+        ]
+      })
+    ]
   }
 })

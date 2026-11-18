@@ -21,7 +21,7 @@ describe('packageRootOf', () => {
   })
 
   it('ignores the app’s own modules', () => {
-    expect(packageRootOf('/repo/app/src/renderer/src/App.tsx')).toBeUndefined()
+    expect(packageRootOf('/repo/app/src/renderer/src/App.tsx')).toBeNull()
   })
 })
 

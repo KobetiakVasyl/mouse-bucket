@@ -1,17 +1,49 @@
-/* Black-and-white theme with Times New Roman everywhere. See docs/ARCHITECTURE.md. */
+/* Grayscale theme, dark or light, with red only for destructive actions and Montserrat everywhere. See docs/UI.md. */
 @import 'tailwindcss';
+@import './fonts.css';
 
 @theme {
   --color-*: initial;
-  --color-black: #000;
-  --color-white: #fff;
   --font-*: initial;
-  --font-serif: 'Times New Roman', Times, 'Liberation Serif', serif;
-  --default-font-family: var(--font-serif);
+  --font-sans: 'Montserrat', 'Liberation Sans', Arial, sans-serif;
+  --default-font-family: var(--font-sans);
+}
+
+/* Each role has a dark and a light shade, and components use only these roles. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-danger: var(--danger);
 }
 
 @layer base {
+  :root {
+    --paper: #f7f7f7;
+    --surface: #ffffff;
+    --hover: #ebebeb;
+    --line: #d1d1d1;
+    --muted: #595959;
+    --ink: #141414;
+    --danger: #c81e1e;
+    color-scheme: light;
+  }
+
+  :root.dark {
+    --paper: #111111;
+    --surface: #1a1a1a;
+    --hover: #262626;
+    --line: #3d3d3d;
+    --muted: #a6a6a6;
+    --ink: #f0f0f0;
+    --danger: #f26b6b;
+    color-scheme: dark;
+  }
+
   html {
-    @apply bg-white text-black;
+    @apply bg-paper text-ink;
   }
 }

@@ -1,10 +1,10 @@
 # aws-s3-desktop
 
-MouseBucket (`io.github.kobetiakvasyl.mousebucket`): an Electron desktop app for browsing one S3 bucket and uploading and downloading files with the user's own IAM keys. There is no backend: the app talks to S3 directly. It targets Linux and Windows equally. TypeScript throughout, MIT licensed, public repo.
+MouseBucket (`io.github.kobetiakvasyl.mousebucket`): an Electron desktop app for uploading files to S3 buckets and downloading files from them with the user's own IAM keys. There is no backend: the app talks to S3 directly. It targets Linux and Windows equally. TypeScript throughout, MIT licensed, public repo.
 
 ## Status
 
-The app in `app/` is scaffolded: one hardened, empty window, with no features yet (see [ARCHITECTURE.md](docs/ARCHITECTURE.md)).
+The app in `app/` uploads and downloads through templates: an S3 location plus the IAM keys that reach it. It has a welcome page, Home with Upload and Download tiles, Templates and Settings with a dark or light theme (see [UI.md](docs/UI.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md)).
 
 ## Docs
 
@@ -64,7 +64,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 ## Code conventions
 
 - TypeScript strict mode. No `any`: use `unknown` and narrow it.
-- Style with Tailwind CSS. The theme is black and white only, with Times New Roman as the font everywhere. Ask before adding a UI component library.
+- Style with Tailwind CSS, using only the theme's color roles. The theme is grayscale (black, white and shades of gray), with red only for deleting and errors, rounded corners everywhere, toggle buttons instead of radio buttons, and the bundled Montserrat as the font everywhere (see [UI.md](docs/UI.md)). Ask before adding a UI component library.
 - Ask before adding a dependency, and pin exact versions.
 - Use Vitest for tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test.
 - Comments are a short summary plus a reference to the doc that explains the details, for example `// Blocks navigation away from the app. See docs/SECURITY.md.` The explanation lives in `docs/*.md`, not in the code.

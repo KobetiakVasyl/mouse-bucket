@@ -29,9 +29,11 @@ How the app is built into installers and licensed.
 ## License
 
 - MIT. `LICENSE` is at the repo root, and `app/package.json` has `"license": "MIT"`.
-- Every npm package that ships inside the app is MIT licensed: currently React, React DOM and scheduler. Build tools don't ship, and some of them use other licenses, such as ISC, Apache-2.0 and MPL-2.0.
-- All dependencies are dev dependencies, so electron-builder packs no `node_modules`. The npm packages the app ships are bundled into its code instead. `app/vite-plugins/third-party-notices.ts` collects their license texts into `THIRD_PARTY_NOTICES.txt` next to each bundle that contains any (currently `out/renderer/`), and that file ships inside the app.
+- Every npm package that ships inside the app is MIT or Apache-2.0 licensed. React, React DOM and scheduler (in the renderer) and zod (in main) are MIT. The AWS SDK and its `@smithy` packages (in main) are Apache-2.0, which requires shipping their license and NOTICE files. Build tools don't ship, and some of them use other licenses, such as ISC and MPL-2.0.
+- The Montserrat font ships in the renderer under the SIL Open Font License 1.1, which requires shipping the license with it. Its files and `OFL.txt` are in `app/src/renderer/src/assets/fonts/montserrat/` (see [UI.md](UI.md#theme)).
+- All dependencies are dev dependencies, so electron-builder packs no `node_modules`. The npm packages the app ships are bundled into its code instead. `app/vite-plugins/third-party-notices.ts` collects their license and NOTICE texts into `THIRD_PARTY_NOTICES.txt` next to each bundle that contains any (currently `out/main/` and `out/renderer/`), and that file ships inside the app.
 - The plugin reads files named `LICENSE`, `LICENCE`, `COPYING` or `NOTICE`, optionally with a suffix such as `-MIT` and an extension such as `.md`. It warns about a bundled package without one. The renderer build fails if the plugin finds no packages at all, because the renderer always bundles React.
+- Bundled files that aren't npm packages, such as the font, are listed in `app/electron.vite.config.ts` with their license file, and the plugin adds them to the renderer's notices.
 - Electron's own license files ship with every build.
 
 ## Updates
