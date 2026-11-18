@@ -12,7 +12,7 @@ export function FolderBreadcrumb({
   onOpenFolder: (prefix: string) => void
 }): React.JSX.Element {
   return (
-    <nav aria-label="Folder" className="mt-8 mb-4 flex flex-wrap gap-x-2">
+    <nav aria-label="Folder" className="flex flex-wrap gap-x-2 text-base text-ink">
       <LinkButton onClick={() => onOpenFolder('')}>{bucket}</LinkButton>
       {folderCrumbs(prefix).map((crumb) => (
         <span key={crumb.prefix} className="flex gap-x-2">

@@ -1,19 +1,22 @@
 // The How it works page: what MouseBucket is and how each part of it works. See docs/UI.md.
 import { UPLOAD_CHECKSUM } from '../../../shared/constants/storage-constants'
 import { Card } from '../theme/components/Card'
-import { PageHeading } from '../theme/components/PageHeading'
+import { PageLayout } from '../theme/components/PageLayout'
 import { PolicyExample } from '../theme/compositions/PolicyExample'
 
 export function HowItWorksPage(): React.JSX.Element {
   return (
-    <>
-      <PageHeading title="How it works">
-        MouseBucket uploads files from this computer to Amazon S3, and downloads files from it, with
-        your own IAM user&apos;s keys. There&apos;s no account to sign up for and no server in
-        between: the app talks to AWS directly.
-      </PageHeading>
-
-      <div className="max-w-4xl space-y-6">
+    <PageLayout
+      title="How it works"
+      description={
+        <>
+          MouseBucket uploads files from this computer to Amazon S3, and downloads files from it,
+          with your own IAM user&apos;s keys. There&apos;s no account to sign up for and no server
+          in between: the app talks to AWS directly.
+        </>
+      }
+    >
+      <div className="space-y-6">
         <Card title="Templates">
           <p>
             A template is a named S3 location plus the IAM keys that reach it. You add it once on
@@ -125,7 +128,7 @@ export function HowItWorksPage(): React.JSX.Element {
             </li>
             <li>
               Keys only ever go to AWS, as the signatures on each request. Apart from AWS, the app
-              contacts only GitHub, and only when you check for updates in Settings.
+              contacts only GitHub, and only when you check for updates from the side menu.
             </li>
           </ul>
         </Card>
@@ -138,6 +141,6 @@ export function HowItWorksPage(): React.JSX.Element {
           <PolicyExample kind="download" />
         </Card>
       </div>
-    </>
+    </PageLayout>
   )
 }

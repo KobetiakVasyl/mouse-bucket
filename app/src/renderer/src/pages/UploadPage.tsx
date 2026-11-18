@@ -7,7 +7,7 @@ import { NOTHING_DROPPED_MESSAGE } from '../constants/upload-constants'
 import { uploadService } from '../services/upload-service'
 import { Button } from '../theme/components/Button'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
-import { PageHeading } from '../theme/components/PageHeading'
+import { PageLayout } from '../theme/components/PageLayout'
 import { StatusMessage } from '../theme/components/StatusMessage'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
 import { DropZone } from '../theme/compositions/DropZone'
@@ -54,8 +54,7 @@ export function UploadPage({
   }
 
   return (
-    <>
-      <PageHeading title="Upload">Files keep their names on the way to the bucket.</PageHeading>
+    <PageLayout title="Upload" description="Files keep their names on the way to the bucket.">
       <TemplatePicker templates={templates} selectedId={selectedId} onSelect={setSelectedId} />
       <UploadSettings
         template={template}
@@ -87,6 +86,6 @@ export function UploadPage({
       <StatusMessage message={message} className="mt-4" />
       <ErrorMessage message={error} />
       <TransferList transfers={transfersOfKind(transfers, 'upload')} />
-    </>
+    </PageLayout>
   )
 }

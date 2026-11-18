@@ -34,7 +34,7 @@ test('offers to copy the keys of another template', async ({ page }) => {
     .getByRole('group', { name: 'IAM user' })
     .getByRole('button', { name: 'Copy from a template' })
     .click()
-  await expect(page.getByLabel('Copy the keys of')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'Copy the keys of' })).toBeVisible()
   await expect(page.getByLabel('Access key ID')).toBeHidden()
 })
 

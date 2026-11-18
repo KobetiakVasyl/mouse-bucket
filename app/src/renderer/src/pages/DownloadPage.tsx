@@ -6,7 +6,8 @@ import type { Transfer } from '../../../shared/types/transfer-types'
 import { NO_SELECTION } from '../constants/download-constants'
 import { downloadService } from '../services/download-service'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
-import { PageHeading } from '../theme/components/PageHeading'
+import { PageLayout } from '../theme/components/PageLayout'
+import { Section } from '../theme/components/Section'
 import { StatusMessage } from '../theme/components/StatusMessage'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { FolderBreadcrumb } from '../theme/compositions/FolderBreadcrumb'
@@ -192,46 +193,55 @@ export function DownloadPage({
   }
 
   return (
-    <>
-      <PageHeading title="Browse">
-        Open folders to find a file. Download saves it in your download folder; archived files need
-        a restore first. Select several files to act on them together.
-      </PageHeading>
+    <PageLayout
+      title="Browse"
+      description="Open folders to find a file. Download saves it in your download folder; archived files need a restore first. Select several files to act on them together."
+    >
       <TemplatePicker
         templates={templates}
         selectedId={template.id}
         onSelect={(templateId) => goTo({ templateId, prefix: '' })}
       />
-      <FolderBreadcrumb bucket={template.bucket} prefix={place.prefix} onOpenFolder={openFolder} />
-
-      {current === null && <p className="text-muted">Loading…</p>}
-      {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
-      {current !== null && current.state === 'loaded' && (
-        <>
-          <SelectionBar
-            files={selectedFiles(files, selected)}
-            onDownload={(targets) => void download(targets)}
-            onRestore={(targets) => setDialog({ kind: 'restore', files: targets })}
-            onDelete={(targets) => setDialog({ kind: 'delete', files: targets })}
-            onClear={() => setSelected(NO_SELECTION)}
-          />
-          <FolderTable
-            listing={current.listing}
+      <Section
+        title="Files"
+        description={
+          <FolderBreadcrumb
+            bucket={template.bucket}
             prefix={place.prefix}
-            loadingMore={loadingMore}
-            selected={selected}
-            onSelect={select}
-            onSelectAll={(on) =>
-              setSelected(on ? new Set(files.map((file) => file.key)) : NO_SELECTION)
-            }
             onOpenFolder={openFolder}
-            onDownload={(file) => void download([file])}
-            onRestore={(file) => setDialog({ kind: 'restore', files: [file] })}
-            onDelete={(file) => setDialog({ kind: 'delete', files: [file] })}
-            onLoadMore={(token) => void loadMore(current.listing, token)}
           />
-        </>
-      )}
+        }
+        className="mt-10"
+      >
+        {current === null && <p className="text-muted">Loading…</p>}
+        {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
+        {current !== null && current.state === 'loaded' && (
+          <>
+            <SelectionBar
+              files={selectedFiles(files, selected)}
+              onDownload={(targets) => void download(targets)}
+              onRestore={(targets) => setDialog({ kind: 'restore', files: targets })}
+              onDelete={(targets) => setDialog({ kind: 'delete', files: targets })}
+              onClear={() => setSelected(NO_SELECTION)}
+            />
+            <FolderTable
+              listing={current.listing}
+              prefix={place.prefix}
+              loadingMore={loadingMore}
+              selected={selected}
+              onSelect={select}
+              onSelectAll={(on) =>
+                setSelected(on ? new Set(files.map((file) => file.key)) : NO_SELECTION)
+              }
+              onOpenFolder={openFolder}
+              onDownload={(file) => void download([file])}
+              onRestore={(file) => setDialog({ kind: 'restore', files: [file] })}
+              onDelete={(file) => setDialog({ kind: 'delete', files: [file] })}
+              onLoadMore={(token) => void loadMore(current.listing, token)}
+            />
+          </>
+        )}
+      </Section>
 
       <StatusMessage message={message} className="mt-4" />
       <ErrorMessage message={error} />
@@ -270,6 +280,6 @@ export function DownloadPage({
           onCancel={closeDialog}
         />
       )}
-    </>
+    </PageLayout>
   )
 }

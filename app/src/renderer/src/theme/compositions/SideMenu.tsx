@@ -1,18 +1,21 @@
-// The side menu: the logo and name, the app's pages, and at the bottom How it works and the way back to the welcome page. See docs/UI.md.
+// The side menu: the logo and name, the app's pages, and at the bottom How it works, checking for updates and the way
+// back to the welcome page. See docs/UI.md.
 import logo from '../../../../../resources/icon.png'
 import { MENU_FOOTER_ITEMS, MENU_ITEMS } from '../../constants/navigation-constants'
 import type { MenuItem, Page } from '../../types/navigation-types'
 import { menuPageOf } from '../../utils/navigation-utils'
 import { MENU_ITEM_CLASS } from '../styles/style-constants'
-import { WelcomeIcon } from '../components/icons'
+import { CheckUpdatesIcon, WelcomeIcon } from '../components/icons'
 
 export function SideMenu({
   current,
   onNavigate,
+  onCheckForUpdates,
   onShowWelcome
 }: {
   current: Page
   onNavigate: (page: Page) => void
+  onCheckForUpdates: () => void
   onShowWelcome: () => void
 }): React.JSX.Element {
   const marked = menuPageOf(current)
@@ -30,6 +33,7 @@ export function SideMenu({
         </button>
       </li>
     ))
+  const secondary = `${MENU_ITEM_CLASS} text-muted hover:bg-hover hover:text-ink`
   return (
     <nav
       aria-label="Main menu"
@@ -43,11 +47,13 @@ export function SideMenu({
       <ul className="mt-auto space-y-1 px-2">
         {items(MENU_FOOTER_ITEMS)}
         <li>
-          <button
-            type="button"
-            className={`${MENU_ITEM_CLASS} text-muted hover:bg-hover hover:text-ink`}
-            onClick={onShowWelcome}
-          >
+          <button type="button" className={secondary} onClick={onCheckForUpdates}>
+            <CheckUpdatesIcon />
+            Check for updates
+          </button>
+        </li>
+        <li>
+          <button type="button" className={secondary} onClick={onShowWelcome}>
             <WelcomeIcon />
             Show welcome page again
           </button>

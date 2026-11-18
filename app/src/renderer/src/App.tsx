@@ -1,4 +1,5 @@
-// The app shell: the first data load from main, the side menu, the pages and the welcome page. See docs/UI.md.
+// The app shell: the first data load from main, the side menu, the pages, the updates dialog and the welcome page. See
+// docs/UI.md.
 import { useEffect, useState } from 'react'
 import type { SettingsUpdate } from '../../shared/types/settings-types'
 import { DownloadPage } from './pages/DownloadPage'
@@ -14,6 +15,7 @@ import { templateService } from './services/template-service'
 import { themeService } from './services/theme-service'
 import { useTransfers } from './services/transfer-service'
 import { SideMenu } from './theme/compositions/SideMenu'
+import { UpdatesDialog } from './theme/compositions/UpdatesDialog'
 import type { AppData, AppLoad } from './types/app-types'
 import type { Page } from './types/navigation-types'
 import { messageOf } from './utils/error-utils'
@@ -24,6 +26,7 @@ export default function App(): React.JSX.Element {
   const [load, setLoad] = useState<AppLoad>({ state: 'loading' })
   const [page, setPage] = useState<Page>('home')
   const [welcomeOpen, setWelcomeOpen] = useState(false)
+  const [updatesOpen, setUpdatesOpen] = useState(false)
   const transfers = useTransfers()
 
   useEffect(() => {
@@ -115,7 +118,6 @@ export default function App(): React.JSX.Element {
     settings: () => (
       <SettingsPage
         settings={settings}
-        version={status.version}
         onChange={updateSettings}
         onChooseDownloadFolder={async () => {
           const next = await settingsService.chooseDownloadFolder()
@@ -127,8 +129,16 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className="flex h-screen">
-      <SideMenu current={shown} onNavigate={setPage} onShowWelcome={() => setWelcomeOpen(true)} />
+      <SideMenu
+        current={shown}
+        onNavigate={setPage}
+        onCheckForUpdates={() => setUpdatesOpen(true)}
+        onShowWelcome={() => setWelcomeOpen(true)}
+      />
       <main className="min-w-0 flex-1 overflow-y-auto p-8">{pages[shown]()}</main>
+      {updatesOpen && (
+        <UpdatesDialog version={status.version} onClose={() => setUpdatesOpen(false)} />
+      )}
       {welcomeOpen && (
         <WelcomePage
           onClose={closeWelcome}

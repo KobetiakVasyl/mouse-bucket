@@ -47,7 +47,7 @@ CI publishes the installers it builds as GitHub Releases of `KobetiakVasyl/mouse
 
 ## Updates
 
-The app updates itself from those releases, but only when asked: Settings has "Check for updates", and the app contacts GitHub at no other time (`app/src/main/services/update-service.ts`, with electron-updater).
+The app updates itself from those releases, but only when asked: "Check for updates" at the bottom of the side menu opens a dialog that checks, and the app contacts GitHub at no other time (`app/src/main/services/update-service.ts`, with electron-updater).
 
 - Only installed builds update: the Windows installer's install, and the AppImage, which is replaced by the new one. A run from source, or another Linux build, says that updates need an installed copy.
 - After a check finds a newer version, "Download the update" downloads it, showing its progress, and "Restart and install" quits the app and starts it. Quitting pauses running transfers, as always (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)). Nothing downloads or installs on its own.

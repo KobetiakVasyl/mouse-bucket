@@ -127,10 +127,12 @@ export function FolderTable({
         </tbody>
       </TableFrame>
       {nextToken !== null && (
-        <Button className="mt-4" disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
-          <LoadMoreIcon />
-          Load more
-        </Button>
+        <div className="mt-4 flex justify-end">
+          <Button disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
+            <LoadMoreIcon />
+            Load more
+          </Button>
+        </div>
       )}
     </>
   )

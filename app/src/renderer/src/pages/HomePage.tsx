@@ -5,7 +5,7 @@ import type { Transfer } from '../../../shared/types/transfer-types'
 import { FIRST_TEMPLATE_MESSAGE } from '../constants/template-constants'
 import { Button } from '../theme/components/Button'
 import { Notice } from '../theme/components/Notice'
-import { PageHeading } from '../theme/components/PageHeading'
+import { PageLayout } from '../theme/components/PageLayout'
 import { Tile } from '../theme/components/Tile'
 import { TransferList } from '../theme/compositions/TransferList'
 import type { Page } from '../types/navigation-types'
@@ -24,17 +24,16 @@ export function HomePage({
   const canUpload = hasKind(templates, 'upload')
   const canDownload = hasKind(templates, 'download')
   return (
-    <>
-      <PageHeading title="Home" />
+    <PageLayout title="Home">
       {templates.length === 0 && (
         <Notice>
-          <span className="flex flex-wrap items-center justify-between gap-3">
-            {FIRST_TEMPLATE_MESSAGE}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p>{FIRST_TEMPLATE_MESSAGE}</p>
             <Button variant="primary" onClick={() => onNavigate('templates')}>
               <AddIcon />
               Add a template
             </Button>
-          </span>
+          </div>
         </Notice>
       )}
       <div className="grid h-[65vh] min-h-72 grid-cols-2 gap-6">
@@ -62,6 +61,6 @@ export function HomePage({
         />
       </div>
       <TransferList transfers={transfers} />
-    </>
+    </PageLayout>
   )
 }

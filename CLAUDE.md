@@ -69,6 +69,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 
 - TypeScript strict mode. No `any`: use `unknown` and narrow it.
 - Style with Tailwind CSS, using only the theme's color roles. The theme is grayscale (black, white and shades of gray), with red only for deleting and errors and green only for restoring, rounded corners everywhere, toggle buttons instead of radio buttons, the bundled Montserrat as the font everywhere, and icons only from `app/src/renderer/src/theme/components/icons/`, outlined by default and always next to text (see [UI.md](docs/UI.md)). Ask before adding a UI component library.
+- Page structure: every page uses `PageLayout`, centered within a maximum width. Headers and sections show the title, then an optional subtitle, then a horizontal divider (`PageLayout`, `Section`, `Card`, `Modal`). Action buttons go on the right (see [UI.md](docs/UI.md#page-structure)).
 - Ask before adding a dependency, and pin exact versions.
 - Tests live in `app/tests/`: `unit/`, `integration/` (real files in temporary folders) and `e2e/` (Playwright), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test at its mirrored path.
 - Comments are a short summary plus a reference to the doc that explains the details, for example `// Blocks navigation away from the app. See docs/SECURITY.md.` The explanation lives in `docs/*.md`, not in the code.

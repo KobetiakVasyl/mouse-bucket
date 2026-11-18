@@ -1,17 +1,16 @@
-// Asks how fast to restore archived files and for how many days the copies stay, starting with the defaults from Settings. See docs/UI.md.
+// Asks how fast to restore archived files and for how many days the copies stay, starting with the defaults from
+// Settings. See docs/UI.md.
 import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
 import type { RestoreTier, S3File } from '../../../../shared/types/s3-types'
-import { RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
+import { RESTORE_TIER_HINTS, RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
 import { fileCount, restoreTimesFor } from '../../utils/download-utils'
-import { parseRestoreDays } from '../../validation/restore-validation'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
-import { Field } from '../components/Field'
 import { Modal } from '../components/Modal'
 import { ToggleGroup } from '../components/ToggleGroup'
-import { INPUT_CLASS } from '../styles/style-constants'
 import { RestoreIcon } from '../components/icons'
+import { RestoreDaysPicker } from './RestoreDaysPicker'
 
 export function RestoreDialog({
   files,
@@ -31,8 +30,7 @@ export function RestoreDialog({
   onCancel: () => void
 }): React.JSX.Element {
   const [tier, setTier] = useState<RestoreTier>(defaultTier)
-  const [daysText, setDaysText] = useState(String(defaultDays))
-  const days = parseRestoreDays(daysText)
+  const [days, setDays] = useState<number | null>(defaultDays)
   const times = restoreTimesFor(files)
   return (
     <Modal title="Restore from the archive" onClose={onCancel}>
@@ -50,30 +48,23 @@ export function RestoreDialog({
         AWS charges for each restore.
       </p>
       <div className="space-y-5">
-        <div>
-          <ToggleGroup
-            label="Speed"
-            options={RESTORE_TIER_OPTIONS}
-            value={tier}
-            onChange={setTier}
-          />
-          {times !== undefined && (
-            <p className="mt-1 text-sm text-muted">Usually ready {times[tier]}.</p>
-          )}
-        </div>
-        <Field
+        <ToggleGroup
+          label="Speed"
+          options={RESTORE_TIER_OPTIONS}
+          value={tier}
+          hint={
+            times === undefined
+              ? RESTORE_TIER_HINTS[tier]
+              : `Usually ready ${times[tier]}. ${RESTORE_TIER_HINTS[tier]}`
+          }
+          onChange={setTier}
+        />
+        <RestoreDaysPicker
           label="Days to keep the copy"
+          days={days}
           hint={`From ${RESTORE_DAYS.min} to ${RESTORE_DAYS.max}.`}
-        >
-          <input
-            className={INPUT_CLASS}
-            type="number"
-            min={RESTORE_DAYS.min}
-            max={RESTORE_DAYS.max}
-            value={daysText}
-            onChange={(event) => setDaysText(event.target.value)}
-          />
-        </Field>
+          onChange={setDays}
+        />
       </div>
       <div className="mt-6 flex justify-end gap-3">
         <Button onClick={onCancel} autoFocus>

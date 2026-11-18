@@ -17,7 +17,7 @@ export function WelcomePage({
       className="fixed inset-0 flex items-center justify-center bg-paper p-8"
     >
       <div className="max-w-xl rounded-2xl border border-line bg-surface p-10">
-        <h1 id="welcome-title" className="mb-6 text-4xl font-semibold">
+        <h1 id="welcome-title" className="mb-6 border-b border-line pb-4 text-4xl font-semibold">
           Welcome to MouseBucket
         </h1>
         <p className="mb-4">
@@ -33,13 +33,13 @@ export function WelcomePage({
           <li>On the Home page, choose Upload or Browse, then pick a template.</li>
         </ol>
         <p className="mb-8">Your keys stay on this computer, encrypted by the operating system.</p>
-        <div className="flex gap-3">
-          <Button variant="primary" onClick={onClose} autoFocus>
-            Close
-          </Button>
+        <div className="flex flex-wrap justify-end gap-3">
           <Button onClick={onShowHowItWorks}>
             <HelpIcon />
             How it works
+          </Button>
+          <Button variant="primary" onClick={onClose} autoFocus>
+            Close
           </Button>
         </div>
       </div>

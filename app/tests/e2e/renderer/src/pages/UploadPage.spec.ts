@@ -17,7 +17,9 @@ test('shows six template tiles and the rest in a drop-down', async ({ page }) =>
   const picker = page.getByRole('region', { name: 'Template' })
   await expect(picker.getByRole('button')).toHaveCount(6)
   await expect(picker.getByRole('button', { name: /^A01/ })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByLabel('More templates').selectOption({ label: 'A12' })
+  await page.getByRole('combobox', { name: 'More templates' }).click()
+  await page.getByRole('option', { name: /^A12/ }).click()
+  await expect(page.getByRole('combobox', { name: 'More templates' })).toHaveText('A12')
   await expect(page.getByText('s3://example-bucket/a12/').last()).toBeVisible()
 })
 
@@ -28,11 +30,12 @@ test('shows the settings every upload uses', async ({ page }) => {
 })
 
 test('starts with Deep Archive and can switch to Standard', async ({ page }) => {
-  const storageClass = page.getByLabel('Storage class')
-  await expect(storageClass).toHaveValue('DEEP_ARCHIVE')
+  const storageClass = page.getByRole('combobox', { name: 'Storage class' })
+  await expect(storageClass).toHaveText('Glacier Deep Archive')
   await expect(page.getByText(/billed for at least 180 days/)).toBeVisible()
-  await storageClass.selectOption('STANDARD')
-  await expect(storageClass).toHaveValue('STANDARD')
+  await storageClass.click()
+  await page.getByRole('option', { name: 'Standard' }).click()
+  await expect(storageClass).toHaveText('Standard')
   await expect(
     page.getByText('Files can be downloaded at once, but cost more to store.')
   ).toBeVisible()

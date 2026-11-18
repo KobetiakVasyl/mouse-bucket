@@ -12,7 +12,7 @@ The IAM policy on the user is the whole authorization boundary. Inside the app, 
 - Every permission request, such as the camera, microphone or notifications, is denied (`setPermissionRequestHandler` and `setPermissionCheckHandler` on the default session).
 - The window options, with the four `webPreferences` flags above, come from `app/src/main/utils/window-utils.ts`, and `app/tests/unit/main/utils/window-utils.test.ts` checks them.
 - No remote content is ever loaded. No telemetry, no crash reporting, no remote assets.
-- Apart from S3, main contacts only GitHub, and only when the user presses "Check for updates" in Settings. Updates are checked against the SHA-512 in the release's metadata, not a signature, since the installers aren't signed (see [PACKAGING.md](PACKAGING.md#updates)).
+- Apart from S3, main contacts only GitHub, and only when the user opens "Check for updates" from the side menu. Updates are checked against the SHA-512 in the release's metadata, not a signature, since the installers aren't signed (see [PACKAGING.md](PACKAGING.md#updates)).
 - Production builds set `webPreferences.devTools: false`. Staging builds allow DevTools (see [ENVIRONMENTS.md](ENVIRONMENTS.md)).
 
 ## Electron fuses
@@ -84,4 +84,4 @@ The secret scan only catches a credential after it's been pushed, and in a publi
 
 ## Updates
 
-The app doesn't update itself.
+The app updates itself only when asked, from the releases CI publishes on GitHub, and checks each download against the SHA-512 in the release's metadata (see [PACKAGING.md](PACKAGING.md#updates)).

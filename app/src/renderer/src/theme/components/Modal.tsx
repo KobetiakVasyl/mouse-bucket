@@ -1,4 +1,4 @@
-// A dialog over the page. Escape closes it. See docs/UI.md.
+// A dialog over the page: its title, a divider, then its content. Escape closes it. See docs/UI.md.
 import { type ReactNode, useEffect } from 'react'
 
 export function Modal({
@@ -23,9 +23,9 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="w-full max-w-lg rounded-2xl border border-line bg-surface p-8"
+        className="w-full max-w-xl rounded-2xl border border-line bg-surface p-8"
       >
-        <h2 className="mb-4 text-2xl font-semibold">{title}</h2>
+        <h2 className="mb-5 border-b border-line pb-3 text-2xl font-semibold">{title}</h2>
         {children}
       </div>
     </div>

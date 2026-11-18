@@ -23,7 +23,7 @@ export function DropZone({
         setOver(false)
         onDrop(Array.from(event.dataTransfer.files))
       }}
-      className={`mt-6 flex max-w-3xl flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-8 text-center ${over ? 'border-ink bg-hover' : 'border-line'}`}
+      className={`mt-10 flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-8 text-center ${over ? 'border-ink bg-hover' : 'border-line'}`}
     >
       <UploadIcon className="text-5xl text-muted" />
       <p className="text-lg">Drop files or folders here, or</p>

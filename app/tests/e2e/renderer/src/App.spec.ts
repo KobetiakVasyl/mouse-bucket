@@ -34,3 +34,13 @@ test.describe('with templates', () => {
     }
   })
 })
+
+test('checks for updates from the side menu, in a dialog', async ({ page }) => {
+  await menuItem(page, 'Check for updates').click()
+  const dialog = page.getByRole('dialog', { name: 'Updates' })
+  await expect(dialog).toContainText(/MouseBucket \d+\.\d+\.\d+/)
+  await expect(dialog).toContainText('Updates work only in an installed copy of the app.')
+  await expect(dialog.getByRole('button', { name: 'Download the update' })).toBeHidden()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+})

@@ -4,7 +4,8 @@ import type { NewTemplate, Template, TemplateEdit } from '../../../shared/types/
 import { FIRST_TEMPLATE_MESSAGE } from '../constants/template-constants'
 import { templateService } from '../services/template-service'
 import { Notice } from '../theme/components/Notice'
-import { PageHeading } from '../theme/components/PageHeading'
+import { PageLayout } from '../theme/components/PageLayout'
+import { Section } from '../theme/components/Section'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { TemplateForm } from '../theme/compositions/TemplateForm'
 import { TemplateTable } from '../theme/compositions/TemplateTable'
@@ -69,12 +70,10 @@ export function TemplatesPage({
   }
 
   return (
-    <>
-      <PageHeading title="Templates">
-        A template is an S3 location plus the IAM keys that reach it. Upload templates point at a
-        folder, download templates at a whole bucket.
-      </PageHeading>
-
+    <PageLayout
+      title="Templates"
+      description="A template is an S3 location plus the IAM keys that reach it. Upload templates point at a folder, download templates at a whole bucket."
+    >
       {firstRun && <Notice>{FIRST_TEMPLATE_MESSAGE}</Notice>}
       {!encryptionAvailable && (
         <Notice>
@@ -84,7 +83,7 @@ export function TemplatesPage({
       )}
 
       {templates.length > 0 && (
-        <div className="mb-10">
+        <Section title="Saved templates" className="mb-12">
           <TemplateTable
             templates={templates}
             onEdit={(template) => {
@@ -93,7 +92,7 @@ export function TemplatesPage({
             }}
             onDelete={setDeleting}
           />
-        </div>
+        </Section>
       )}
 
       <TemplateForm
@@ -124,6 +123,6 @@ export function TemplatesPage({
           onCancel={closeDelete}
         />
       )}
-    </>
+    </PageLayout>
   )
 }

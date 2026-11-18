@@ -23,6 +23,8 @@ import { selectedTemplate, sortByName } from '../../utils/template-utils'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { Field } from '../components/Field'
+import { Section } from '../components/Section'
+import { Select } from '../components/Select'
 import { StatusMessage } from '../components/StatusMessage'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
@@ -62,8 +64,9 @@ export function TemplateForm({
   )
   const needsEncryption = editing === null || form.keySource !== 'kept'
 
+  // Scrolls to the section, so its title shows above the form.
   useEffect(() => {
-    if (editing !== null) formRef.current?.scrollIntoView({ block: 'start' })
+    if (editing !== null) formRef.current?.closest('section')?.scrollIntoView({ block: 'start' })
   }, [editing])
 
   const update =
@@ -90,108 +93,96 @@ export function TemplateForm({
   }
 
   return (
-    <form
-      ref={formRef}
-      aria-label={editing === null ? 'New template' : `Edit ${editing.name}`}
-      className="max-w-xl space-y-6"
-      onSubmit={(event) => void submit(event)}
-    >
-      <h2 className="text-xl font-semibold">
-        {editing === null ? 'New template' : `Edit “${editing.name}”`}
-      </h2>
-      <div>
+    <Section title={editing === null ? 'New template' : `Edit “${editing.name}”`}>
+      <form
+        ref={formRef}
+        aria-label={editing === null ? 'New template' : `Edit ${editing.name}`}
+        className="max-w-2xl space-y-6"
+        onSubmit={(event) => void submit(event)}
+      >
         <ToggleGroup
           label="Type"
           options={TEMPLATE_KIND_OPTIONS}
           value={form.kind}
+          hint={`The IAM user needs ${PERMISSIONS[form.kind].summary}`}
           onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
         />
-        <p className="mt-1 text-sm text-muted">
-          The IAM user needs {PERMISSIONS[form.kind].summary}
-        </p>
-      </div>
-      <Field label="Name" hint="Shown when you choose a template, for example Reports.">
-        <input className={INPUT_CLASS} value={form.name} onChange={update('name')} required />
-      </Field>
-      <Field label="S3 location" hint={locationHint(form)}>
-        <input
-          className={INPUT_CLASS}
-          value={form.location}
-          onChange={update('location')}
-          spellCheck={false}
-          required
-        />
-      </Field>
-
-      {keyOptions.length > 1 && (
-        <ToggleGroup
-          label="IAM user"
-          options={keyOptions}
-          value={form.keySource}
-          onChange={(keySource) => setForm((previous) => ({ ...previous, keySource }))}
-        />
-      )}
-      {form.keySource === 'kept' && (
-        <p className="text-sm text-muted">The template keeps the keys it has.</p>
-      )}
-      {copying && (
-        <Field
-          label="Copy the keys of"
-          hint="The keys are copied on this computer and never shown."
-        >
-          <select
-            className={INPUT_CLASS}
-            value={selectedTemplate(copySources, form.copyFrom).id}
-            onChange={(event) =>
-              setForm((previous) => ({ ...previous, copyFrom: event.target.value }))
-            }
-          >
-            {sortByName(copySources).map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name} ({formatS3Location(template)})
-              </option>
-            ))}
-          </select>
+        <Field label="Name" hint="Shown when you choose a template, for example Reports.">
+          <input className={INPUT_CLASS} value={form.name} onChange={update('name')} required />
         </Field>
-      )}
-      {form.keySource !== 'kept' && !copying && (
-        <>
-          <Field label="Access key ID">
-            <input
-              className={INPUT_CLASS}
-              value={form.accessKeyId}
-              onChange={update('accessKeyId')}
-              autoComplete="off"
-              spellCheck={false}
-              required
-            />
-          </Field>
-          <Field label="Secret access key">
-            <input
-              className={INPUT_CLASS}
-              type="password"
-              value={form.secretAccessKey}
-              onChange={update('secretAccessKey')}
-              autoComplete="off"
-              required
-            />
-          </Field>
-        </>
-      )}
+        <Field label="S3 location" hint={locationHint(form)}>
+          <input
+            className={INPUT_CLASS}
+            value={form.location}
+            onChange={update('location')}
+            spellCheck={false}
+            required
+          />
+        </Field>
 
-      <div className="flex gap-3">
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={saving || (needsEncryption && !encryptionAvailable)}
-        >
-          {editing === null ? <AddIcon /> : <SaveIcon />}
-          {saving ? 'Checking the bucket…' : editing === null ? 'Add template' : 'Save changes'}
-        </Button>
-        {editing !== null && <Button onClick={onCancelEdit}>Cancel</Button>}
-      </div>
-      <StatusMessage message={message} />
-      <ErrorMessage message={error} />
-    </form>
+        {keyOptions.length > 1 && (
+          <ToggleGroup
+            label="IAM user"
+            options={keyOptions}
+            value={form.keySource}
+            onChange={(keySource) => setForm((previous) => ({ ...previous, keySource }))}
+          />
+        )}
+        {form.keySource === 'kept' && (
+          <p className="text-sm text-muted">The template keeps the keys it has.</p>
+        )}
+        {copying && (
+          <Select
+            label="Copy the keys of"
+            options={sortByName(copySources).map((template) => ({
+              value: template.id,
+              label: template.name,
+              detail: formatS3Location(template)
+            }))}
+            value={selectedTemplate(copySources, form.copyFrom).id}
+            hint="The keys are copied on this computer and never shown."
+            onChange={(copyFrom) => setForm((previous) => ({ ...previous, copyFrom }))}
+          />
+        )}
+        {form.keySource !== 'kept' && !copying && (
+          <>
+            <Field label="Access key ID">
+              <input
+                className={INPUT_CLASS}
+                value={form.accessKeyId}
+                onChange={update('accessKeyId')}
+                autoComplete="off"
+                spellCheck={false}
+                required
+              />
+            </Field>
+            <Field label="Secret access key">
+              <input
+                className={INPUT_CLASS}
+                type="password"
+                value={form.secretAccessKey}
+                onChange={update('secretAccessKey')}
+                autoComplete="off"
+                required
+              />
+            </Field>
+          </>
+        )}
+
+        <div className="flex justify-end gap-3">
+          {editing !== null && <Button onClick={onCancelEdit}>Cancel</Button>}
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={saving || (needsEncryption && !encryptionAvailable)}
+          >
+            {editing === null ? <AddIcon /> : <SaveIcon />}
+            {saving ? 'Checking the bucket…' : editing === null ? 'Add template' : 'Save changes'}
+          </Button>
+        </div>
+        <StatusMessage message={message} />
+        <ErrorMessage message={error} />
+      </form>
+    </Section>
   )
 }
