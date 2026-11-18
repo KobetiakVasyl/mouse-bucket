@@ -125,7 +125,7 @@ A new template can reuse another template's IAM user: main copies the keys from 
 - Files in Glacier Flexible Retrieval or Glacier Deep Archive can't be downloaded until they're restored. Listings ask S3 for each file's restore status (`OptionalObjectAttributes: RestoreStatus`), and main reports each file as available, archived, restoring, or restored until a date (`app/src/main/s3/list.ts`).
 - A restore (`RestoreObject`) makes a temporary copy for the chosen number of days, at Standard or Bulk speed. Deep Archive usually takes up to 12 hours at Standard and 48 at Bulk.
 - Delete (`DeleteObject`) removes one file by its key, after the page asked for confirmation. On a bucket with versioning on, S3 keeps older versions.
-- Download templates need `s3:ListBucket`, `s3:GetObject`, `s3:RestoreObject` and `s3:DeleteObject`. Upload templates need `s3:PutObject` and `s3:AbortMultipartUpload`.
+- Download templates need `s3:ListBucket`, `s3:GetObject`, `s3:RestoreObject` and `s3:DeleteObject`. Upload templates need `s3:PutObject` and `s3:AbortMultipartUpload`. `app/src/renderer/src/permissions.ts` holds these, with example policies, for the Templates and How it works pages.
 
 ## Stack
 

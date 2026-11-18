@@ -17,6 +17,7 @@ import {
   TableFrame,
   ToggleGroup
 } from '../components/ui'
+import { PERMISSIONS } from '../permissions'
 import { selectedTemplate, sortByName } from '../template-order'
 
 type KeySource = 'entered' | 'copied'
@@ -40,12 +41,6 @@ const EMPTY_FORM: Form = {
   accessKeyId: '',
   secretAccessKey: '',
   copyFrom: ''
-}
-
-const PERMISSIONS = {
-  upload: 's3:PutObject on the folder, plus s3:AbortMultipartUpload for large files.',
-  download:
-    's3:ListBucket on the bucket, and s3:GetObject, s3:RestoreObject and s3:DeleteObject on its files.'
 }
 
 function locationHint(form: Form): string {
@@ -209,7 +204,9 @@ export function TemplatesPage({
             value={form.kind}
             onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
           />
-          <p className="mt-1 text-sm text-muted">The IAM user needs {PERMISSIONS[form.kind]}</p>
+          <p className="mt-1 text-sm text-muted">
+            The IAM user needs {PERMISSIONS[form.kind].summary}
+          </p>
         </div>
         <Field label="Name" hint="Shown when you choose a template, for example Reports.">
           <input className={inputClass} value={form.name} onChange={update('name')} required />

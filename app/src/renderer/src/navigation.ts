@@ -1,7 +1,7 @@
 // Which page to show: Templates while nothing is set up, Home when a page's template type is missing. See docs/UI.md.
 import type { Template } from '../../shared/ipc'
 
-export type Page = 'home' | 'upload' | 'download' | 'templates' | 'settings'
+export type Page = 'home' | 'upload' | 'download' | 'templates' | 'how-it-works' | 'settings'
 
 const NEEDS_A_TEMPLATE: ReadonlySet<Page> = new Set(['home', 'upload', 'download'])
 

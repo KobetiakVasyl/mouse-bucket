@@ -5,7 +5,7 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 ## Theme
 
 - Grayscale: black, white and shades of gray between them. The one exception is red, used only for actions that delete something and for error messages.
-- Montserrat is the font everywhere. It ships inside the app, because the app loads nothing from the internet: `app/src/renderer/src/assets/fonts/montserrat/` holds its variable-weight `.woff2` files (Latin, Latin Extended, Cyrillic, Cyrillic Extended and Vietnamese) with their OFL license, and `app/src/renderer/src/styles/fonts.css` declares them. They come from Fontsource's build of Montserrat 5.3.0. To update them, replace the files and `fonts.css` together.
+- Montserrat is the font everywhere, except the example IAM policies on How it works, which use the system's monospace font so the JSON lines up. It ships inside the app, because the app loads nothing from the internet: `app/src/renderer/src/assets/fonts/montserrat/` holds its variable-weight `.woff2` files (Latin, Latin Extended, Cyrillic, Cyrillic Extended and Vietnamese) with their OFL license, and `app/src/renderer/src/styles/fonts.css` declares them. They come from Fontsource's build of Montserrat 5.3.0. To update them, replace the files and `fonts.css` together.
 - Corners are always rounded: buttons, inputs, tiles, cards, tables, dialogs, menu items and progress bars.
 - Choices between a few options are toggle buttons, never radio buttons (`ToggleGroup` in `app/src/renderer/src/components/ui.tsx`).
 - Two themes: dark (light text on near-black), the default, and light (dark text on near-white). The choice is in Settings.
@@ -26,9 +26,9 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 
 ## Layout and pages
 
-A side menu on the left lists Home, Templates and Settings, with "Show welcome page again" at the bottom. The page fills the rest of the window, and tables span its full width.
+A side menu on the left lists Home, Templates, How it works and Settings, with "Show welcome page again" at the bottom. The page fills the rest of the window, and tables span its full width.
 
-- **Welcome:** a full-window page that describes the app, with a Close button. It shows on the first start only, until it's closed, and again from the side menu.
+- **Welcome:** a full-window page that describes the app, with Close and How it works buttons. It shows on the first start only, until it's closed or How it works is opened, and again from the side menu.
 - **Home:** an Upload tile and a Download tile, and the transfers. A tile is disabled until a template of its type exists.
 - **Upload:**
   - Pick an upload template.
@@ -44,6 +44,7 @@ A side menu on the left lists Home, Templates and Settings, with "Show welcome p
   - The saved templates, each with a red Delete that asks for confirmation first. Deleting a template changes nothing in the bucket.
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
+- **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
 - **Settings:** the dark or light theme.
 
 Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/template-order.ts`).

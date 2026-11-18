@@ -1,7 +1,13 @@
 // The welcome page, shown over the app on first start and from the side menu. See docs/UI.md.
 import { Button } from '../components/ui'
 
-export function WelcomePage({ onClose }: { onClose: () => void }): React.JSX.Element {
+export function WelcomePage({
+  onClose,
+  onShowHowItWorks
+}: {
+  onClose: () => void
+  onShowHowItWorks: () => void
+}): React.JSX.Element {
   return (
     <div
       role="dialog"
@@ -26,9 +32,12 @@ export function WelcomePage({ onClose }: { onClose: () => void }): React.JSX.Ele
           <li>On the Home page, choose Upload or Download, then pick a template.</li>
         </ol>
         <p className="mb-8">Your keys stay on this computer, encrypted by the operating system.</p>
-        <Button variant="primary" onClick={onClose} autoFocus>
-          Close
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="primary" onClick={onClose} autoFocus>
+            Close
+          </Button>
+          <Button onClick={onShowHowItWorks}>How it works</Button>
+        </div>
       </div>
     </div>
   )

@@ -17,6 +17,7 @@ describe('pageToShow', () => {
       expect(pageToShow(page, [])).toBe('templates')
     }
     expect(pageToShow('settings', [])).toBe('settings')
+    expect(pageToShow('how-it-works', [])).toBe('how-it-works')
   })
 
   it('shows Home instead of a page whose template type is missing', () => {
@@ -26,7 +27,14 @@ describe('pageToShow', () => {
 
   it('shows the requested page otherwise', () => {
     const templates = [template('upload'), template('download')]
-    for (const page of ['home', 'upload', 'download', 'templates', 'settings'] as const) {
+    for (const page of [
+      'home',
+      'upload',
+      'download',
+      'templates',
+      'how-it-works',
+      'settings'
+    ] as const) {
       expect(pageToShow(page, templates)).toBe(page)
     }
   })

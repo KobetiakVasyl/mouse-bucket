@@ -4,6 +4,7 @@ import { menuPageOf, type Page } from '../navigation'
 const ITEMS: { page: Page; label: string }[] = [
   { page: 'home', label: 'Home' },
   { page: 'templates', label: 'Templates' },
+  { page: 'how-it-works', label: 'How it works' },
   { page: 'settings', label: 'Settings' }
 ]
 

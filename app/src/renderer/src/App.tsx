@@ -7,6 +7,7 @@ import { useTransfers } from './components/TransferList'
 import { type Page, pageToShow } from './navigation'
 import { DownloadPage } from './pages/DownloadPage'
 import { HomePage } from './pages/HomePage'
+import { HowItWorksPage } from './pages/HowItWorksPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { TemplatesPage } from './pages/TemplatesPage'
 import { UploadPage } from './pages/UploadPage'
@@ -99,6 +100,7 @@ export default function App(): React.JSX.Element {
         }
       />
     ),
+    'how-it-works': () => <HowItWorksPage />,
     settings: () => <SettingsPage settings={settings} onChange={updateSettings} />
   }
 
@@ -106,7 +108,15 @@ export default function App(): React.JSX.Element {
     <div className="flex h-screen">
       <SideMenu current={shown} onNavigate={setPage} onShowWelcome={() => setWelcomeOpen(true)} />
       <main className="min-w-0 flex-1 overflow-y-auto p-8">{pages[shown]()}</main>
-      {welcomeOpen && <WelcomePage onClose={closeWelcome} />}
+      {welcomeOpen && (
+        <WelcomePage
+          onClose={closeWelcome}
+          onShowHowItWorks={() => {
+            closeWelcome()
+            setPage('how-it-works')
+          }}
+        />
+      )}
     </div>
   )
 }
