@@ -93,9 +93,9 @@ describe('DownloadService', () => {
 
   it('saves under the name the platform gives the file, such as a Google Drive file by its ID', async () => {
     storage.fileName.mockResolvedValue('Holiday: 2025.jpg')
-    const savedAs = await service().downloadFile({ templateId: TEMPLATE.id, key: '1AbCdEfGhIjK' })
+    const savedAs = await service().downloadFile({ templateId: TEMPLATE.id, key: 'drive-file-1' })
     expect(savedAs).toBe('Holiday_ 2025.jpg')
-    expect(storage.fileName).toHaveBeenCalledWith(ACCESS, '1AbCdEfGhIjK')
+    expect(storage.fileName).toHaveBeenCalledWith(ACCESS, 'drive-file-1')
   })
 
   it('queues a download straight into the download folder under a safe name', async () => {

@@ -1,0 +1,4 @@
+# Findings of the secret scan that were reviewed and aren't credentials, by fingerprint. See docs/SECURITY.md.
+# A made-up Google Drive file ID passed as a file's `key` in a test, which the generic API key rule matches.
+895f3857722986e0cdd77c3931a0ca771db99556:app/tests/integration/main/services/download-service.test.ts:generic-api-key:96
+895f3857722986e0cdd77c3931a0ca771db99556:app/tests/integration/main/services/download-service.test.ts:generic-api-key:98

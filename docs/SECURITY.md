@@ -83,7 +83,7 @@ Google Drive has no keys to type in. Each user makes their own OAuth client in G
 
 Every push to `staging` and `production`, and every pull request into either, runs [.github/workflows/security.yml](../.github/workflows/security.yml):
 
-- **Secret scan:** gitleaks scans the full git history and fails if it finds a credential. Findings are redacted in the log.
+- **Secret scan:** gitleaks scans the full git history and fails if it finds a credential. Findings are redacted in the log. `.gitleaksignore` at the repo root lists findings that were reviewed and aren't credentials, each by its fingerprint (commit, file, rule and line), with a comment saying what it is. Run the scan locally with the same command and image as the workflow to read a finding.
 - **Code scanning:** CodeQL analyzes the JavaScript and TypeScript with its extended security queries. Results appear in the repo's Security tab.
 - **Dependency audit:** `app/scripts/audit.mjs` (`npm run audit`) runs `npm audit` and fails on any high or critical advisory that isn't in `app/audit-allowlist.json`. It also lists allowlisted advisories that npm no longer reports, so they can be removed.
 
