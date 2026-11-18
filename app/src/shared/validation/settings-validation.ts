@@ -1,6 +1,7 @@
 // What the settings hold, and what a change to them may contain. See docs/ARCHITECTURE.md.
 import { z } from 'zod'
-import { UploadStorageClassSchema } from './s3-validation'
+import { RESTORE_DAYS } from '../constants/storage-constants'
+import { RestoreTierSchema, UploadStorageClassSchema } from './s3-validation'
 
 export const ThemeSchema = z.enum(['dark', 'light'])
 
@@ -9,6 +10,9 @@ export const SettingsSchema = z.object({
   welcomeSeen: z.boolean(),
   // The storage class the Upload page starts with.
   defaultStorageClass: UploadStorageClassSchema,
+  // The speed and days the Restore dialog starts with.
+  defaultRestoreTier: RestoreTierSchema,
+  defaultRestoreDays: z.number().int().min(RESTORE_DAYS.min).max(RESTORE_DAYS.max),
   // Where downloads are saved: the system's Downloads folder until another is chosen.
   downloadFolder: z.string().min(1).max(4096)
 })

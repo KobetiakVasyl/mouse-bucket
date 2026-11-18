@@ -1,8 +1,8 @@
 // The choices on the Settings page. See docs/UI.md.
 import type { Theme } from '../../../shared/types/settings-types'
-import type { ToggleOption } from '../types/component-types'
+import type { ChoiceOption } from '../types/component-types'
 
-export const THEME_OPTIONS: ToggleOption<Theme>[] = [
+export const THEME_OPTIONS: ChoiceOption<Theme>[] = [
   { value: 'dark', label: 'Dark' },
   { value: 'light', label: 'Light' }
 ]

@@ -9,7 +9,7 @@ import { uploadSettingsRows } from '../../utils/upload-utils'
 import { Card } from '../components/Card'
 import { Field } from '../components/Field'
 import { SoonBadge } from '../components/SoonBadge'
-import { ToggleGroup } from '../components/ToggleGroup'
+import { Select } from '../components/Select'
 import { INPUT_CLASS } from '../styles/style-constants'
 
 export function UploadSettings({
@@ -24,13 +24,13 @@ export function UploadSettings({
   return (
     <Card title="Upload settings" className="mt-8 max-w-3xl">
       <div className="mb-6">
-        <ToggleGroup
+        <Select
           label="Storage class"
           options={UPLOAD_STORAGE_CLASS_OPTIONS}
           value={storageClass}
+          hint={UPLOAD_STORAGE_CLASS_HINTS[storageClass]}
           onChange={onStorageClassChange}
         />
-        <p className="mt-1 text-sm text-muted">{UPLOAD_STORAGE_CLASS_HINTS[storageClass]}</p>
       </div>
       <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
         {uploadSettingsRows(template).map(([name, value]) => (

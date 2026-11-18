@@ -96,7 +96,7 @@ export function FolderTable({
                     </Button>
                   )}
                   {file.access.state === 'archived' && (
-                    <Button className="text-sm" onClick={() => onRestore(file)}>
+                    <Button className="text-sm" variant="positive" onClick={() => onRestore(file)}>
                       Restore
                     </Button>
                   )}

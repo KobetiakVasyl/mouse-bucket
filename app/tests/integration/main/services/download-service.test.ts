@@ -48,6 +48,8 @@ function service(downloadFolder = dir): DownloadService {
         theme: 'dark',
         welcomeSeen: true,
         defaultStorageClass: 'DEEP_ARCHIVE',
+        defaultRestoreTier: 'Bulk',
+        defaultRestoreDays: 7,
         downloadFolder
       })
     }

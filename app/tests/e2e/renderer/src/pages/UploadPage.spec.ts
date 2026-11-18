@@ -28,12 +28,11 @@ test('shows the settings every upload uses', async ({ page }) => {
 })
 
 test('starts with Deep Archive and can switch to Standard', async ({ page }) => {
-  const storageClass = page.getByRole('group', { name: 'Storage class' })
-  const deepArchive = storageClass.getByRole('button', { name: 'Glacier Deep Archive' })
-  await expect(deepArchive).toHaveAttribute('aria-pressed', 'true')
+  const storageClass = page.getByLabel('Storage class')
+  await expect(storageClass).toHaveValue('DEEP_ARCHIVE')
   await expect(page.getByText(/billed for at least 180 days/)).toBeVisible()
-  await storageClass.getByRole('button', { name: 'Standard' }).click()
-  await expect(deepArchive).toHaveAttribute('aria-pressed', 'false')
+  await storageClass.selectOption('STANDARD')
+  await expect(storageClass).toHaveValue('STANDARD')
   await expect(
     page.getByText('Files can be downloaded at once, but cost more to store.')
   ).toBeVisible()

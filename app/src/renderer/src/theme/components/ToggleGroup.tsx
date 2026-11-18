@@ -1,5 +1,5 @@
 // Toggle buttons instead of radio buttons: exactly one option is pressed. See docs/UI.md.
-import type { ToggleOption } from '../../types/component-types'
+import type { ChoiceOption } from '../../types/component-types'
 import { FOCUS } from '../styles/style-constants'
 
 export function ToggleGroup<T extends string>({
@@ -9,7 +9,7 @@ export function ToggleGroup<T extends string>({
   onChange
 }: {
   label: string
-  options: ToggleOption<T>[]
+  options: ChoiceOption<T>[]
   value: T
   onChange: (value: T) => void
 }): React.JSX.Element {

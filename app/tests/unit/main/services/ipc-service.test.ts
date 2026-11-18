@@ -23,6 +23,8 @@ function setup(): {
         theme: 'light' as const,
         welcomeSeen: true,
         defaultStorageClass: 'DEEP_ARCHIVE' as const,
+        defaultRestoreTier: 'Bulk' as const,
+        defaultRestoreDays: 7,
         downloadFolder: '/home/me/Downloads'
       })),
       chooseDownloadFolder: vi.fn()
@@ -78,6 +80,8 @@ describe('IpcService', () => {
         theme: 'light',
         welcomeSeen: true,
         defaultStorageClass: 'DEEP_ARCHIVE',
+        defaultRestoreTier: 'Bulk',
+        defaultRestoreDays: 7,
         downloadFolder: '/home/me/Downloads'
       }
     })

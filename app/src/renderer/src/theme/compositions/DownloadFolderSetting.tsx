@@ -12,7 +12,7 @@ export function DownloadFolderSetting({
 }): React.JSX.Element {
   return (
     <section aria-label="Download folder">
-      <h2 className="mb-1 font-semibold">Download folder</h2>
+      <h2 className="mb-3 text-xl font-semibold">Download folder</h2>
       <div className="flex items-center gap-3">
         <p
           className="min-w-0 flex-1 truncate rounded-lg border border-line bg-surface px-3 py-2"

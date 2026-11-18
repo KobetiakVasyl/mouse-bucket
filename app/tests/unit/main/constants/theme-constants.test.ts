@@ -33,12 +33,13 @@ describe('theme', () => {
     expect(property(dark, 'paper')).toBe(PAPER.dark)
   })
 
-  it('uses only shades of gray, apart from the danger red', () => {
-    const danger = new Set([property(light, 'danger'), property(dark, 'danger')])
-    expect(danger.has('')).toBe(false)
+  it('uses only shades of gray, apart from the danger red and the restoring green', () => {
+    const roles = ['danger', 'positive']
+    const colored = new Set(roles.flatMap((role) => [property(light, role), property(dark, role)]))
+    expect(colored.has('')).toBe(false)
     const colors = css.match(/#[0-9a-f]{3,8}\b/gi)
     expect(colors).not.toBeNull()
     const notGray = (colors === null ? [] : colors).filter((color) => !isGray(color))
-    expect(notGray.map((color) => color.toLowerCase()).sort()).toEqual([...danger].sort())
+    expect(notGray.map((color) => color.toLowerCase()).sort()).toEqual([...colored].sort())
   })
 })

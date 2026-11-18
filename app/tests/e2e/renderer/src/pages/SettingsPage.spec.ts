@@ -1,4 +1,4 @@
-import { expect, menuItem, test } from '../../../support/app'
+import { downloadTemplate, expect, menuItem, openFromHome, test } from '../../../support/app'
 
 test('switches to the light theme and keeps it', async ({ page }) => {
   const html = page.locator('html')
@@ -13,19 +13,13 @@ test('switches to the light theme and keeps it', async ({ page }) => {
 
 test('sets the storage class the Upload page starts with', async ({ page }) => {
   await menuItem(page, 'Settings').click()
-  const setting = page.getByRole('group', { name: 'Storage class for new uploads' })
-  await expect(setting.getByRole('button', { name: 'Glacier Deep Archive' })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  )
-  await setting.getByRole('button', { name: 'Standard' }).click()
+  const setting = page.getByLabel('Storage class for new uploads')
+  await expect(setting).toHaveValue('DEEP_ARCHIVE')
+  await setting.selectOption('STANDARD')
   await page.reload()
   await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
   await menuItem(page, 'Settings').click()
-  await expect(setting.getByRole('button', { name: 'Standard' })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  )
+  await expect(setting).toHaveValue('STANDARD')
 })
 
 test("shows the system's Downloads folder as the download folder", async ({ app, page }) => {
@@ -34,4 +28,31 @@ test("shows the system's Downloads folder as the download folder", async ({ app,
   const setting = page.getByRole('region', { name: 'Download folder' })
   await expect(setting).toContainText(downloads)
   await expect(setting.getByRole('button', { name: 'Change…' })).toBeEnabled()
+})
+
+test.describe('with a download template', () => {
+  test.use({ setup: { templates: [downloadTemplate('Archive')], settings: { welcomeSeen: true } } })
+
+  test('sets the speed and days a restore starts with', async ({ page }) => {
+    await menuItem(page, 'Settings').click()
+    const speed = page.getByRole('group', { name: 'Restore speed' })
+    await expect(speed.getByRole('button', { name: 'Bulk (cheaper)' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await speed.getByRole('button', { name: 'Standard' }).click()
+    await page.getByLabel('Days to keep a restored copy').fill('3')
+
+    await openFromHome(page, 'Browse')
+    await page
+      .getByRole('row', { name: /backup\.tar\.gz/ })
+      .getByRole('button', { name: 'Restore' })
+      .click()
+    const dialog = page.getByRole('dialog', { name: 'Restore from the archive' })
+    await expect(dialog.getByRole('button', { name: 'Standard' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await expect(dialog.getByLabel('Days to keep the copy')).toHaveValue('3')
+  })
 })

@@ -23,11 +23,13 @@ afterEach(async () => {
 })
 
 describe('SettingsService', () => {
-  it("starts dark, uploading to Deep Archive and downloading to the system's Downloads", async () => {
+  it('starts dark, uploading to Deep Archive, restoring in Bulk for 7 days, downloading to Downloads', async () => {
     expect(await service().get()).toEqual({
       theme: 'dark',
       welcomeSeen: false,
       defaultStorageClass: 'DEEP_ARCHIVE',
+      defaultRestoreTier: 'Bulk',
+      defaultRestoreDays: 7,
       downloadFolder: downloads
     })
   })
@@ -39,6 +41,8 @@ describe('SettingsService', () => {
       theme: 'light',
       welcomeSeen: true,
       defaultStorageClass: 'STANDARD',
+      defaultRestoreTier: 'Bulk',
+      defaultRestoreDays: 7,
       downloadFolder: downloads
     })
     const onDisk: unknown = JSON.parse(await readFile(join(dir, 'settings.json'), 'utf8'))
@@ -59,6 +63,8 @@ describe('SettingsService', () => {
       theme: 'light',
       welcomeSeen: true,
       defaultStorageClass: 'DEEP_ARCHIVE',
+      defaultRestoreTier: 'Bulk',
+      defaultRestoreDays: 7,
       downloadFolder: downloads
     })
   })

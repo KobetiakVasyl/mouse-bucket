@@ -35,6 +35,7 @@ export function SelectionBar({
       </Button>
       <Button
         className="text-sm"
+        variant="positive"
         disabled={archived.length === 0}
         onClick={() => onRestore(archived)}
       >

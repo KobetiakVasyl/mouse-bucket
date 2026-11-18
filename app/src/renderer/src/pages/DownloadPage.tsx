@@ -34,10 +34,12 @@ import { transfersOfKind } from '../utils/transfer-utils'
 // Shown only while at least one download template exists.
 export function DownloadPage({
   templates,
-  transfers
+  transfers,
+  restoreDefaults
 }: {
   templates: Template[]
   transfers: Transfer[]
+  restoreDefaults: { tier: RestoreTier; days: number }
 }): React.JSX.Element {
   const [place, setPlace] = useState<FolderPlace>(() => ({
     templateId: sortByName(templates)[0].id,
@@ -258,6 +260,8 @@ export function DownloadPage({
       {dialog.kind === 'restore' && (
         <RestoreDialog
           files={dialog.files}
+          defaultTier={restoreDefaults.tier}
+          defaultDays={restoreDefaults.days}
           busy={dialogBusy}
           error={dialogError}
           onRestore={(tier, days) => void restoreFiles(dialog.files, tier, days)}

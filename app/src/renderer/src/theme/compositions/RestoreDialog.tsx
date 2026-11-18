@@ -1,12 +1,8 @@
-// Asks how fast to restore archived files and for how many days the copies stay. See docs/UI.md.
+// Asks how fast to restore archived files and for how many days the copies stay, starting with the defaults from Settings. See docs/UI.md.
 import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
 import type { RestoreTier, S3File } from '../../../../shared/types/s3-types'
-import {
-  DEFAULT_RESTORE_DAYS,
-  DEFAULT_RESTORE_TIER,
-  RESTORE_TIER_OPTIONS
-} from '../../constants/download-constants'
+import { RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
 import { fileCount, restoreTimesFor } from '../../utils/download-utils'
 import { parseRestoreDays } from '../../validation/restore-validation'
 import { Button } from '../components/Button'
@@ -18,19 +14,23 @@ import { INPUT_CLASS } from '../styles/style-constants'
 
 export function RestoreDialog({
   files,
+  defaultTier,
+  defaultDays,
   busy,
   error,
   onRestore,
   onCancel
 }: {
   files: S3File[]
+  defaultTier: RestoreTier
+  defaultDays: number
   busy: boolean
   error: string | undefined
   onRestore: (tier: RestoreTier, days: number) => void
   onCancel: () => void
 }): React.JSX.Element {
-  const [tier, setTier] = useState<RestoreTier>(DEFAULT_RESTORE_TIER)
-  const [daysText, setDaysText] = useState(DEFAULT_RESTORE_DAYS)
+  const [tier, setTier] = useState<RestoreTier>(defaultTier)
+  const [daysText, setDaysText] = useState(String(defaultDays))
   const days = parseRestoreDays(daysText)
   const times = restoreTimesFor(files)
   return (
@@ -79,7 +79,7 @@ export function RestoreDialog({
           Cancel
         </Button>
         <Button
-          variant="primary"
+          variant="positive"
           disabled={days === null || busy}
           onClick={() => {
             if (days !== null) onRestore(tier, days)

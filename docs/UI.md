@@ -4,12 +4,12 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 
 ## Theme
 
-- Grayscale: black, white and shades of gray between them. The one exception is red, used only for actions that delete something and for error messages.
+- Grayscale: black, white and shades of gray between them. There are two exceptions: red, used only for actions that delete something and for error messages, and green, used only for Restore buttons.
 - Montserrat is the font everywhere, except the example IAM policies on How it works, which use the system's monospace font so the JSON lines up. It ships inside the app, because the app loads nothing from the internet: `app/src/renderer/src/assets/fonts/montserrat/` holds its variable-weight `.woff2` files (Latin, Latin Extended, Cyrillic, Cyrillic Extended and Vietnamese) with their OFL license, and `app/src/renderer/src/theme/styles/fonts.css` declares them. They come from Fontsource's build of Montserrat 5.3.0. To update them, replace the files and `fonts.css` together.
 - Corners are always rounded: buttons, inputs, tiles, cards, tables, dialogs, menu items and progress bars.
-- Choices between a few options are toggle buttons, never radio buttons (`app/src/renderer/src/theme/components/ToggleGroup.tsx`).
+- Choices between a few options are toggle buttons, never radio buttons (`app/src/renderer/src/theme/components/ToggleGroup.tsx`). The storage class is a drop-down instead (`app/src/renderer/src/theme/components/Select.tsx`).
 - Two themes: dark (light text on near-black), the default, and light (dark text on near-white). The choice is in Settings.
-- `app/src/renderer/src/theme/styles/global.css` removes Tailwind's default colors and fonts, so nothing else can creep in. It defines seven color roles, each with a dark and a light shade, and the `dark` class on `<html>` picks the shades. Components use only these roles:
+- `app/src/renderer/src/theme/styles/global.css` removes Tailwind's default colors and fonts, so nothing else can creep in. It defines eight color roles, each with a dark and a light shade, and the `dark` class on `<html>` picks the shades. Components use only these roles:
 
   | Role | Used for | Dark | Light |
   |---|---|---|---|
@@ -20,8 +20,9 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
   | `muted` | Secondary text: hints, descriptions, table headings, transfer details | `#a6a6a6` | `#595959` |
   | `ink` | Main text, the selected menu item and toggle, primary buttons and focus outlines | `#f0f0f0` | `#141414` |
   | `danger` | Delete buttons, their borders and the edge of error messages | `#f26b6b` | `#c81e1e` |
+  | `positive` | Restore buttons and their borders | `#4ade80` | `#15803d` |
 
-- `app/tests/unit/main/constants/theme-constants.test.ts` checks that every color in `global.css` is a shade of gray, apart from the two `danger` shades.
+- `app/tests/unit/main/constants/theme-constants.test.ts` checks that every color in `global.css` is a shade of gray, apart from the `danger` and `positive` shades.
 - Main passes the saved theme in the page's query string and paints the window's background in the theme's `paper` shade (`app/src/main/constants/theme-constants.ts`), so the first frame already has the right colors. The same test checks that the two `paper` shades match.
 
 ## Layout and pages
@@ -32,14 +33,14 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
 - **Home:** an Upload tile and a Browse tile, side by side, each half the page wide and about two thirds of the window tall, then the transfers. A tile is disabled until a template of its type exists.
 - **Upload:**
   - Pick an upload template.
-  - Choose the storage class with toggle buttons: Glacier Deep Archive or Standard, each with a line on what it means. It starts with the default from Settings.
+  - Choose the storage class from a drop-down: Glacier Deep Archive or Standard, with a line on what the chosen one means. It starts with the default from Settings.
   - The upload settings show where files go and how S3 stores them (see [ARCHITECTURE.md](ARCHITECTURE.md#transfers)). Tags and metadata are shown as coming soon.
   - "Choose files…" opens the system's file picker, and the chosen files join the transfers.
 - **Browse:** reached from the Browse tile.
   - Pick a download template, then browse its bucket: a breadcrumb for the folder path, then folders and files with their size, storage class and date. "Load more" fetches the next 1,000 entries.
   - Files in Glacier Flexible Retrieval or Glacier Deep Archive show whether they're archived, restoring, or restored until a date.
   - **Download** is offered for files that can be downloaded now. It saves the file into the download folder at once, and says so. When the name is taken, the new file gets a number, such as `report (2).pdf`.
-  - **Restore** is offered for archived files. It opens a dialog to choose the speed (Standard or Bulk, with the usual waiting time) and how many days, from 1 to 365, the restored copy stays.
+  - **Restore**, in green, is offered for archived files. It opens a dialog to choose the speed (Standard or Bulk, with the usual waiting time) and how many days, from 1 to 365, the restored copy stays. The dialog starts with the defaults from Settings: Bulk and 7 days unless changed.
   - **Delete**, in red, asks for confirmation in a dialog first.
   - Each file has a checkbox, and the column heading's checkbox selects every file shown. With files selected, a bar above the table counts them and offers **Download**, **Restore** and **Delete** for the selection. Each button shows how many of the selected files it applies to: Download the ones that can be downloaded now, Restore the archived ones, and Delete all of them. Delete asks first and lists the files. Opening another folder or template clears the selection.
   - Actions on several files run one file at a time. If one fails, the files done so far show as done, and the dialog stays open with the rest and the error.
@@ -48,7 +49,10 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
-- **Settings:** the dark or light theme, the storage class the Upload page starts with (Glacier Deep Archive unless changed), and the download folder (the system's Downloads folder unless changed), with "Change…" opening the system's folder picker.
+- **Settings**, in three sections:
+  - **Appearance:** the dark or light theme.
+  - **Defaults:** the storage class the Upload page starts with (Glacier Deep Archive unless changed), and the speed and days the Restore dialog starts with (Bulk and 7 days unless changed). Days save only while they're a whole number from 1 to 365.
+  - **Download folder:** where downloads are saved (the system's Downloads folder unless changed), with "Change…" opening the system's folder picker.
 
 Upload and Browse pick a template from large tiles: the first 6 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 

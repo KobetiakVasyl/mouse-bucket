@@ -1,6 +1,6 @@
 // Which files the Download page offers to download, restore times, and the Restore dialog's choices. See docs/UI.md.
 import type { FileAccess, RestoreTier } from '../../../shared/types/s3-types'
-import type { ToggleOption } from '../types/component-types'
+import type { ChoiceOption } from '../types/component-types'
 
 export const DOWNLOADABLE_STATES: ReadonlySet<FileAccess['state']> = new Set([
   'available',
@@ -22,10 +22,7 @@ export const RESTORE_TIMES: ReadonlyMap<string, Record<RestoreTier, string>> = n
   ['GLACIER', { Standard: 'in 3 to 5 hours', Bulk: 'in 5 to 12 hours' }]
 ])
 
-export const RESTORE_TIER_OPTIONS: ToggleOption<RestoreTier>[] = [
+export const RESTORE_TIER_OPTIONS: ChoiceOption<RestoreTier>[] = [
   { value: 'Standard', label: 'Standard' },
   { value: 'Bulk', label: 'Bulk (cheaper)' }
 ]
-
-export const DEFAULT_RESTORE_TIER: RestoreTier = 'Standard'
-export const DEFAULT_RESTORE_DAYS = '7'

@@ -1,15 +1,12 @@
-// The Settings page: the dark or light theme, the storage class uploads start with, and the download folder. See docs/UI.md.
+// The Settings page: the theme, the defaults for uploads and restores, and the download folder. See docs/UI.md.
 import { useState } from 'react'
 import type { Settings, SettingsUpdate } from '../../../shared/types/settings-types'
 import { THEME_OPTIONS } from '../constants/settings-constants'
-import {
-  UPLOAD_STORAGE_CLASS_HINTS,
-  UPLOAD_STORAGE_CLASS_OPTIONS
-} from '../constants/storage-class-constants'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
-import { DownloadFolderSetting } from '../theme/compositions/DownloadFolderSetting'
 import { PageHeading } from '../theme/components/PageHeading'
 import { ToggleGroup } from '../theme/components/ToggleGroup'
+import { DefaultsSettings } from '../theme/compositions/DefaultsSettings'
+import { DownloadFolderSetting } from '../theme/compositions/DownloadFolderSetting'
 import { messageOf } from '../utils/error-utils'
 
 export function SettingsPage({
@@ -37,25 +34,17 @@ export function SettingsPage({
   return (
     <>
       <PageHeading title="Settings" />
-      <div className="max-w-3xl space-y-6">
-        <ToggleGroup
-          label="Theme"
-          options={THEME_OPTIONS}
-          value={settings.theme}
-          onChange={(theme) => change({ theme })}
-        />
-        <div>
+      <div className="max-w-3xl space-y-10">
+        <section aria-label="Appearance">
+          <h2 className="mb-3 text-xl font-semibold">Appearance</h2>
           <ToggleGroup
-            label="Storage class for new uploads"
-            options={UPLOAD_STORAGE_CLASS_OPTIONS}
-            value={settings.defaultStorageClass}
-            onChange={(defaultStorageClass) => change({ defaultStorageClass })}
+            label="Theme"
+            options={THEME_OPTIONS}
+            value={settings.theme}
+            onChange={(theme) => change({ theme })}
           />
-          <p className="mt-1 text-sm text-muted">
-            The Upload page starts with this; you can still change it there for each upload.{' '}
-            {UPLOAD_STORAGE_CLASS_HINTS[settings.defaultStorageClass]}
-          </p>
-        </div>
+        </section>
+        <DefaultsSettings settings={settings} onChange={change} />
         <DownloadFolderSetting
           folder={settings.downloadFolder}
           busy={choosing}

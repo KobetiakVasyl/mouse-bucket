@@ -80,7 +80,11 @@ export default function App(): React.JSX.Element {
       />
     ),
     download: () => (
-      <DownloadPage templates={templatesOfKind(templates, 'download')} transfers={transfers} />
+      <DownloadPage
+        templates={templatesOfKind(templates, 'download')}
+        transfers={transfers}
+        restoreDefaults={{ tier: settings.defaultRestoreTier, days: settings.defaultRestoreDays }}
+      />
     ),
     templates: () => (
       <TemplatesPage

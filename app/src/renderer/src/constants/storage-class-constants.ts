@@ -1,6 +1,6 @@
 // Readable names for S3's storage classes, the way the S3 console shows them, and the classes an upload can use. See docs/UI.md.
 import type { UploadStorageClass } from '../../../shared/types/s3-types'
-import type { ToggleOption } from '../types/component-types'
+import type { ChoiceOption } from '../types/component-types'
 
 export const STORAGE_CLASS_LABELS: ReadonlyMap<string, string> = new Map([
   ['STANDARD', 'Standard'],
@@ -16,7 +16,7 @@ export const STORAGE_CLASS_LABELS: ReadonlyMap<string, string> = new Map([
   ['SNOW', 'Snow']
 ])
 
-export const UPLOAD_STORAGE_CLASS_OPTIONS: ToggleOption<UploadStorageClass>[] = [
+export const UPLOAD_STORAGE_CLASS_OPTIONS: ChoiceOption<UploadStorageClass>[] = [
   { value: 'DEEP_ARCHIVE', label: 'Glacier Deep Archive' },
   { value: 'STANDARD', label: 'Standard' }
 ]

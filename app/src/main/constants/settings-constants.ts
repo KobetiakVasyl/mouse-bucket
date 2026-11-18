@@ -4,5 +4,7 @@ import type { Settings } from '../../shared/types/settings-types'
 export const DEFAULT_SETTINGS: Omit<Settings, 'downloadFolder'> = {
   theme: 'dark',
   welcomeSeen: false,
-  defaultStorageClass: 'DEEP_ARCHIVE'
+  defaultStorageClass: 'DEEP_ARCHIVE',
+  defaultRestoreTier: 'Bulk',
+  defaultRestoreDays: 7
 }

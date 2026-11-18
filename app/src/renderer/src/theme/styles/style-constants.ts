@@ -6,11 +6,12 @@ export const FOCUS =
 
 export const INPUT_CLASS = `w-full rounded-lg border border-line bg-surface px-3 py-2 text-ink placeholder:text-muted hover:border-muted focus:border-ink disabled:pointer-events-none disabled:opacity-50 ${FOCUS}`
 
-// Danger is the only color: red, for actions that delete something.
+// The only colors: red for actions that delete something, and green for restoring.
 export const BUTTON_LOOKS: Record<ButtonVariant, string> = {
   primary: 'border-ink bg-ink text-paper hover:opacity-85',
   secondary: 'border-line bg-surface text-ink hover:border-muted hover:bg-hover',
-  danger: 'border-danger bg-surface text-danger hover:bg-danger hover:text-paper'
+  danger: 'border-danger bg-surface text-danger hover:bg-danger hover:text-paper',
+  positive: 'border-positive bg-surface text-positive hover:bg-positive hover:text-paper'
 }
 
 export const LINK_CLASS = 'rounded text-left underline hover:no-underline'

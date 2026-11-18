@@ -1,4 +1,4 @@
-/* Grayscale theme, dark or light, with red only for destructive actions and Montserrat everywhere. See docs/UI.md. */
+/* Grayscale theme, dark or light, with red only for destructive actions, green only for restoring, and Montserrat everywhere. See docs/UI.md. */
 @import 'tailwindcss';
 @import './fonts.css';
 
@@ -20,6 +20,7 @@
   --color-muted: var(--muted);
   --color-ink: var(--ink);
   --color-danger: var(--danger);
+  --color-positive: var(--positive);
 }
 
 @layer base {
@@ -31,6 +32,7 @@
     --muted: #595959;
     --ink: #141414;
     --danger: #c81e1e;
+    --positive: #15803d;
     color-scheme: light;
   }
 
@@ -42,6 +44,7 @@
     --muted: #a6a6a6;
     --ink: #f0f0f0;
     --danger: #f26b6b;
+    --positive: #4ade80;
     color-scheme: dark;
   }
 
