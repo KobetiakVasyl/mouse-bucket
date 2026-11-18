@@ -1,7 +1,8 @@
 // The renderer's only bridge to main: one typed method per IPC channel. See docs/ARCHITECTURE.md.
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
-import { Channel, type IpcResult, TRANSFERS_CHANGED } from '../shared/channels'
-import type { Api, Transfer } from '../shared/ipc'
+import { Channel, TRANSFERS_CHANGED } from '../shared/constants/ipc-constants'
+import type { Api, IpcResult } from '../shared/types/ipc-types'
+import type { Transfer } from '../shared/types/transfer-types'
 
 async function invoke<T>(channel: string, payload?: unknown): Promise<T> {
   const result: IpcResult<T> = await ipcRenderer.invoke(channel, payload)

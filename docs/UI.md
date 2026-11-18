@@ -5,11 +5,11 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
 ## Theme
 
 - Grayscale: black, white and shades of gray between them. The one exception is red, used only for actions that delete something and for error messages.
-- Montserrat is the font everywhere, except the example IAM policies on How it works, which use the system's monospace font so the JSON lines up. It ships inside the app, because the app loads nothing from the internet: `app/src/renderer/src/assets/fonts/montserrat/` holds its variable-weight `.woff2` files (Latin, Latin Extended, Cyrillic, Cyrillic Extended and Vietnamese) with their OFL license, and `app/src/renderer/src/styles/fonts.css` declares them. They come from Fontsource's build of Montserrat 5.3.0. To update them, replace the files and `fonts.css` together.
+- Montserrat is the font everywhere, except the example IAM policies on How it works, which use the system's monospace font so the JSON lines up. It ships inside the app, because the app loads nothing from the internet: `app/src/renderer/src/assets/fonts/montserrat/` holds its variable-weight `.woff2` files (Latin, Latin Extended, Cyrillic, Cyrillic Extended and Vietnamese) with their OFL license, and `app/src/renderer/src/theme/styles/fonts.css` declares them. They come from Fontsource's build of Montserrat 5.3.0. To update them, replace the files and `fonts.css` together.
 - Corners are always rounded: buttons, inputs, tiles, cards, tables, dialogs, menu items and progress bars.
-- Choices between a few options are toggle buttons, never radio buttons (`ToggleGroup` in `app/src/renderer/src/components/ui.tsx`).
+- Choices between a few options are toggle buttons, never radio buttons (`app/src/renderer/src/theme/components/ToggleGroup.tsx`).
 - Two themes: dark (light text on near-black), the default, and light (dark text on near-white). The choice is in Settings.
-- `app/src/renderer/src/styles/global.css` removes Tailwind's default colors and fonts, so nothing else can creep in. It defines seven color roles, each with a dark and a light shade, and the `dark` class on `<html>` picks the shades. Components use only these roles:
+- `app/src/renderer/src/theme/styles/global.css` removes Tailwind's default colors and fonts, so nothing else can creep in. It defines seven color roles, each with a dark and a light shade, and the `dark` class on `<html>` picks the shades. Components use only these roles:
 
   | Role | Used for | Dark | Light |
   |---|---|---|---|
@@ -21,8 +21,8 @@ The renderer is React with TypeScript in strict mode, styled with Tailwind CSS. 
   | `ink` | Main text, the selected menu item and toggle, primary buttons and focus outlines | `#f0f0f0` | `#141414` |
   | `danger` | Delete buttons, their borders and the edge of error messages | `#f26b6b` | `#c81e1e` |
 
-- `app/src/shared/theme.test.ts` checks that every color in `global.css` is a shade of gray, apart from the two `danger` shades.
-- Main passes the saved theme in the page's query string and paints the window's background in the theme's `paper` shade (`app/src/shared/theme.ts`), so the first frame already has the right colors. The same test checks that the two `paper` shades match.
+- `app/tests/unit/main/constants/theme-constants.test.ts` checks that every color in `global.css` is a shade of gray, apart from the two `danger` shades.
+- Main passes the saved theme in the page's query string and paints the window's background in the theme's `paper` shade (`app/src/main/constants/theme-constants.ts`), so the first frame already has the right colors. The same test checks that the two `paper` shades match.
 
 ## Layout and pages
 
@@ -47,9 +47,9 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
 - **Settings:** the dark or light theme.
 
-Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/template-order.ts`).
+Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 
-While there are no templates, Home, Upload and Download show Templates instead, so a new user lands there. Upload or Download without a template of its type shows Home (`app/src/renderer/src/navigation.ts`).
+While there are no templates, Home, Upload and Download show Templates instead, so a new user lands there. Upload or Download without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
 
 The transfers list shows each upload and download of this session with its template, status, size and a progress bar, with Cancel while it's pending. Finished transfers stay in the list until the app quits.
 
@@ -57,7 +57,7 @@ Dialogs (confirmations and Restore) open over the page. Escape or Cancel closes 
 
 ## The app's window
 
-- The first start opens the window maximized. After that, the window opens where it was, with its size and maximized state, as saved in `window-state.json` when it closes (`app/src/main/window-state.ts`). If that place is no longer on any screen, for example after a monitor is unplugged, the window opens maximized again.
+- The first start opens the window maximized. After that, the window opens where it was, with its size and maximized state, as saved in `window-state.json` when it closes (`app/src/main/services/window-state-service.ts`, and `windowPlacement` in `app/src/main/utils/window-utils.ts`). If that place is no longer on any screen, for example after a monitor is unplugged, the window opens maximized again.
 - Minimizing keeps transfers running. The app doesn't hide in the background or the system tray: closing the window quits it.
 - Closing the window while transfers are pending asks first, because quitting cancels them.
 - Errors from main are shown as they arrive. They never contain keys.

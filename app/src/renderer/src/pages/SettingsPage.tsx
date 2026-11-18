@@ -1,8 +1,11 @@
 // The Settings page: for now, the dark or light theme. See docs/UI.md.
 import { useState } from 'react'
-import type { Settings, SettingsUpdate, Theme } from '../../../shared/ipc'
-import { messageOf } from '../api'
-import { ErrorMessage, PageHeading, ToggleGroup } from '../components/ui'
+import type { Settings, SettingsUpdate, Theme } from '../../../shared/types/settings-types'
+import { THEME_OPTIONS } from '../constants/settings-constants'
+import { ErrorMessage } from '../theme/components/ErrorMessage'
+import { PageHeading } from '../theme/components/PageHeading'
+import { ToggleGroup } from '../theme/components/ToggleGroup'
+import { messageOf } from '../utils/error-utils'
 
 export function SettingsPage({
   settings,
@@ -21,10 +24,7 @@ export function SettingsPage({
       <PageHeading title="Settings" />
       <ToggleGroup
         label="Theme"
-        options={[
-          { value: 'dark', label: 'Dark' },
-          { value: 'light', label: 'Light' }
-        ]}
+        options={THEME_OPTIONS}
         value={settings.theme}
         onChange={changeTheme}
       />

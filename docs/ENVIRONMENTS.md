@@ -16,7 +16,7 @@ The app has exactly two environments: **staging** and **production**. There is n
 | Window title | Ends with "STAGING" | No marker |
 | DevTools | Allowed | Blocked (`webPreferences.devTools: false`) |
 
-`app/src/main/environment.ts` holds the same names and IDs for the running app, which uses them for the window title, the Windows taskbar ID and the AppImage data folder. `app/src/main/identity.test.ts` checks that `app/package.json` and both installer configs match it.
+`app/src/main/constants/app-constants.ts` holds the production name and ID, and `app/src/main/services/environment-service.ts` derives staging's from them. The running app uses them for the window title, the Windows taskbar ID and the AppImage data folder. `app/tests/unit/main/constants/app-constants.test.ts` checks that `app/package.json` and both installer configs match them.
 
 ## Where work happens
 
@@ -33,7 +33,7 @@ npm, Electron and electron-builder keep their download caches in `.cache/` at th
 - Electron and electron-builder: `app/scripts/with-caches.mjs` runs the `postinstall` and `dist` commands with `electron_config_cache` and `ELECTRON_BUILDER_CACHE` set to folders in `.cache/`, unless either is already set. When neither is set, it also points their temp files at `.cache/tmp/`.
 - The Linux container's image sets all three caches to its home folder (`/home/ubuntu/.cache`), so the container's temp files stay in the container too.
 - CI keeps `.cache/npm`, `.cache/electron` and `.cache/electron-builder` between runs (see [Continuous integration](#continuous-integration)).
-- Tests that write files use fresh folders under `.cache/tmp/tests/` (`app/src/main/testing/temp-dir.ts`), never the system's temp folder.
+- Tests that write files use fresh folders under `.cache/tmp/tests/` (`app/tests/support/temp-dir.ts`), never the system's temp folder.
 
 ## Separate app identity
 
@@ -47,7 +47,7 @@ Staging has its own `appId` and product name. Its installers also use their own 
 
 The app data is what Electron calls `userData`: everything the app stores, including Chromium's caches.
 
-The app keeps its data where it runs from, not in the user profile (`app/src/main/environment.ts`):
+The app keeps its data where it runs from, not in the user profile (`app/src/main/services/environment-service.ts`):
 
 | How the app runs | App data folder |
 |---|---|
@@ -85,7 +85,7 @@ The environment doesn't decide which bucket or keys the app uses. In both enviro
 
 ## How the environment is chosen
 
-- The environment is fixed when the app is built, through electron-vite's `--mode` flag (`staging` or `production`). It can't be switched while the app is running. A build in any other mode stops at startup (`app/src/main/environment.ts`).
+- The environment is fixed when the app is built, through electron-vite's `--mode` flag (`staging` or `production`). It can't be switched while the app is running. A build in any other mode stops at startup (`app/src/main/services/environment-service.ts`).
 - On the host, `npm run staging` runs electron-vite's hot-reload server in `staging` mode. Renderer changes show up in the open window, and main or preload changes restart the app.
 - `npm run staging:preview` builds in `staging` mode and launches the result, without hot reload. Use it in the Linux container, which gets no file-change events (see [Limits](#limits)).
 - Code reads the environment from `import.meta.env.MODE`. Never use Vite's `import.meta.env.DEV` to tell the environments apart: it only says whether the hot-reload server is running.
@@ -96,7 +96,7 @@ The environment doesn't decide which bucket or keys the app uses. In both enviro
 
 On pushes and manual runs, CI then builds the installers for the branch's environment: staging installers from `staging`, and production installers from `production`. It builds the app with electron-vite and the installers with electron-builder, without the typecheck that `npm run dist` adds, because the first job already ran it. It builds the AppImage on Ubuntu and the Windows installer on Windows, and keeps both as workflow artifacts for 14 days. Pull requests skip this step.
 
-Before uploading, CI starts each built app with the `--launch-check` switch (`npm run launch-check -- <environment>`, run under `xvfb-run` on Ubuntu). The script starts exactly that environment's build at the version in `app/package.json`, finding its name in the environment's electron-builder config (`app/scripts/launch-check-target.mjs`), and fails if it isn't in `app/dist/`. With that switch, the app quits with exit code 0 once the page has loaded its status, settings and templates from main over IPC, which the page marks with `data-state="ready"` on `<html>`. That proves the preload, the IPC sender check and the bundled main code all work in the packaged app. It quits with its own error code if the page failed to load, didn't render, the renderer crashed, loading took longer than 30 seconds, or another copy of the same environment was already running (`app/src/main/launch-check.ts`). Any other failure shows up as a different exit code, for example a tampered `app.asar` on Windows. The security workflow is described in [SECURITY.md](SECURITY.md).
+Before uploading, CI starts each built app with the `--launch-check` switch (`npm run launch-check -- <environment>`, run under `xvfb-run` on Ubuntu). The script starts exactly that environment's build at the version in `app/package.json`, finding its name in the environment's electron-builder config (`app/scripts/launch-check-target.mjs`), and fails if it isn't in `app/dist/`. With that switch, the app quits with exit code 0 once the page has loaded its status, settings and templates from main over IPC, which the page marks with `data-state="ready"` on `<html>`. That proves the preload, the IPC sender check and the bundled main code all work in the packaged app. It quits with its own error code if the page failed to load, didn't render, the renderer crashed, loading took longer than 30 seconds, or another copy of the same environment was already running (`app/src/main/services/launch-check-service.ts`). Any other failure shows up as a different exit code, for example a tampered `app.asar` on Windows. The security workflow is described in [SECURITY.md](SECURITY.md).
 
 Check workflow changes before pushing them: `npm run actionlint`, run in `app/`, checks `.github/workflows/` with actionlint in Docker (`app/scripts/actionlint.mjs`, which pins the image by digest).
 
@@ -124,7 +124,7 @@ Rebuild only when `docker/linux/` changes. Code changes need no rebuild, because
 ### What's in the image
 
 - Ubuntu 26.04 LTS.
-- Node and npm, copied from the official `node` image at the version in `.node-version`. `app/scripts/node-version.test.mjs` checks that the Dockerfile's `FROM node:` line matches it.
+- Node and npm, copied from the official `node` image at the version in `.node-version`. `app/tests/unit/node-version.test.ts` checks that the Dockerfile's `FROM node:` line matches it.
 - Both base images are pinned by digest. To update one, change its tag and digest together.
 - git, and the non-root user `ubuntu` with passwordless sudo.
 - The libraries Electron needs at runtime, and Liberation fonts for any character the bundled Montserrat lacks.

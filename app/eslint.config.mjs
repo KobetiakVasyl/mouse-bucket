@@ -36,17 +36,19 @@ export default defineConfig(
   tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
+    rules: { '@typescript-eslint/no-explicit-any': 'error' }
+  },
+  // React lives only in the renderer; elsewhere, names like Playwright's `use` aren't hooks.
+  {
+    files: ['src/renderer/**/*.{ts,tsx}'],
     ...eslintReact.configs['recommended-typescript']
   },
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['src/renderer/**/*.{ts,tsx}'],
     plugins: {
       'react-hooks': eslintPluginReactHooks
     },
-    rules: {
-      ...eslintPluginReactHooks.configs.recommended.rules,
-      '@typescript-eslint/no-explicit-any': 'error'
-    }
+    rules: eslintPluginReactHooks.configs.recommended.rules
   },
   {
     files: ['src/main/**'],
@@ -54,7 +56,6 @@ export default defineConfig(
   },
   {
     files: ['src/renderer/**', 'src/shared/**'],
-    ignores: ['**/*.test.ts'],
     rules: { 'no-restricted-imports': ['error', noElectronOrNode] }
   },
   {

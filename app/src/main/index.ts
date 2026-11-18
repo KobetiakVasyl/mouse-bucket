@@ -1,30 +1,35 @@
-// App lifecycle, the hardened main window and the services behind IPC. See docs/SECURITY.md and docs/ARCHITECTURE.md.
-import { app, BrowserWindow, dialog, safeStorage, screen, session } from 'electron'
-import { join } from 'path'
-import { pathToFileURL } from 'url'
+// Starts the app: one copy per data folder, main's services wired together, and the main window. See docs/ARCHITECTURE.md and docs/SECURITY.md.
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { app, ipcMain, powerSaveBlocker, safeStorage, screen, session } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { TRANSFERS_CHANGED } from '../shared/channels'
-import type { Theme } from '../shared/ipc'
-import { appDataDir, appId, environmentFromMode, hotReloadUrl, productName } from './environment'
-import { describeError } from './errors'
-import { registerIpc } from './ipc/register'
-import { systemKeepAwake } from './keep-awake'
-import { osKeyVault } from './key-vault'
-import { LAUNCH_CHECK_SWITCH, LaunchCheckExit, watchLaunch } from './launch-check'
-import { SettingsStore } from './settings'
-import { TemplateStore } from './templates'
-import { TransferQueue } from './transfers'
-import { mainWindowOptions } from './window'
-import { type Placement, windowPlacement, WindowStateStore } from './window-state'
+import { TRANSFERS_CHANGED } from '../shared/constants/ipc-constants'
+import { DATA_FILES } from './constants/data-file-constants'
+import { LAUNCH_CHECK_SWITCH, LaunchCheckExit } from './constants/launch-check-constants'
+import { PROGRESS_INTERVAL_MS, TRANSFER_CONCURRENCY } from './constants/transfer-constants'
+import { DialogService } from './services/dialog-service'
+import { DownloadService } from './services/download-service'
+import { EnvironmentService } from './services/environment-service'
+import { IpcService } from './services/ipc-service'
+import { KeepAwakeService } from './services/keep-awake-service'
+import { KeyVaultService } from './services/key-vault-service'
+import { LaunchCheckService } from './services/launch-check-service'
+import { S3Service } from './services/s3-service'
+import { SettingsService } from './services/settings-service'
+import { TemplateService } from './services/template-service'
+import { TransferService } from './services/transfer-service'
+import { UploadService } from './services/upload-service'
+import { WindowService } from './services/window-service'
+import { WindowStateService } from './services/window-state-service'
+import { windowPlacement } from './utils/window-utils'
 
-const environment = environmentFromMode(import.meta.env.MODE)
+const environment = EnvironmentService.fromMode(import.meta.env.MODE)
 const launchCheck = app.commandLine.hasSwitch(LAUNCH_CHECK_SWITCH)
 
-app.setName(productName(environment))
-if (process.platform === 'win32') app.setAppUserModelId(appId(environment))
+app.setName(environment.productName)
+if (process.platform === 'win32') app.setAppUserModelId(environment.appId)
 
-const dataDir = appDataDir({
-  environment,
+const dataDir = environment.dataDir({
   isPackaged: app.isPackaged,
   appPath: app.getAppPath(),
   platform: process.platform,
@@ -33,9 +38,11 @@ const dataDir = appDataDir({
 })
 if (dataDir !== null) app.setPath('userData', dataDir)
 
-const rendererUrl = hotReloadUrl(environment, app.isPackaged, process.env['ELECTRON_RENDERER_URL'])
-const rendererFile = join(__dirname, '../renderer/index.html')
-const appUrl = rendererUrl === null ? pathToFileURL(rendererFile).href : rendererUrl
+const page = {
+  url: environment.hotReloadUrl(app.isPackaged, process.env['ELECTRON_RENDERER_URL']),
+  file: join(__dirname, '../renderer/index.html')
+}
+const appUrl = page.url === null ? pathToFileURL(page.file).href : page.url
 
 // Blocks new windows and navigation away from the app in every web contents. See docs/SECURITY.md.
 app.on('web-contents-created', (_event, contents) => {
@@ -51,106 +58,54 @@ function denyAllPermissions(): void {
   session.defaultSession.setPermissionCheckHandler(() => false)
 }
 
-interface WindowSetup {
-  theme: Theme
-  transfers: TransferQueue
-  windowState: WindowStateStore
-  placement: Placement
-}
-
-function createWindow({ theme, transfers, windowState, placement }: WindowSetup): void {
-  const mainWindow = new BrowserWindow(
-    mainWindowOptions({
-      environment,
-      platform: process.platform,
-      preloadPath: join(__dirname, '../preload/index.js'),
-      icon,
-      theme,
-      bounds: placement.bounds
-    })
-  )
-
-  mainWindow.on('page-title-updated', (event) => event.preventDefault())
-  mainWindow.on('ready-to-show', () => {
-    if (placement.maximized) mainWindow.maximize()
-    mainWindow.show()
-  })
-
-  // Closing quits the app, so it asks first while transfers are pending. See docs/UI.md.
-  mainWindow.on('close', (event) => {
-    if (transfers.active) {
-      const choice = dialog.showMessageBoxSync(mainWindow, {
-        type: 'warning',
-        buttons: ['Keep transferring', 'Quit and cancel them'],
-        defaultId: 0,
-        cancelId: 0,
-        message: 'Uploads or downloads are still running.',
-        detail: "Quitting cancels every transfer that hasn't finished."
-      })
-      if (choice === 0) {
-        event.preventDefault()
-        return
-      }
-      transfers.cancelAll()
-    }
-    try {
-      windowState.saveSync({
-        bounds: mainWindow.getNormalBounds(),
-        maximized: mainWindow.isMaximized()
-      })
-    } catch (error) {
-      console.error("The window's position wasn't saved:", describeError(error))
-    }
-  })
-
-  if (launchCheck) watchLaunch(mainWindow.webContents, (code) => app.exit(code))
-
-  // The theme travels in the query string, so the page paints in the right colors at once.
-  if (rendererUrl !== null) {
-    const url = new URL(rendererUrl)
-    url.searchParams.set('theme', theme)
-    mainWindow.loadURL(url.href)
-  } else {
-    mainWindow.loadFile(rendererFile, { query: { theme } })
-  }
-}
-
 async function start(): Promise<void> {
   denyAllPermissions()
   const userData = app.getPath('userData')
-  const vault = osKeyVault(safeStorage, process.platform)
-  const settings = new SettingsStore(join(userData, 'settings.json'))
-  const templates = new TemplateStore(userData, vault)
-  const transfers = new TransferQueue({
-    concurrency: 3,
-    progressIntervalMs: 200,
-    keepAwake: systemKeepAwake(),
-    onChange: (list) => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        if (!window.isDestroyed()) window.webContents.send(TRANSFERS_CHANGED, list)
-      }
-    }
+  const vault = new KeyVaultService(safeStorage, process.platform)
+  const s3 = new S3Service()
+  const dialogs = new DialogService()
+  const settings = new SettingsService(join(userData, DATA_FILES.settings))
+  const templates = new TemplateService(userData, vault, s3)
+  const transfers = new TransferService({
+    concurrency: TRANSFER_CONCURRENCY,
+    progressIntervalMs: PROGRESS_INTERVAL_MS,
+    keepAwake: new KeepAwakeService(powerSaveBlocker),
+    onChange: (list) => WindowService.sendToAll(TRANSFERS_CHANGED, list)
   })
-  registerIpc({ settings, templates, transfers, vault }, appUrl)
-  const windowState = new WindowStateStore(join(userData, 'window-state.json'))
+  const uploads = new UploadService(templates, s3, transfers, dialogs)
+  const downloads = new DownloadService(templates, s3, transfers, dialogs, () =>
+    app.getPath('downloads')
+  )
+  new IpcService(ipcMain, appUrl, process.platform).register({
+    vault,
+    settings,
+    templates,
+    uploads,
+    downloads,
+    transfers
+  })
+
+  const windowState = new WindowStateService(join(userData, DATA_FILES.windowState))
+  const windows = new WindowService({
+    environment,
+    page,
+    preloadPath: join(__dirname, '../preload/index.js'),
+    icon,
+    transfers,
+    windowState,
+    dialogs,
+    launchCheck: launchCheck ? new LaunchCheckService((code) => app.exit(code)) : null
+  })
+  // One running copy per app data folder; starting another focuses the first. See docs/ENVIRONMENTS.md.
+  app.on('second-instance', () => windows.focus())
   const workAreas = screen.getAllDisplays().map((display) => display.workArea)
   const placement = windowPlacement(await windowState.load(), workAreas)
-  createWindow({ theme: (await settings.get()).theme, transfers, windowState, placement })
+  windows.open((await settings.get()).theme, placement)
 }
 
-function focusMainWindow(): void {
-  const windows = BrowserWindow.getAllWindows()
-  if (windows.length === 0) return
-  const mainWindow = windows[0]
-  if (mainWindow.isMinimized()) mainWindow.restore()
-  mainWindow.focus()
-}
-
-// One running copy per app data folder; starting another focuses the first. See docs/ENVIRONMENTS.md.
 if (!app.requestSingleInstanceLock()) {
   app.exit(launchCheck ? LaunchCheckExit.alreadyRunning : 0)
 } else {
-  app.on('second-instance', focusMainWindow)
   app.on('window-all-closed', () => app.quit())
   app
     .whenReady()

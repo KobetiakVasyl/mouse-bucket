@@ -32,7 +32,7 @@ const env = { ...process.env, APPIMAGE_EXTRACT_AND_RUN: '1' }
 console.log(`Launching ${builtApp} --launch-check`)
 const result = spawnSync(builtApp, ['--launch-check'], { stdio: 'inherit', timeout: 90_000, env })
 
-// The exit codes come from LaunchCheckExit in src/main/launch-check.ts.
+// The exit codes come from LaunchCheckExit in src/main/constants/launch-check-constants.ts.
 /** @type {Map<number | null, string>} */
 const outcomes = new Map([
   [0, 'the window rendered'],

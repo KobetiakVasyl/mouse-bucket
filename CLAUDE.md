@@ -32,9 +32,10 @@ Run these in `app/` on the host. To check the Linux build, run the same commands
 | `npm ci` | Clean install from the lockfile, including the Electron binary |
 | `npm run staging` | Run the app in staging mode with hot reload (on the host) |
 | `npm run staging:preview` | Build in staging mode and launch, without hot reload (use this in the Linux container) |
-| `npm run typecheck` | TypeScript, for main and preload, the renderer, then the `.mjs` scripts |
+| `npm run typecheck` | TypeScript, for main and preload, the renderer, the `.mjs` scripts, then the tests |
 | `npm run lint` | ESLint, including the import boundaries below |
-| `npm test` | Vitest, started through `scripts/test.mjs` |
+| `npm test` | Unit and integration tests with Vitest, started through `scripts/test.mjs` |
+| `npm run test:unit`, `npm run test:integration` | Only one of the two |
 | `npm run format`, `npm run format:check` | Prettier: rewrite, or only check (CI runs the check) |
 | `npm run audit` | npm audit, checked against `audit-allowlist.json` |
 | `npm run build:staging`, `npm run build:production` | Build without launching |
@@ -51,6 +52,8 @@ The app lives in `app/`. `app/src/` has four parts with hard boundaries:
 - `main/` owns every side effect: credentials, settings, S3 calls, disk I/O, dialogs and the transfer queue.
 - `shared/` holds the types and the IPC channel map that the other three use. Change a contract here, never on one side only.
 
+Inside each part, code is split into folders by kind: `services/` (classes), `constants/`, `types/`, `validation/` and `utils/`, plus `pages/` and `theme/` (`styles/`, `components/`, `compositions/`) in the renderer. File names end in their kind, such as `s3-service.ts`, and React components are one per file in PascalCase. Module-level constants and named types live only in their folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#code-organization)).
+
 Keep Electron-specific code out of the renderer, so that moving to Tauri later stays possible.
 
 ## Security rules (ask before relaxing any of these)
@@ -66,7 +69,7 @@ Keep Electron-specific code out of the renderer, so that moving to Tauri later s
 - TypeScript strict mode. No `any`: use `unknown` and narrow it.
 - Style with Tailwind CSS, using only the theme's color roles. The theme is grayscale (black, white and shades of gray), with red only for deleting and errors, rounded corners everywhere, toggle buttons instead of radio buttons, and the bundled Montserrat as the font everywhere (see [UI.md](docs/UI.md)). Ask before adding a UI component library.
 - Ask before adding a dependency, and pin exact versions.
-- Use Vitest for tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test.
+- Tests live in `app/tests/`: `unit/` and `integration/` (real files in temporary folders), each mirroring `app/`'s folders (see [ARCHITECTURE.md](docs/ARCHITECTURE.md#tests)). Use Vitest for unit and integration tests and `aws-sdk-client-mock` to mock S3. New main-process logic gets a unit test at its mirrored path.
 - Comments are a short summary plus a reference to the doc that explains the details, for example `// Blocks navigation away from the app. See docs/SECURITY.md.` The explanation lives in `docs/*.md`, not in the code.
 - Never keep legacy comments: commented-out code, notes about how something used to work, or comments that no longer match the code. Delete them whenever you touch that code.
 

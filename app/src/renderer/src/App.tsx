@@ -1,10 +1,6 @@
 // The app shell: the first data load from main, the side menu, the pages and the welcome page. See docs/UI.md.
 import { useEffect, useState } from 'react'
-import type { AppStatus, Settings, SettingsUpdate, Template } from '../../shared/ipc'
-import { api, messageOf } from './api'
-import { SideMenu } from './components/SideMenu'
-import { useTransfers } from './components/TransferList'
-import { type Page, pageToShow } from './navigation'
+import type { SettingsUpdate } from '../../shared/types/settings-types'
 import { DownloadPage } from './pages/DownloadPage'
 import { HomePage } from './pages/HomePage'
 import { HowItWorksPage } from './pages/HowItWorksPage'
@@ -12,38 +8,35 @@ import { SettingsPage } from './pages/SettingsPage'
 import { TemplatesPage } from './pages/TemplatesPage'
 import { UploadPage } from './pages/UploadPage'
 import { WelcomePage } from './pages/WelcomePage'
-import { applyTheme } from './theme'
-
-interface AppData {
-  status: AppStatus
-  settings: Settings
-  templates: Template[]
-}
-
-type Load =
-  { state: 'loading' } | { state: 'ready'; data: AppData } | { state: 'failed'; error: string }
-
-// The launch check reads this state to know the page loaded its data from main. See docs/ENVIRONMENTS.md.
-function markState(state: 'ready' | 'failed'): void {
-  document.documentElement.dataset.state = state
-}
+import { appService } from './services/app-service'
+import { settingsService } from './services/settings-service'
+import { templateService } from './services/template-service'
+import { themeService } from './services/theme-service'
+import { useTransfers } from './services/transfer-service'
+import { SideMenu } from './theme/compositions/SideMenu'
+import type { AppData, AppLoad } from './types/app-types'
+import type { Page } from './types/navigation-types'
+import { messageOf } from './utils/error-utils'
+import { pageToShow } from './utils/navigation-utils'
+import { templatesOfKind } from './utils/template-utils'
 
 export default function App(): React.JSX.Element {
-  const [load, setLoad] = useState<Load>({ state: 'loading' })
+  const [load, setLoad] = useState<AppLoad>({ state: 'loading' })
   const [page, setPage] = useState<Page>('home')
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const transfers = useTransfers()
 
   useEffect(() => {
-    Promise.all([api.getStatus(), api.getSettings(), api.listTemplates()]).then(
+    Promise.all([appService.status(), settingsService.get(), templateService.list()]).then(
       ([status, settings, templates]) => {
         setLoad({ state: 'ready', data: { status, settings, templates } })
+        themeService.apply(settings.theme)
         setWelcomeOpen(!settings.welcomeSeen)
-        markState('ready')
+        appService.markLoaded('ready')
       },
       (reason: unknown) => {
         setLoad({ state: 'failed', error: messageOf(reason) })
-        markState('failed')
+        appService.markLoaded('failed')
       }
     )
   }, [])
@@ -64,8 +57,8 @@ export default function App(): React.JSX.Element {
     )
 
   const updateSettings = async (update: SettingsUpdate): Promise<void> => {
-    const next = await api.updateSettings(update)
-    applyTheme(next.theme)
+    const next = await settingsService.update(update)
+    themeService.apply(next.theme)
     changeData((data) => ({ ...data, settings: next }))
   }
 
@@ -76,13 +69,15 @@ export default function App(): React.JSX.Element {
   }
 
   const shown = pageToShow(page, templates)
-  const ofKind = (kind: Template['kind']): Template[] =>
-    templates.filter((template) => template.kind === kind)
 
   const pages: Record<Page, () => React.JSX.Element> = {
     home: () => <HomePage templates={templates} transfers={transfers} onNavigate={setPage} />,
-    upload: () => <UploadPage templates={ofKind('upload')} transfers={transfers} />,
-    download: () => <DownloadPage templates={ofKind('download')} transfers={transfers} />,
+    upload: () => (
+      <UploadPage templates={templatesOfKind(templates, 'upload')} transfers={transfers} />
+    ),
+    download: () => (
+      <DownloadPage templates={templatesOfKind(templates, 'download')} transfers={transfers} />
+    ),
     templates: () => (
       <TemplatesPage
         templates={templates}

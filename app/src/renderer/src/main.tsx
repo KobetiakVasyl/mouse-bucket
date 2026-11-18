@@ -1,11 +1,12 @@
-import './styles/global.css'
+// The renderer's entry: paints the saved theme at once, then renders the app. See docs/UI.md.
+import './theme/styles/global.css'
 
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { applyTheme, themeFromQuery } from './theme'
+import { themeService } from './services/theme-service'
 
-applyTheme(themeFromQuery(window.location.search))
+themeService.apply(themeService.fromQuery(window.location.search))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

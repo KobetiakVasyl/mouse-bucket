@@ -1,5 +1,5 @@
 // The welcome page, shown over the app on first start and from the side menu. See docs/UI.md.
-import { Button } from '../components/ui'
+import { Button } from '../theme/components/Button'
 
 export function WelcomePage({
   onClose,

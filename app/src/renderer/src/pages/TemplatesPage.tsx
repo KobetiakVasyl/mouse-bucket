@@ -1,81 +1,13 @@
 // The Templates page: the saved templates, and the form that adds one. See docs/UI.md.
-import { type ChangeEvent, type FormEvent, useCallback, useState } from 'react'
-import type { NewTemplate, Template, TemplateKind } from '../../../shared/ipc'
-import { formatS3Location, parseS3Location } from '../../../shared/s3-location'
-import { api, messageOf } from '../api'
-import {
-  Button,
-  CELL,
-  ConfirmDialog,
-  ErrorMessage,
-  Field,
-  inputClass,
-  Notice,
-  PageHeading,
-  TABLE_HEAD_ROW,
-  TABLE_ROW,
-  TableFrame,
-  ToggleGroup
-} from '../components/ui'
-import { PERMISSIONS } from '../permissions'
-import { selectedTemplate, sortByName } from '../template-order'
-
-type KeySource = 'entered' | 'copied'
-
-interface Form {
-  kind: TemplateKind
-  name: string
-  location: string
-  keySource: KeySource
-  accessKeyId: string
-  secretAccessKey: string
-  // The template whose keys a copy uses.
-  copyFrom: string
-}
-
-const EMPTY_FORM: Form = {
-  kind: 'upload',
-  name: '',
-  location: '',
-  keySource: 'entered',
-  accessKeyId: '',
-  secretAccessKey: '',
-  copyFrom: ''
-}
-
-function locationHint(form: Form): string {
-  if (form.location.trim() === '') {
-    return form.kind === 'upload'
-      ? 'For example s3://my-bucket/folder/'
-      : 'For example s3://my-bucket'
-  }
-  const parsed = parseS3Location(form.location)
-  if ('error' in parsed) return parsed.error
-  if (form.kind === 'download' && parsed.location.prefix !== '') {
-    return 'A download template points at a whole bucket. Remove the folder.'
-  }
-  const where = formatS3Location(parsed.location)
-  return form.kind === 'upload' ? `Uploads go to ${where}` : `Downloads browse ${where}`
-}
-
-// Copying needs a template to copy from, so with none saved the keys are always typed in.
-function newTemplate(form: Form, templates: Template[]): NewTemplate {
-  const base = { kind: form.kind, name: form.name, location: form.location }
-  if (templates.length === 0) return { ...base, keys: enteredKeys(form) }
-  if (form.keySource === 'entered') return { ...base, keys: enteredKeys(form) }
-  return {
-    ...base,
-    keys: { source: 'copied', templateId: selectedTemplate(templates, form.copyFrom).id }
-  }
-}
-
-function enteredKeys(form: Form): NewTemplate['keys'] {
-  return {
-    source: 'entered',
-    accessKeyId: form.accessKeyId,
-    secretAccessKey: form.secretAccessKey
-  }
-}
+import { useCallback, useState } from 'react'
+import type { NewTemplate, Template } from '../../../shared/types/template-types'
+import { templateService } from '../services/template-service'
+import { Notice } from '../theme/components/Notice'
+import { PageHeading } from '../theme/components/PageHeading'
+import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
+import { TemplateForm } from '../theme/compositions/TemplateForm'
+import { TemplateTable } from '../theme/compositions/TemplateTable'
+import { messageOf } from '../utils/error-utils'
 
 export function TemplatesPage({
   templates,
@@ -90,36 +22,16 @@ export function TemplatesPage({
   onCreated: (template: Template) => void
   onDeleted: (id: string) => void
 }): React.JSX.Element {
-  const [form, setForm] = useState<Form>(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string>()
-  const [error, setError] = useState<string>()
   const [deleting, setDeleting] = useState<Template | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string>()
-  const sorted = sortByName(templates)
-  const copying = templates.length > 0 && form.keySource === 'copied'
 
-  const update =
-    (field: 'name' | 'location' | 'accessKeyId' | 'secretAccessKey') =>
-    (event: ChangeEvent<HTMLInputElement>): void =>
-      setForm((previous) => ({ ...previous, [field]: event.target.value }))
-
-  const submit = async (event: FormEvent): Promise<void> => {
-    event.preventDefault()
-    setSaving(true)
+  const create = async (newTemplate: NewTemplate): Promise<void> => {
     setMessage(undefined)
-    setError(undefined)
-    try {
-      const template = await api.createTemplate(newTemplate(form, templates))
-      setForm(EMPTY_FORM)
-      setMessage(`Added "${template.name}".`)
-      onCreated(template)
-    } catch (reason) {
-      setError(messageOf(reason))
-    } finally {
-      setSaving(false)
-    }
+    const template = await templateService.create(newTemplate)
+    setMessage(`Added "${template.name}".`)
+    onCreated(template)
   }
 
   const closeDelete = useCallback((): void => {
@@ -131,7 +43,7 @@ export function TemplatesPage({
     setDeleteBusy(true)
     setDeleteError(undefined)
     try {
-      await api.deleteTemplate(template.id)
+      await templateService.delete(template.id)
       onDeleted(template.id)
       setMessage(`Deleted "${template.name}".`)
       closeDelete()
@@ -157,131 +69,18 @@ export function TemplatesPage({
         </Notice>
       )}
 
-      {sorted.length > 0 && (
+      {templates.length > 0 && (
         <div className="mb-10">
-          <TableFrame>
-            <thead>
-              <tr className={TABLE_HEAD_ROW}>
-                <th className={CELL}>Name</th>
-                <th className={CELL}>Type</th>
-                <th className={CELL}>Location</th>
-                <th className={CELL}>Region</th>
-                <th className={CELL} />
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((template) => (
-                <tr key={template.id} className={TABLE_ROW}>
-                  <td className={CELL}>{template.name}</td>
-                  <td className={CELL}>{template.kind === 'upload' ? 'Upload' : 'Download'}</td>
-                  <td className={`${CELL} break-all`}>{formatS3Location(template)}</td>
-                  <td className={CELL}>{template.region}</td>
-                  <td className={`${CELL} text-right`}>
-                    <Button
-                      className="text-sm"
-                      variant="danger"
-                      onClick={() => setDeleting(template)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </TableFrame>
+          <TemplateTable templates={templates} onDelete={setDeleting} />
         </div>
       )}
 
-      <form className="max-w-xl space-y-6" onSubmit={(event) => void submit(event)}>
-        <h2 className="text-xl font-semibold">New template</h2>
-        <div>
-          <ToggleGroup
-            label="Type"
-            options={[
-              { value: 'upload', label: 'Upload' },
-              { value: 'download', label: 'Download' }
-            ]}
-            value={form.kind}
-            onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
-          />
-          <p className="mt-1 text-sm text-muted">
-            The IAM user needs {PERMISSIONS[form.kind].summary}
-          </p>
-        </div>
-        <Field label="Name" hint="Shown when you choose a template, for example Reports.">
-          <input className={inputClass} value={form.name} onChange={update('name')} required />
-        </Field>
-        <Field label="S3 location" hint={locationHint(form)}>
-          <input
-            className={inputClass}
-            value={form.location}
-            onChange={update('location')}
-            spellCheck={false}
-            required
-          />
-        </Field>
-
-        {templates.length > 0 && (
-          <ToggleGroup
-            label="IAM user"
-            options={[
-              { value: 'entered', label: 'Enter keys' },
-              { value: 'copied', label: 'Copy from a template' }
-            ]}
-            value={form.keySource}
-            onChange={(keySource) => setForm((previous) => ({ ...previous, keySource }))}
-          />
-        )}
-        {copying ? (
-          <Field
-            label="Copy the keys of"
-            hint="The keys are copied on this computer and never shown."
-          >
-            <select
-              className={inputClass}
-              value={selectedTemplate(templates, form.copyFrom).id}
-              onChange={(event) =>
-                setForm((previous) => ({ ...previous, copyFrom: event.target.value }))
-              }
-            >
-              {sorted.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name} ({formatS3Location(template)})
-                </option>
-              ))}
-            </select>
-          </Field>
-        ) : (
-          <>
-            <Field label="Access key ID">
-              <input
-                className={inputClass}
-                value={form.accessKeyId}
-                onChange={update('accessKeyId')}
-                autoComplete="off"
-                spellCheck={false}
-                required
-              />
-            </Field>
-            <Field label="Secret access key">
-              <input
-                className={inputClass}
-                type="password"
-                value={form.secretAccessKey}
-                onChange={update('secretAccessKey')}
-                autoComplete="off"
-                required
-              />
-            </Field>
-          </>
-        )}
-
-        <Button type="submit" variant="primary" disabled={!encryptionAvailable || saving}>
-          {saving ? 'Checking the bucket…' : 'Add template'}
-        </Button>
-        {message !== undefined && <p role="status">{message}</p>}
-        <ErrorMessage message={error} />
-      </form>
+      <TemplateForm
+        templates={templates}
+        encryptionAvailable={encryptionAvailable}
+        message={message}
+        onCreate={create}
+      />
 
       {deleting !== null && (
         <ConfirmDialog

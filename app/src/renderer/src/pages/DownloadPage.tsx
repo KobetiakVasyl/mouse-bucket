@@ -1,73 +1,23 @@
 // The Download page: pick a download template, browse its bucket, then download, restore or delete files. See docs/UI.md.
 import { useCallback, useEffect, useState } from 'react'
-import type {
-  FileAccess,
-  FolderListing,
-  RestoreTier,
-  S3File,
-  Template,
-  Transfer
-} from '../../../shared/ipc'
-import { storageClassLabel } from '../../../shared/storage'
-import { api, messageOf } from '../api'
-import { TemplatePicker } from '../components/TemplatePicker'
-import { TransferList } from '../components/TransferList'
-import {
-  Button,
-  CELL,
-  ConfirmDialog,
-  ErrorMessage,
-  Field,
-  inputClass,
-  Modal,
-  PageHeading,
-  TABLE_HEAD_ROW,
-  TABLE_ROW,
-  TableFrame,
-  ToggleGroup
-} from '../components/ui'
-import { formatBytes, formatDate } from '../format'
-import { selectedTemplate, sortByName } from '../template-order'
-
-// Where the browser is: which template's bucket, and which folder in it ('' for the top).
-interface Place {
-  templateId: string
-  prefix: string
-}
-
-// A listing remembers the place it belongs to, so a stale one is never shown.
-type Shown =
-  | { place: Place; state: 'loaded'; listing: FolderListing }
-  | { place: Place; state: 'failed'; error: string }
-
-type Dialog =
-  { kind: 'none' } | { kind: 'delete'; file: S3File } | { kind: 'restore'; file: S3File }
-
-const samePlace = (a: Place, b: Place): boolean =>
-  a.templateId === b.templateId && a.prefix === b.prefix
-
-const DOWNLOADABLE: ReadonlySet<FileAccess['state']> = new Set(['available', 'restored'])
-
-const LINK = 'rounded text-left underline hover:no-underline'
-
-// Typical restore times, by storage class and speed.
-const RESTORE_TIMES = new Map([
-  ['DEEP_ARCHIVE', { Standard: 'within 12 hours', Bulk: 'within 48 hours' }],
-  ['GLACIER', { Standard: 'in 3 to 5 hours', Bulk: 'in 5 to 12 hours' }]
-])
-
-function accessNote(access: FileAccess): string {
-  switch (access.state) {
-    case 'available':
-      return ''
-    case 'archived':
-      return 'Archived'
-    case 'restoring':
-      return 'Restoring…'
-    case 'restored':
-      return `Restored until ${formatDate(access.until)}`
-  }
-}
+import type { FolderListing, RestoreTier, S3File } from '../../../shared/types/s3-types'
+import type { Template } from '../../../shared/types/template-types'
+import type { Transfer } from '../../../shared/types/transfer-types'
+import { downloadService } from '../services/download-service'
+import { ErrorMessage } from '../theme/components/ErrorMessage'
+import { PageHeading } from '../theme/components/PageHeading'
+import { StatusMessage } from '../theme/components/StatusMessage'
+import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
+import { FolderBreadcrumb } from '../theme/compositions/FolderBreadcrumb'
+import { FolderTable } from '../theme/compositions/FolderTable'
+import { RestoreDialog } from '../theme/compositions/RestoreDialog'
+import { TemplatePicker } from '../theme/compositions/TemplatePicker'
+import { TransferList } from '../theme/compositions/TransferList'
+import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-types'
+import { appendListing, samePlace } from '../utils/download-utils'
+import { messageOf } from '../utils/error-utils'
+import { selectedTemplate, sortByName } from '../utils/template-utils'
+import { transfersOfKind } from '../utils/transfer-utils'
 
 // Shown only while at least one download template exists.
 export function DownloadPage({
@@ -77,13 +27,13 @@ export function DownloadPage({
   templates: Template[]
   transfers: Transfer[]
 }): React.JSX.Element {
-  const [place, setPlace] = useState<Place>(() => ({
+  const [place, setPlace] = useState<FolderPlace>(() => ({
     templateId: sortByName(templates)[0].id,
     prefix: ''
   }))
-  const [shown, setShown] = useState<Shown | null>(null)
+  const [shown, setShown] = useState<ShownFolder | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [dialog, setDialog] = useState<Dialog>({ kind: 'none' })
+  const [dialog, setDialog] = useState<FileDialog>({ kind: 'none' })
   const [dialogBusy, setDialogBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string>()
   const [message, setMessage] = useState<string>()
@@ -93,7 +43,7 @@ export function DownloadPage({
 
   useEffect(() => {
     let active = true
-    api
+    downloadService
       .listFolder({ templateId: place.templateId, prefix: place.prefix, continuationToken: null })
       .then(
         (listing) => {
@@ -108,7 +58,7 @@ export function DownloadPage({
     }
   }, [place])
 
-  const goTo = (next: Place): void => {
+  const goTo = (next: FolderPlace): void => {
     setMessage(undefined)
     setError(undefined)
     setPlace(next)
@@ -142,14 +92,14 @@ export function DownloadPage({
 
   const deleteFile = (file: S3File): Promise<void> =>
     runDialogAction(async () => {
-      await api.deleteFile({ templateId: template.id, key: file.key })
+      await downloadService.delete({ templateId: template.id, key: file.key })
       changeFiles((files) => files.filter((candidate) => candidate.key !== file.key))
       setMessage(`Deleted ${file.name}.`)
     })
 
   const restoreFile = (file: S3File, tier: RestoreTier, days: number): Promise<void> =>
     runDialogAction(async () => {
-      await api.restoreFile({ templateId: template.id, key: file.key, tier, days })
+      await downloadService.restore({ templateId: template.id, key: file.key, tier, days })
       changeFiles((files) =>
         files.map((candidate) =>
           candidate.key === file.key ? { ...candidate, access: { state: 'restoring' } } : candidate
@@ -161,20 +111,12 @@ export function DownloadPage({
   const loadMore = async (listing: FolderListing, continuationToken: string): Promise<void> => {
     setLoadingMore(true)
     try {
-      const more = await api.listFolder({
+      const next = await downloadService.listFolder({
         templateId: place.templateId,
         prefix: place.prefix,
         continuationToken
       })
-      setShown({
-        place,
-        state: 'loaded',
-        listing: {
-          folders: [...listing.folders, ...more.folders],
-          files: [...listing.files, ...more.files],
-          nextToken: more.nextToken
-        }
-      })
+      setShown({ place, state: 'loaded', listing: appendListing(listing, next) })
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -186,15 +128,13 @@ export function DownloadPage({
     setMessage(undefined)
     setError(undefined)
     try {
-      if (await api.downloadFile({ templateId: template.id, key: file.key })) {
+      if (await downloadService.download({ templateId: template.id, key: file.key })) {
         setMessage(`Downloading ${file.name}. It's in the transfers below.`)
       }
     } catch (reason) {
       setError(messageOf(reason))
     }
   }
-
-  const parts = place.prefix.split('/').filter((part) => part !== '')
 
   return (
     <>
@@ -207,25 +147,7 @@ export function DownloadPage({
         selectedId={template.id}
         onSelect={(templateId) => goTo({ templateId, prefix: '' })}
       />
-
-      <nav aria-label="Folder" className="mt-8 mb-4 flex flex-wrap gap-x-2">
-        <button type="button" className={LINK} onClick={() => openFolder('')}>
-          {template.bucket}
-        </button>
-        {parts.map((part, index) => {
-          const path = `${parts.slice(0, index + 1).join('/')}/`
-          return (
-            <span key={path} className="flex gap-x-2">
-              <span aria-hidden="true" className="text-muted">
-                /
-              </span>
-              <button type="button" className={LINK} onClick={() => openFolder(path)}>
-                {part}
-              </button>
-            </span>
-          )
-        })}
-      </nav>
+      <FolderBreadcrumb bucket={template.bucket} prefix={place.prefix} onOpenFolder={openFolder} />
 
       {current === null && <p className="text-muted">Loading…</p>}
       {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
@@ -242,13 +164,9 @@ export function DownloadPage({
         />
       )}
 
-      {message !== undefined && (
-        <p role="status" className="mt-4">
-          {message}
-        </p>
-      )}
+      <StatusMessage message={message} className="mt-4" />
       <ErrorMessage message={error} />
-      <TransferList transfers={transfers.filter((transfer) => transfer.kind === 'download')} />
+      <TransferList transfers={transfersOfKind(transfers, 'download')} />
 
       {dialog.kind === 'delete' && (
         <ConfirmDialog
@@ -276,162 +194,5 @@ export function DownloadPage({
         />
       )}
     </>
-  )
-}
-
-function FolderTable({
-  listing,
-  prefix,
-  loadingMore,
-  onOpenFolder,
-  onDownload,
-  onRestore,
-  onDelete,
-  onLoadMore
-}: {
-  listing: FolderListing
-  prefix: string
-  loadingMore: boolean
-  onOpenFolder: (prefix: string) => void
-  onDownload: (file: S3File) => void
-  onRestore: (file: S3File) => void
-  onDelete: (file: S3File) => void
-  onLoadMore: (continuationToken: string) => void
-}): React.JSX.Element {
-  if (listing.folders.length === 0 && listing.files.length === 0) {
-    return <p className="text-muted">This folder is empty.</p>
-  }
-  const { nextToken } = listing
-  return (
-    <>
-      <TableFrame>
-        <thead>
-          <tr className={TABLE_HEAD_ROW}>
-            <th className={CELL}>Name</th>
-            <th className={CELL}>Size</th>
-            <th className={CELL}>Storage class</th>
-            <th className={CELL}>Modified</th>
-            <th className={CELL} />
-          </tr>
-        </thead>
-        <tbody>
-          {listing.folders.map((folder) => (
-            <tr key={folder} className={TABLE_ROW}>
-              <td className={CELL}>
-                <button type="button" className={LINK} onClick={() => onOpenFolder(folder)}>
-                  {folder.slice(prefix.length)}
-                </button>
-              </td>
-              <td className={`${CELL} text-muted`}>Folder</td>
-              <td className={CELL} />
-              <td className={CELL} />
-              <td className={CELL} />
-            </tr>
-          ))}
-          {listing.files.map((file) => (
-            <tr key={file.key} className={TABLE_ROW}>
-              <td className={`${CELL} break-all`}>{file.name}</td>
-              <td className={`${CELL} whitespace-nowrap`}>{formatBytes(file.size)}</td>
-              <td className={CELL}>
-                {storageClassLabel(file.storageClass)}
-                {file.access.state !== 'available' && (
-                  <span className="block text-sm text-muted">{accessNote(file.access)}</span>
-                )}
-              </td>
-              <td className={`${CELL} whitespace-nowrap`}>{formatDate(file.lastModified)}</td>
-              <td className={CELL}>
-                <div className="flex justify-end gap-2">
-                  {DOWNLOADABLE.has(file.access.state) && (
-                    <Button className="text-sm" onClick={() => onDownload(file)}>
-                      Download
-                    </Button>
-                  )}
-                  {file.access.state === 'archived' && (
-                    <Button className="text-sm" onClick={() => onRestore(file)}>
-                      Restore
-                    </Button>
-                  )}
-                  <Button className="text-sm" variant="danger" onClick={() => onDelete(file)}>
-                    Delete
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </TableFrame>
-      {nextToken !== null && (
-        <Button className="mt-4" disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
-          Load more
-        </Button>
-      )}
-    </>
-  )
-}
-
-function RestoreDialog({
-  file,
-  busy,
-  error,
-  onRestore,
-  onCancel
-}: {
-  file: S3File
-  busy: boolean
-  error: string | undefined
-  onRestore: (tier: RestoreTier, days: number) => void
-  onCancel: () => void
-}): React.JSX.Element {
-  const [tier, setTier] = useState<RestoreTier>('Standard')
-  const [days, setDays] = useState('7')
-  const dayCount = Number(days)
-  const validDays = Number.isInteger(dayCount) && dayCount >= 1 && dayCount <= 365
-  const times = RESTORE_TIMES.get(file.storageClass)
-  return (
-    <Modal title="Restore from the archive" onClose={onCancel}>
-      <p className="mb-6">
-        S3 makes a temporary copy of <strong>{file.name}</strong> that can be downloaded. AWS
-        charges for each restore.
-      </p>
-      <div className="space-y-5">
-        <div>
-          <ToggleGroup
-            label="Speed"
-            options={[
-              { value: 'Standard', label: 'Standard' },
-              { value: 'Bulk', label: 'Bulk (cheaper)' }
-            ]}
-            value={tier}
-            onChange={setTier}
-          />
-          {times !== undefined && (
-            <p className="mt-1 text-sm text-muted">Usually ready {times[tier]}.</p>
-          )}
-        </div>
-        <Field label="Days to keep the copy" hint="From 1 to 365.">
-          <input
-            className={inputClass}
-            type="number"
-            min={1}
-            max={365}
-            value={days}
-            onChange={(event) => setDays(event.target.value)}
-          />
-        </Field>
-      </div>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button onClick={onCancel} autoFocus>
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          disabled={!validDays || busy}
-          onClick={() => onRestore(tier, dayCount)}
-        >
-          Restore
-        </Button>
-      </div>
-      <ErrorMessage message={error} />
-    </Modal>
   )
 }

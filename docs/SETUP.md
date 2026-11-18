@@ -4,7 +4,7 @@ What each person sets up once before working on the project. Where each kind of 
 
 ## 1. Node.js on the host
 
-Install the Node.js version in `.node-version` at the repo root. CI reads it from there. `app/package.json`'s `engines` field and the Linux container's Dockerfile match it, and `app/scripts/node-version.test.mjs` checks both. npm refuses to install the app's dependencies with any other version (`engine-strict` in `app/.npmrc`).
+Install the Node.js version in `.node-version` at the repo root. CI reads it from there. `app/package.json`'s `engines` field and the Linux container's Dockerfile match it, and `app/tests/unit/node-version.test.ts` checks both. npm refuses to install the app's dependencies with any other version (`engine-strict` in `app/.npmrc`).
 
 Then install the dependencies by running `npm ci` in `app/`. Downloads are cached in `.cache/` in the repo (see [ENVIRONMENTS.md](ENVIRONMENTS.md#caches)). The npm scripts work in any shell, including PowerShell, cmd and Git Bash on Windows.
 
