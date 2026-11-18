@@ -1,6 +1,6 @@
 // Starts the built app for each end-to-end test, in a throwaway folder of its own and with sample S3 data. See docs/ARCHITECTURE.md.
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join, relative } from 'node:path'
 import {
@@ -22,6 +22,8 @@ export interface AppSetup {
 const MAIN = appPath('out/main/index.js')
 const QUIET_WINDOW = appPath('tests/e2e/support/quiet-window.cjs')
 const RUNS = repoPath('.cache/tmp/e2e/')
+// The app's own version, so each test copy reports it as the installed app would.
+const VERSION: unknown = JSON.parse(readFileSync(appPath('package.json'), 'utf8')).version
 
 export function uploadTemplate(name: string, prefix = `${name.toLowerCase()}/`): Template {
   return {
@@ -51,7 +53,7 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
     const main = relative(root, MAIN).replace(/\\/g, '/')
     await writeFile(
       join(root, 'package.json'),
-      JSON.stringify({ name: 'mousebucket-e2e', version: '0.0.0', main })
+      JSON.stringify({ name: 'mousebucket-e2e', version: VERSION, main })
     )
     const dataDir = join(root, 'data', 'staging')
     await mkdir(dataDir, { recursive: true })

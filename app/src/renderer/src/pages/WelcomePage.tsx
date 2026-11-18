@@ -1,5 +1,6 @@
 // The welcome page, shown over the app on first start and from the side menu. See docs/UI.md.
 import { Button } from '../theme/components/Button'
+import { HelpIcon } from '../theme/components/icons'
 
 export function WelcomePage({
   onClose,
@@ -36,7 +37,10 @@ export function WelcomePage({
           <Button variant="primary" onClick={onClose} autoFocus>
             Close
           </Button>
-          <Button onClick={onShowHowItWorks}>How it works</Button>
+          <Button onClick={onShowHowItWorks}>
+            <HelpIcon />
+            How it works
+          </Button>
         </div>
       </div>
     </div>

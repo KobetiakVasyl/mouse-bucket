@@ -17,6 +17,7 @@ import { messageOf } from '../utils/error-utils'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
 import { queuedMessage } from '../utils/upload-utils'
+import { ChooseFilesIcon, ChooseFolderIcon } from '../theme/components/icons'
 
 // Shown only while at least one upload template exists.
 export function UploadPage({
@@ -72,12 +73,14 @@ export function UploadPage({
           disabled={busy}
           onClick={() => void queue(() => uploadService.chooseFiles(request))}
         >
+          <ChooseFilesIcon />
           Choose files…
         </Button>
         <Button
           disabled={busy}
           onClick={() => void queue(() => uploadService.chooseFolder(request))}
         >
+          <ChooseFolderIcon />
           Choose a folder…
         </Button>
       </DropZone>

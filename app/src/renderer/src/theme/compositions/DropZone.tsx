@@ -1,5 +1,6 @@
 // An area that takes files and folders dropped on it, with the buttons that pick them instead. See docs/UI.md.
 import { type ReactNode, useState } from 'react'
+import { UploadIcon } from '../components/icons'
 
 export function DropZone({
   onDrop,
@@ -24,6 +25,7 @@ export function DropZone({
       }}
       className={`mt-6 flex max-w-3xl flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-8 text-center ${over ? 'border-ink bg-hover' : 'border-line'}`}
     >
+      <UploadIcon className="text-5xl text-muted" />
       <p className="text-lg">Drop files or folders here, or</p>
       <div className="flex flex-wrap justify-center gap-3">{children}</div>
     </section>

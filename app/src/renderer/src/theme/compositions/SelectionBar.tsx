@@ -2,6 +2,7 @@
 import type { S3File } from '../../../../shared/types/s3-types'
 import { archivedFiles, downloadableFiles, fileCount } from '../../utils/download-utils'
 import { Button } from '../components/Button'
+import { CancelIcon, DeleteIcon, DownloadIcon, RestoreIcon } from '../components/icons'
 
 export function SelectionBar({
   files,
@@ -31,6 +32,7 @@ export function SelectionBar({
         disabled={downloadable.length === 0}
         onClick={() => onDownload(downloadable)}
       >
+        <DownloadIcon />
         Download ({downloadable.length})
       </Button>
       <Button
@@ -39,12 +41,15 @@ export function SelectionBar({
         disabled={archived.length === 0}
         onClick={() => onRestore(archived)}
       >
+        <RestoreIcon />
         Restore ({archived.length})
       </Button>
       <Button className="text-sm" variant="danger" onClick={() => onDelete(files)}>
+        <DeleteIcon />
         Delete ({files.length})
       </Button>
       <Button className="text-sm" onClick={onClear}>
+        <CancelIcon />
         Clear selection
       </Button>
     </div>

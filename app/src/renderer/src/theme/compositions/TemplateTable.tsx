@@ -6,6 +6,7 @@ import { sortByName } from '../../utils/template-utils'
 import { Button } from '../components/Button'
 import { TableFrame } from '../components/TableFrame'
 import { CELL, TABLE_HEAD_ROW, TABLE_ROW } from '../styles/style-constants'
+import { DeleteIcon, EditIcon } from '../components/icons'
 
 export function TemplateTable({
   templates,
@@ -37,9 +38,11 @@ export function TemplateTable({
             <td className={CELL}>
               <div className="flex justify-end gap-2">
                 <Button className="text-sm" onClick={() => onEdit(template)}>
+                  <EditIcon />
                   Edit
                 </Button>
                 <Button className="text-sm" variant="danger" onClick={() => onDelete(template)}>
+                  <DeleteIcon />
                   Delete
                 </Button>
               </div>

@@ -4,6 +4,7 @@ import { MENU_FOOTER_ITEMS, MENU_ITEMS } from '../../constants/navigation-consta
 import type { MenuItem, Page } from '../../types/navigation-types'
 import { menuPageOf } from '../../utils/navigation-utils'
 import { MENU_ITEM_CLASS } from '../styles/style-constants'
+import { WelcomeIcon } from '../components/icons'
 
 export function SideMenu({
   current,
@@ -16,7 +17,7 @@ export function SideMenu({
 }): React.JSX.Element {
   const marked = menuPageOf(current)
   const items = (list: MenuItem[]): React.JSX.Element[] =>
-    list.map(({ page, label }) => (
+    list.map(({ page, label, icon: Icon }) => (
       <li key={page}>
         <button
           type="button"
@@ -24,6 +25,7 @@ export function SideMenu({
           className={`${MENU_ITEM_CLASS} ${page === marked ? 'bg-ink text-paper' : 'hover:bg-hover'}`}
           onClick={() => onNavigate(page)}
         >
+          <Icon />
           {label}
         </button>
       </li>
@@ -46,6 +48,7 @@ export function SideMenu({
             className={`${MENU_ITEM_CLASS} text-muted hover:bg-hover hover:text-ink`}
             onClick={onShowWelcome}
           >
+            <WelcomeIcon />
             Show welcome page again
           </button>
         </li>

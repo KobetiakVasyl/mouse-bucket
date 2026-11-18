@@ -21,6 +21,17 @@ const noElectronOrNode = {
     }
   ]
 }
+// Icons come only through src/renderer/src/theme/components/icons, which wraps Phosphor.
+const noPhosphorOutsideIcons = {
+  ...noElectronOrNode,
+  paths: [
+    ...noElectronOrNode.paths,
+    {
+      name: '@phosphor-icons/react',
+      message: 'Use the icons in src/renderer/src/theme/components/icons.'
+    }
+  ]
+}
 const noIpcRenderer = {
   paths: [
     {
@@ -56,9 +67,13 @@ export default defineConfig(
   },
   {
     files: ['src/renderer/**', 'src/shared/**'],
+    rules: { 'no-restricted-imports': ['error', noPhosphorOutsideIcons] }
+  },
+  {
+    files: ['src/renderer/src/theme/components/icons/**'],
     rules: { 'no-restricted-imports': ['error', noElectronOrNode] }
   },
-  // CommonJS files, such as the e2e window script that NODE_OPTIONS loads, can only use require.
+  // CommonJS files, such as the e2e window script Electron loads with -r, can only use require.
   {
     files: ['**/*.cjs'],
     rules: { '@typescript-eslint/no-require-imports': 'off' }

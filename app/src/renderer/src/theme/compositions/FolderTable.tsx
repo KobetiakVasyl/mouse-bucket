@@ -8,6 +8,14 @@ import { Checkbox } from '../components/Checkbox'
 import { LinkButton } from '../components/LinkButton'
 import { TableFrame } from '../components/TableFrame'
 import { CELL, TABLE_HEAD_ROW, TABLE_ROW } from '../styles/style-constants'
+import {
+  DeleteIcon,
+  DownloadIcon,
+  FileIcon,
+  FolderIcon,
+  LoadMoreIcon,
+  RestoreIcon
+} from '../components/icons'
 
 export function FolderTable({
   listing,
@@ -61,6 +69,7 @@ export function FolderTable({
               <td className={CELL} />
               <td className={CELL}>
                 <LinkButton onClick={() => onOpenFolder(folder)}>
+                  <FolderIcon className="text-muted" />
                   {folderName(folder, prefix)}
                 </LinkButton>
               </td>
@@ -79,7 +88,12 @@ export function FolderTable({
                   onChange={(checked) => onSelect(file.key, checked)}
                 />
               </td>
-              <td className={`${CELL} break-all`}>{file.name}</td>
+              <td className={CELL}>
+                <span className="flex items-center gap-2">
+                  <FileIcon className="text-muted" />
+                  <span className="break-words">{file.name}</span>
+                </span>
+              </td>
               <td className={`${CELL} whitespace-nowrap`}>{formatBytes(file.size)}</td>
               <td className={CELL}>
                 {storageClassLabel(file.storageClass)}
@@ -89,18 +103,21 @@ export function FolderTable({
               </td>
               <td className={`${CELL} whitespace-nowrap`}>{formatDate(file.lastModified)}</td>
               <td className={CELL}>
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   {isDownloadable(file) && (
                     <Button className="text-sm" onClick={() => onDownload(file)}>
+                      <DownloadIcon />
                       Download
                     </Button>
                   )}
                   {file.access.state === 'archived' && (
                     <Button className="text-sm" variant="positive" onClick={() => onRestore(file)}>
+                      <RestoreIcon />
                       Restore
                     </Button>
                   )}
                   <Button className="text-sm" variant="danger" onClick={() => onDelete(file)}>
+                    <DeleteIcon />
                     Delete
                   </Button>
                 </div>
@@ -111,6 +128,7 @@ export function FolderTable({
       </TableFrame>
       {nextToken !== null && (
         <Button className="mt-4" disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
+          <LoadMoreIcon />
           Load more
         </Button>
       )}

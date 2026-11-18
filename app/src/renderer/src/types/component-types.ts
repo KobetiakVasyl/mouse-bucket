@@ -5,3 +5,9 @@ export interface ChoiceOption<T extends string> {
   value: T
   label: string
 }
+
+// What every icon takes: extra classes, and filled instead of the default outline.
+export interface IconProps {
+  className?: string
+  filled?: boolean
+}

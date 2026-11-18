@@ -10,6 +10,7 @@ import { Tile } from '../theme/components/Tile'
 import { TransferList } from '../theme/compositions/TransferList'
 import type { Page } from '../types/navigation-types'
 import { hasKind } from '../utils/template-utils'
+import { AddIcon, BrowseIcon, UploadIcon } from '../theme/components/icons'
 
 export function HomePage({
   templates,
@@ -30,6 +31,7 @@ export function HomePage({
           <span className="flex flex-wrap items-center justify-between gap-3">
             {FIRST_TEMPLATE_MESSAGE}
             <Button variant="primary" onClick={() => onNavigate('templates')}>
+              <AddIcon />
               Add a template
             </Button>
           </span>
@@ -37,6 +39,7 @@ export function HomePage({
       )}
       <div className="grid h-[65vh] min-h-72 grid-cols-2 gap-6">
         <Tile
+          icon={<UploadIcon />}
           title="Upload"
           available={canUpload}
           description={
@@ -47,6 +50,7 @@ export function HomePage({
           onClick={() => onNavigate('upload')}
         />
         <Tile
+          icon={<BrowseIcon />}
           title="Browse"
           available={canDownload}
           description={

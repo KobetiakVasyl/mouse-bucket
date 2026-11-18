@@ -14,7 +14,8 @@ export const BUTTON_LOOKS: Record<ButtonVariant, string> = {
   positive: 'border-positive bg-surface text-positive hover:bg-positive hover:text-paper'
 }
 
-export const LINK_CLASS = 'rounded text-left underline hover:no-underline'
+export const LINK_CLASS =
+  'inline-flex items-center gap-2 rounded text-left underline hover:no-underline'
 
 export const TABLE_HEAD_ROW = 'border-b border-line text-left text-sm text-muted'
 export const TABLE_ROW = 'border-b border-line last:border-b-0 hover:bg-hover'
@@ -23,4 +24,4 @@ export const CELL = 'px-4 py-2.5'
 export const PROGRESS_CLASS =
   'mt-2 h-2 w-full appearance-none overflow-hidden rounded-full [&::-webkit-progress-bar]:rounded-full [&::-webkit-progress-bar]:bg-hover [&::-webkit-progress-value]:rounded-full [&::-webkit-progress-value]:bg-ink'
 
-export const MENU_ITEM_CLASS = `block w-full rounded-lg px-4 py-2.5 text-left text-lg ${FOCUS}`
+export const MENU_ITEM_CLASS = `flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-left text-lg ${FOCUS}`

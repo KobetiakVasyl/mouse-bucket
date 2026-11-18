@@ -1,5 +1,6 @@
 // The download folder: where downloads are saved, and the button that opens main's folder picker. See docs/UI.md.
 import { Button } from '../components/Button'
+import { FolderIcon } from '../components/icons'
 
 export function DownloadFolderSetting({
   folder,
@@ -21,6 +22,7 @@ export function DownloadFolderSetting({
           {folder}
         </p>
         <Button disabled={busy} onClick={onChange}>
+          <FolderIcon />
           Change…
         </Button>
       </div>

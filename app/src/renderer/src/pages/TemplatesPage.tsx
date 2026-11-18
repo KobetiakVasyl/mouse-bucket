@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { TemplateForm } from '../theme/compositions/TemplateForm'
 import { TemplateTable } from '../theme/compositions/TemplateTable'
 import { messageOf } from '../utils/error-utils'
+import { DeleteIcon } from '../theme/components/icons'
 
 export function TemplatesPage({
   templates,
@@ -116,6 +117,7 @@ export function TemplatesPage({
             </p>
           }
           confirmLabel="Delete"
+          confirmIcon={<DeleteIcon />}
           busy={deleteBusy}
           error={deleteError}
           onConfirm={() => void confirmDelete(deleting)}

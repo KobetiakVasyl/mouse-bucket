@@ -30,6 +30,7 @@ import {
 import { messageOf } from '../utils/error-utils'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
+import { DeleteIcon } from '../theme/components/icons'
 
 // Shown only while at least one download template exists.
 export function DownloadPage({
@@ -251,6 +252,7 @@ export function DownloadPage({
             </p>
           }
           confirmLabel="Delete"
+          confirmIcon={<DeleteIcon />}
           busy={dialogBusy}
           error={dialogError}
           onConfirm={() => void deleteFiles(dialog.files)}

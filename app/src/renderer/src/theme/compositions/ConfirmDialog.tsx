@@ -8,6 +8,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  confirmIcon,
   cancelLabel = 'Cancel',
   busy,
   error,
@@ -17,6 +18,7 @@ export function ConfirmDialog({
   title: string
   message: ReactNode
   confirmLabel: string
+  confirmIcon: React.JSX.Element
   cancelLabel?: string
   busy: boolean
   error: string | undefined
@@ -31,6 +33,7 @@ export function ConfirmDialog({
           {cancelLabel}
         </Button>
         <Button variant="danger" disabled={busy} onClick={onConfirm}>
+          {confirmIcon}
           {confirmLabel}
         </Button>
       </div>

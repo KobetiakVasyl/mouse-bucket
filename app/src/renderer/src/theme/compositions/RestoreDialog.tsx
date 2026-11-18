@@ -11,6 +11,7 @@ import { Field } from '../components/Field'
 import { Modal } from '../components/Modal'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
+import { RestoreIcon } from '../components/icons'
 
 export function RestoreDialog({
   files,
@@ -85,6 +86,7 @@ export function RestoreDialog({
             if (days !== null) onRestore(tier, days)
           }}
         >
+          <RestoreIcon />
           Restore
         </Button>
       </div>

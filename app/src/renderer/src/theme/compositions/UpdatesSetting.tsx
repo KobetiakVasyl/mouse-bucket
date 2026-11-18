@@ -5,6 +5,7 @@ import { messageOf } from '../../utils/error-utils'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { ProgressBar } from '../components/ProgressBar'
+import { CheckUpdatesIcon, DownloadIcon, InstallIcon } from '../components/icons'
 
 export function UpdatesSetting({ version }: { version: string }): React.JSX.Element {
   const state = useUpdateState()
@@ -18,6 +19,7 @@ export function UpdatesSetting({ version }: { version: string }): React.JSX.Elem
       disabled={state !== null && state.status === 'checking'}
       onClick={() => act(updateService.check())}
     >
+      <CheckUpdatesIcon />
       Check for updates
     </Button>
   )
@@ -46,6 +48,7 @@ export function UpdatesSetting({ version }: { version: string }): React.JSX.Elem
         <>
           <p className="mb-3">Version {state.version} is available.</p>
           <Button variant="primary" onClick={() => act(updateService.download())}>
+            <DownloadIcon />
             Download the update
           </Button>
         </>
@@ -65,6 +68,7 @@ export function UpdatesSetting({ version }: { version: string }): React.JSX.Elem
             and can be resumed after.
           </p>
           <Button variant="primary" onClick={() => act(updateService.install())}>
+            <InstallIcon />
             Restart and install
           </Button>
         </>

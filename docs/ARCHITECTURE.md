@@ -34,9 +34,10 @@ Inside each part, code is split into folders by kind (see [Layout](#layout) for 
 | `pages/` | One component per page, built from compositions | renderer |
 | `theme/styles/` | `global.css`, `fonts.css`, and `style-constants.ts` with the Tailwind class strings components share | renderer |
 | `theme/components/` | Basic building blocks, such as `Button`, `Field`, `ToggleGroup` and `Modal` | renderer |
+| `theme/components/icons/` | One component per icon, such as `EditIcon`, wrapping Phosphor, and an `index.ts` that exports them all (see [UI.md](UI.md#theme)) | renderer |
 | `theme/compositions/` | Pieces built from components, such as `SideMenu`, `TemplatePicker`, `TransferList` and `ConfirmDialog` | renderer |
 
-- **Names:** a file's name ends in its kind: `s3-service.ts`, `storage-constants.ts`, `template-types.ts`, `s3-location-validation.ts`, `format-utils.ts`. React components are one per file and named after the component, such as `Button.tsx` or `DownloadPage.tsx`.
+- **Names:** a file's name ends in its kind: `s3-service.ts`, `storage-constants.ts`, `template-types.ts`, `s3-location-validation.ts`, `format-utils.ts`. React components are one per file and named after the component, such as `Button.tsx` or `DownloadPage.tsx`. The icons folder's `index.ts` is the one index file, so icons import from one place.
 - **Constants and types:** module-level constants live only in `constants/` (and `theme/styles/style-constants.ts`), and named types only in `types/`. A component's props may stay in its signature.
 - **Services:** each service is a class, created once and handed to whatever uses it. A service takes what it needs in its constructor, typed as only the methods it calls, such as `Pick<TemplateService, 'getOfKind' | 'accessFor'>`, so tests can pass small fakes.
   - Main creates all its services in `app/src/main/index.ts`. `IpcService` connects each channel to one service method behind the sender and payload checks, and holds no logic of its own.
@@ -184,7 +185,7 @@ Tests live in `app/tests/`, apart from the code they test. There are three kinds
 
 - Electron 45, scaffolded with electron-vite's `react-ts` template.
 - React and TypeScript in strict mode.
-- Tailwind CSS (see [UI.md](UI.md)).
+- Tailwind CSS, and Phosphor for icons (see [UI.md](UI.md)).
 - `@aws-sdk/client-s3`, in main only.
 - zod for the IPC payload schemas.
 - electron-builder for installers, and electron-updater for updates (see [PACKAGING.md](PACKAGING.md)).

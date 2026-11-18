@@ -15,6 +15,7 @@ import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { ProgressBar } from '../components/ProgressBar'
 import { ConfirmDialog } from './ConfirmDialog'
+import { CancelIcon, PauseIcon, ResumeIcon, RetryIcon } from '../components/icons'
 
 export function TransferList({ transfers }: { transfers: Transfer[] }): React.JSX.Element | null {
   const [error, setError] = useState<string>()
@@ -53,16 +54,19 @@ export function TransferList({ transfers }: { transfers: Transfer[] }): React.JS
             </div>
             {isPending(transfer) && (
               <Button className="text-sm" onClick={() => act(transferService.pause(transfer.id))}>
+                <PauseIcon />
                 Pause
               </Button>
             )}
             {isResumable(transfer) && (
               <Button className="text-sm" onClick={() => act(transferService.resume(transfer.id))}>
+                {transfer.status === 'failed' ? <RetryIcon /> : <ResumeIcon />}
                 {transfer.status === 'failed' ? 'Retry' : 'Resume'}
               </Button>
             )}
             {(isPending(transfer) || isResumable(transfer)) && (
               <Button className="text-sm" onClick={() => cancel(transfer)}>
+                <CancelIcon />
                 Cancel
               </Button>
             )}
@@ -75,6 +79,7 @@ export function TransferList({ transfers }: { transfers: Transfer[] }): React.JS
           title={`Cancel this ${cancelling.kind}?`}
           message={<p>{cancelWarning(cancelling)}</p>}
           confirmLabel={`Cancel ${cancelling.kind}`}
+          confirmIcon={<CancelIcon />}
           cancelLabel="Keep it"
           busy={false}
           error={undefined}

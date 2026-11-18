@@ -26,6 +26,7 @@ import { Field } from '../components/Field'
 import { StatusMessage } from '../components/StatusMessage'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
+import { AddIcon, SaveIcon } from '../components/icons'
 
 // onCreate and onUpdate throw when main refuses; the form then shows why and keeps what was typed.
 // The page gives the form a new key for each template it edits, so it starts from that template.
@@ -184,6 +185,7 @@ export function TemplateForm({
           variant="primary"
           disabled={saving || (needsEncryption && !encryptionAvailable)}
         >
+          {editing === null ? <AddIcon /> : <SaveIcon />}
           {saving ? 'Checking the bucket…' : editing === null ? 'Add template' : 'Save changes'}
         </Button>
         {editing !== null && <Button onClick={onCancelEdit}>Cancel</Button>}
