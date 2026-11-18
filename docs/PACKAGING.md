@@ -7,6 +7,7 @@ How the app is built into installers and licensed.
 - Linux and Windows are the release targets, with equal priority. macOS isn't a target. electron-builder, configured in `app/electron-builder.yml`, builds:
   - Linux: AppImage
   - Windows: NSIS. It installs per user, into a folder the user picks.
+- Installers aren't code-signed, on purpose: signing needs a certificate that has to be bought again before it expires. On Windows, SmartScreen therefore warns on the first run, and the user continues with "More info", then "Run anyway". The installer shows the publisher as unknown.
 - On Windows, uninstalling deletes everything the app put on the machine: the install folder, the app's data inside it, and any app data Electron left in the user profile (`deleteAppDataOnUninstall`).
 - On Windows, upgrading keeps the app's data. Installing a newer version runs the old version's uninstaller, and the `customRemoveFiles` hook in `app/build/installer.nsh` handles it in three steps:
   1. Move `data\` next to the install folder, as `<install folder>-data`.
