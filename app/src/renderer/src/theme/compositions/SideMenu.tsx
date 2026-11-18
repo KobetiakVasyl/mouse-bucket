@@ -31,7 +31,7 @@ export function SideMenu({
   return (
     <nav
       aria-label="Main menu"
-      className="flex w-72 shrink-0 flex-col border-r border-line bg-surface py-6"
+      className="flex w-88 shrink-0 flex-col border-r border-line bg-surface py-6"
     >
       <div className="mb-8 flex items-center gap-3 px-4">
         <img src={logo} alt="" className="size-16 shrink-0 rounded-xl" />
