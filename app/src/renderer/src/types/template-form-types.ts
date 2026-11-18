@@ -1,7 +1,8 @@
-// What the form that adds a template holds while it's filled in. See docs/UI.md.
+// What the form that adds or changes a template holds while it's filled in. See docs/UI.md.
 import type { TemplateKind } from '../../../shared/types/template-types'
 
-export type KeySource = 'entered' | 'copied'
+// Kept is only for a template being changed: it keeps the keys it has.
+export type KeySource = 'entered' | 'copied' | 'kept'
 
 export interface TemplateFormValues {
   kind: TemplateKind

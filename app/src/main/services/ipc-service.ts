@@ -24,6 +24,7 @@ export class IpcService {
     )
     this.handle(Channel.templatesList, () => templates.list())
     this.handle(Channel.templatesCreate, (input) => templates.add(input))
+    this.handle(Channel.templatesUpdate, (edit) => templates.update(edit))
     this.handle(Channel.templatesDelete, (id) => templates.delete(id))
     this.handle(Channel.uploadChooseFiles, (request, event) =>
       uploads.chooseFiles(request, event.sender)

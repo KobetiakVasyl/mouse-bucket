@@ -1,16 +1,24 @@
-// The form that adds a template: type, name, S3 location, and the IAM user's keys, typed in or copied. See docs/UI.md.
-import { type ChangeEvent, type FormEvent, useState } from 'react'
-import type { NewTemplate, Template } from '../../../../shared/types/template-types'
-import { formatS3Location } from '../../utils/s3-location-utils'
+// The form that adds a template, or changes one: type, name, S3 location, and the IAM user's keys, typed in, copied,
+// or kept when changing. See docs/UI.md.
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
+import type { NewTemplate, Template, TemplateEdit } from '../../../../shared/types/template-types'
 import { PERMISSIONS } from '../../constants/permission-constants'
 import {
+  EDIT_KEY_SOURCE_OPTIONS,
   EMPTY_TEMPLATE_FORM,
   KEY_SOURCE_OPTIONS,
   TEMPLATE_KIND_OPTIONS
 } from '../../constants/template-constants'
 import type { TemplateFormTextField, TemplateFormValues } from '../../types/template-form-types'
 import { messageOf } from '../../utils/error-utils'
-import { isCopyingKeys, locationHint, newTemplate } from '../../utils/template-form-utils'
+import { formatS3Location } from '../../utils/s3-location-utils'
+import {
+  formFor,
+  isCopyingKeys,
+  locationHint,
+  newTemplate,
+  templateEdit
+} from '../../utils/template-form-utils'
 import { selectedTemplate, sortByName } from '../../utils/template-utils'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
@@ -19,22 +27,43 @@ import { StatusMessage } from '../components/StatusMessage'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
 
-// onCreate throws when main refuses the template; the form then shows why and keeps what was typed.
+// onCreate and onUpdate throw when main refuses; the form then shows why and keeps what was typed.
+// The page gives the form a new key for each template it edits, so it starts from that template.
 export function TemplateForm({
   templates,
+  editing,
   encryptionAvailable,
   message,
-  onCreate
+  onCreate,
+  onUpdate,
+  onCancelEdit
 }: {
   templates: Template[]
+  editing: Template | null
   encryptionAvailable: boolean
   message: string | undefined
   onCreate: (template: NewTemplate) => Promise<void>
+  onUpdate: (edit: TemplateEdit) => Promise<void>
+  onCancelEdit: () => void
 }): React.JSX.Element {
-  const [form, setForm] = useState<TemplateFormValues>(EMPTY_TEMPLATE_FORM)
+  const [form, setForm] = useState<TemplateFormValues>(() =>
+    editing === null ? EMPTY_TEMPLATE_FORM : formFor(editing)
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
-  const copying = isCopyingKeys(form, templates)
+  const formRef = useRef<HTMLFormElement>(null)
+  // A template can't copy its own keys; keeping them does that.
+  const copySources =
+    editing === null ? templates : templates.filter((template) => template.id !== editing.id)
+  const copying = isCopyingKeys(form, copySources)
+  const keyOptions = (editing === null ? KEY_SOURCE_OPTIONS : EDIT_KEY_SOURCE_OPTIONS).filter(
+    (option) => option.value !== 'copied' || copySources.length > 0
+  )
+  const needsEncryption = editing === null || form.keySource !== 'kept'
+
+  useEffect(() => {
+    if (editing !== null) formRef.current?.scrollIntoView({ block: 'start' })
+  }, [editing])
 
   const update =
     (field: TemplateFormTextField) =>
@@ -46,8 +75,12 @@ export function TemplateForm({
     setSaving(true)
     setError(undefined)
     try {
-      await onCreate(newTemplate(form, templates))
-      setForm(EMPTY_TEMPLATE_FORM)
+      if (editing === null) {
+        await onCreate(newTemplate(form, copySources))
+        setForm(EMPTY_TEMPLATE_FORM)
+      } else {
+        await onUpdate(templateEdit(form, editing.id, copySources))
+      }
     } catch (reason) {
       setError(messageOf(reason))
     } finally {
@@ -56,8 +89,15 @@ export function TemplateForm({
   }
 
   return (
-    <form className="max-w-xl space-y-6" onSubmit={(event) => void submit(event)}>
-      <h2 className="text-xl font-semibold">New template</h2>
+    <form
+      ref={formRef}
+      aria-label={editing === null ? 'New template' : `Edit ${editing.name}`}
+      className="max-w-xl space-y-6"
+      onSubmit={(event) => void submit(event)}
+    >
+      <h2 className="text-xl font-semibold">
+        {editing === null ? 'New template' : `Edit “${editing.name}”`}
+      </h2>
       <div>
         <ToggleGroup
           label="Type"
@@ -82,34 +122,38 @@ export function TemplateForm({
         />
       </Field>
 
-      {templates.length > 0 && (
+      {keyOptions.length > 1 && (
         <ToggleGroup
           label="IAM user"
-          options={KEY_SOURCE_OPTIONS}
+          options={keyOptions}
           value={form.keySource}
           onChange={(keySource) => setForm((previous) => ({ ...previous, keySource }))}
         />
       )}
-      {copying ? (
+      {form.keySource === 'kept' && (
+        <p className="text-sm text-muted">The template keeps the keys it has.</p>
+      )}
+      {copying && (
         <Field
           label="Copy the keys of"
           hint="The keys are copied on this computer and never shown."
         >
           <select
             className={INPUT_CLASS}
-            value={selectedTemplate(templates, form.copyFrom).id}
+            value={selectedTemplate(copySources, form.copyFrom).id}
             onChange={(event) =>
               setForm((previous) => ({ ...previous, copyFrom: event.target.value }))
             }
           >
-            {sortByName(templates).map((template) => (
+            {sortByName(copySources).map((template) => (
               <option key={template.id} value={template.id}>
                 {template.name} ({formatS3Location(template)})
               </option>
             ))}
           </select>
         </Field>
-      ) : (
+      )}
+      {form.keySource !== 'kept' && !copying && (
         <>
           <Field label="Access key ID">
             <input
@@ -134,9 +178,16 @@ export function TemplateForm({
         </>
       )}
 
-      <Button type="submit" variant="primary" disabled={!encryptionAvailable || saving}>
-        {saving ? 'Checking the bucket…' : 'Add template'}
-      </Button>
+      <div className="flex gap-3">
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={saving || (needsEncryption && !encryptionAvailable)}
+        >
+          {saving ? 'Checking the bucket…' : editing === null ? 'Add template' : 'Save changes'}
+        </Button>
+        {editing !== null && <Button onClick={onCancelEdit}>Cancel</Button>}
+      </div>
       <StatusMessage message={message} />
       <ErrorMessage message={error} />
     </form>

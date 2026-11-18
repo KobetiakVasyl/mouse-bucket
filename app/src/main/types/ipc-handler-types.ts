@@ -18,7 +18,7 @@ export type IpcRegistry = Pick<IpcMain, 'handle'>
 export interface IpcServices {
   vault: Pick<KeyVault, 'available'>
   settings: Pick<SettingsService, 'get' | 'update' | 'chooseDownloadFolder'>
-  templates: Pick<TemplateService, 'list' | 'add' | 'delete'>
+  templates: Pick<TemplateService, 'list' | 'add' | 'update' | 'delete'>
   uploads: Pick<UploadService, 'chooseFiles' | 'chooseFolder' | 'uploadPaths'>
   downloads: Pick<DownloadService, 'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'>
   transfers: Pick<TransferService, 'list' | 'pause' | 'resume' | 'cancel'>

@@ -1,6 +1,6 @@
-// The Templates page: the saved templates, and the form that adds one. See docs/UI.md.
+// The Templates page: the saved templates, and the form that adds one or changes the one being edited. See docs/UI.md.
 import { useCallback, useState } from 'react'
-import type { NewTemplate, Template } from '../../../shared/types/template-types'
+import type { NewTemplate, Template, TemplateEdit } from '../../../shared/types/template-types'
 import { templateService } from '../services/template-service'
 import { Notice } from '../theme/components/Notice'
 import { PageHeading } from '../theme/components/PageHeading'
@@ -14,15 +14,18 @@ export function TemplatesPage({
   encryptionAvailable,
   firstRun,
   onCreated,
+  onUpdated,
   onDeleted
 }: {
   templates: Template[]
   encryptionAvailable: boolean
   firstRun: boolean
   onCreated: (template: Template) => void
+  onUpdated: (template: Template) => void
   onDeleted: (id: string) => void
 }): React.JSX.Element {
   const [message, setMessage] = useState<string>()
+  const [editing, setEditing] = useState<Template | null>(null)
   const [deleting, setDeleting] = useState<Template | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string>()
@@ -32,6 +35,14 @@ export function TemplatesPage({
     const template = await templateService.create(newTemplate)
     setMessage(`Added "${template.name}".`)
     onCreated(template)
+  }
+
+  const update = async (edit: TemplateEdit): Promise<void> => {
+    setMessage(undefined)
+    const template = await templateService.update(edit)
+    setMessage(`Saved "${template.name}".`)
+    setEditing(null)
+    onUpdated(template)
   }
 
   const closeDelete = useCallback((): void => {
@@ -45,6 +56,7 @@ export function TemplatesPage({
     try {
       await templateService.delete(template.id)
       onDeleted(template.id)
+      if (editing !== null && editing.id === template.id) setEditing(null)
       setMessage(`Deleted "${template.name}".`)
       closeDelete()
     } catch (reason) {
@@ -71,15 +83,26 @@ export function TemplatesPage({
 
       {templates.length > 0 && (
         <div className="mb-10">
-          <TemplateTable templates={templates} onDelete={setDeleting} />
+          <TemplateTable
+            templates={templates}
+            onEdit={(template) => {
+              setMessage(undefined)
+              setEditing(template)
+            }}
+            onDelete={setDeleting}
+          />
         </div>
       )}
 
       <TemplateForm
+        key={editing === null ? 'new' : editing.id}
         templates={templates}
+        editing={editing}
         encryptionAvailable={encryptionAvailable}
         message={message}
         onCreate={create}
+        onUpdate={update}
+        onCancelEdit={() => setEditing(null)}
       />
 
       {deleting !== null && (

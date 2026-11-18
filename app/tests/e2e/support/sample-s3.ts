@@ -162,6 +162,8 @@ export function installSampleS3(
   replace('transfers:pause', (payload) => changeTransfer(payload, 'paused'))
   replace('transfers:resume', (payload) => changeTransfer(payload, 'running'))
   replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
+  // CI's Linux runner has no keyring, so the app would refuse to store keys. The tests need the forms enabled.
+  replace('app:status', () => ({ encryptionAvailable: true }))
   replace('templates:create', (payload) => {
     const location = field(payload, 'location').replace(/^s3:\/\//, '')
     const slash = location.indexOf('/')

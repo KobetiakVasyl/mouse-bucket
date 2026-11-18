@@ -131,4 +131,69 @@ describe('TemplateService', () => {
     expect(await rotating.credentialsFor(template.id)).toEqual(KEYS)
     expect((await stat(path)).mtimeMs).toBeGreaterThan(before)
   })
+
+  it('renames a template, keeping its keys and region without asking S3', async () => {
+    const templates = service()
+    const template = await templates.add(NEW)
+    findRegion.mockClear()
+    const renamed = await templates.update({
+      id: template.id,
+      name: 'Monthly reports',
+      kind: 'upload',
+      location: 's3://bucket-one/a/',
+      keys: { source: 'kept' }
+    })
+    expect(renamed).toEqual({ ...template, name: 'Monthly reports' })
+    expect(findRegion).not.toHaveBeenCalled()
+    expect(await templates.list()).toEqual([renamed])
+    expect(await templates.credentialsFor(template.id)).toEqual(KEYS)
+  })
+
+  it('asks S3 for the region again when the bucket or the keys change', async () => {
+    const templates = service()
+    const template = await templates.add(NEW)
+    findRegion.mockResolvedValue('eu-north-1')
+    const moved = await templates.update({
+      id: template.id,
+      name: 'Reports',
+      kind: 'download',
+      location: 's3://bucket-two',
+      keys: { source: 'kept' }
+    })
+    expect(moved).toMatchObject({
+      kind: 'download',
+      bucket: 'bucket-two',
+      prefix: '',
+      region: 'eu-north-1'
+    })
+    expect(findRegion).toHaveBeenLastCalledWith(KEYS, 'bucket-two')
+
+    const newKeys = { accessKeyId: 'AKIAEXAMPLEKEY000002', secretAccessKey: 'other' }
+    await templates.update({
+      id: template.id,
+      name: 'Reports',
+      kind: 'download',
+      location: 's3://bucket-two',
+      keys: { source: 'entered', ...newKeys }
+    })
+    expect(findRegion).toHaveBeenLastCalledWith(newKeys, 'bucket-two')
+    expect(await templates.credentialsFor(template.id)).toEqual(newKeys)
+  })
+
+  it("refuses another template's name, and new keys without OS encryption", async () => {
+    const templates = service()
+    const template = await templates.add(NEW)
+    await templates.add({ ...NEW, name: 'Other' })
+    const change = { id: template.id, kind: 'upload', location: 's3://bucket-one/a/' } as const
+    await expect(
+      templates.update({ ...change, name: 'OTHER', keys: { source: 'kept' } })
+    ).rejects.toThrow('already exists')
+    const locked = service(fakeVault(false))
+    await expect(
+      locked.update({ ...change, name: 'Reports', keys: { source: 'entered', ...KEYS } })
+    ).rejects.toThrow("can't store keys securely")
+    expect(
+      await locked.update({ ...change, name: 'Renamed', keys: { source: 'kept' } })
+    ).toMatchObject({ name: 'Renamed' })
+  })
 })

@@ -1,4 +1,4 @@
-// The saved templates by name, each with its type, location, region and a red Delete. See docs/UI.md.
+// The saved templates by name, each with its type, location, region, Edit and a red Delete. See docs/UI.md.
 import type { Template } from '../../../../shared/types/template-types'
 import { formatS3Location } from '../../utils/s3-location-utils'
 import { TEMPLATE_KIND_LABELS } from '../../constants/template-constants'
@@ -9,9 +9,11 @@ import { CELL, TABLE_HEAD_ROW, TABLE_ROW } from '../styles/style-constants'
 
 export function TemplateTable({
   templates,
+  onEdit,
   onDelete
 }: {
   templates: Template[]
+  onEdit: (template: Template) => void
   onDelete: (template: Template) => void
 }): React.JSX.Element {
   return (
@@ -32,10 +34,15 @@ export function TemplateTable({
             <td className={CELL}>{TEMPLATE_KIND_LABELS[template.kind]}</td>
             <td className={`${CELL} break-all`}>{formatS3Location(template)}</td>
             <td className={CELL}>{template.region}</td>
-            <td className={`${CELL} text-right`}>
-              <Button className="text-sm" variant="danger" onClick={() => onDelete(template)}>
-                Delete
-              </Button>
+            <td className={CELL}>
+              <div className="flex justify-end gap-2">
+                <Button className="text-sm" onClick={() => onEdit(template)}>
+                  Edit
+                </Button>
+                <Button className="text-sm" variant="danger" onClick={() => onDelete(template)}>
+                  Delete
+                </Button>
+              </div>
             </td>
           </tr>
         ))}

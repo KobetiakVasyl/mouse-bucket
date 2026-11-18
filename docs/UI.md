@@ -45,8 +45,9 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
   - Each file has a checkbox, and the column heading's checkbox selects every file shown. With files selected, a bar above the table counts them and offers **Download**, **Restore** and **Delete** for the selection. Each button shows how many of the selected files it applies to: Download the ones that can be downloaded now, Restore the archived ones, and Delete all of them. Delete asks first and lists the files. Opening another folder or template clears the selection.
   - Actions on several files run one file at a time. If one fails, the files done so far show as done, and the dialog stays open with the rest and the error.
 - **Templates:**
-  - The saved templates, each with a red Delete that asks for confirmation first. Deleting a template changes nothing in the bucket.
+  - The saved templates, each with Edit and a red Delete that asks for confirmation first. Deleting a template changes nothing in the bucket.
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.
+  - Edit turns the form into one that changes that template, filled in with its type, name and S3 location, and scrolls to it. The IAM user starts as "Keep the current keys", and can instead take new keys or another template's. "Save changes" or Cancel turns it back into the form that adds one.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
 - **Settings**, in three sections:

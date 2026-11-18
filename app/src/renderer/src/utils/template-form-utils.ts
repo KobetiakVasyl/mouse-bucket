@@ -1,5 +1,5 @@
-// Explains the new-template form's S3 location as it's typed, and turns the form into what main receives. See docs/UI.md.
-import type { NewTemplate, Template } from '../../../shared/types/template-types'
+// Explains the template form's S3 location as it's typed, and turns the form into what main receives. See docs/UI.md.
+import type { NewTemplate, Template, TemplateEdit } from '../../../shared/types/template-types'
 import { formatS3Location } from './s3-location-utils'
 import { parseS3Location } from '../../../shared/validation/s3-location-validation'
 import { WHOLE_BUCKET_MESSAGE } from '../../../shared/constants/s3-location-constants'
@@ -39,4 +39,27 @@ function enteredKeys(form: TemplateFormValues): NewTemplate['keys'] {
     accessKeyId: form.accessKeyId,
     secretAccessKey: form.secretAccessKey
   }
+}
+
+// The form filled in with a template to change, keeping its keys.
+export function formFor(template: Template): TemplateFormValues {
+  return {
+    kind: template.kind,
+    name: template.name,
+    location: formatS3Location(template),
+    keySource: 'kept',
+    accessKeyId: '',
+    secretAccessKey: '',
+    copyFrom: ''
+  }
+}
+
+// `templates` are the ones whose keys may be copied: all but the one being changed.
+export function templateEdit(
+  form: TemplateFormValues,
+  id: string,
+  templates: Template[]
+): TemplateEdit {
+  if (form.keySource !== 'kept') return { id, ...newTemplate(form, templates) }
+  return { id, kind: form.kind, name: form.name, location: form.location, keys: { source: 'kept' } }
 }

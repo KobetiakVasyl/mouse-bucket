@@ -95,6 +95,14 @@ export default function App(): React.JSX.Element {
           changeData((data) => ({ ...data, templates: [...data.templates, template] }))
           if (templates.length === 0) setPage('home')
         }}
+        onUpdated={(template) =>
+          changeData((data) => ({
+            ...data,
+            templates: data.templates.map((existing) =>
+              existing.id === template.id ? template : existing
+            )
+          }))
+        }
         onDeleted={(id) =>
           changeData((data) => ({
             ...data,

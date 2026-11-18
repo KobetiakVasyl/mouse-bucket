@@ -10,7 +10,7 @@ import {
   UploadRequestSchema
 } from './s3-validation'
 import { SettingsUpdateSchema } from './settings-validation'
-import { NewTemplateSchema, TemplateIdSchema } from './template-validation'
+import { NewTemplateSchema, TemplateEditSchema, TemplateIdSchema } from './template-validation'
 
 const NoPayload = z.undefined()
 const TransferIdSchema = z.string().min(1).max(100)
@@ -23,6 +23,7 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.settingsChooseDownloadFolder]: NoPayload,
   [Channel.templatesList]: NoPayload,
   [Channel.templatesCreate]: NewTemplateSchema,
+  [Channel.templatesUpdate]: TemplateEditSchema,
   [Channel.templatesDelete]: TemplateIdSchema,
   [Channel.uploadChooseFiles]: UploadRequestSchema,
   [Channel.uploadChooseFolder]: UploadRequestSchema,

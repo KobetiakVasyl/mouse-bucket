@@ -1,10 +1,13 @@
-// Lists, adds and deletes templates in main, which keeps their keys. See docs/ARCHITECTURE.md.
+// Lists, adds, changes and deletes templates in main, which keeps their keys. See docs/ARCHITECTURE.md.
 import type { Api } from '../../../shared/types/ipc-types'
-import type { NewTemplate, Template } from '../../../shared/types/template-types'
+import type { NewTemplate, Template, TemplateEdit } from '../../../shared/types/template-types'
 
 export class TemplateService {
   constructor(
-    private readonly api: Pick<Api, 'listTemplates' | 'createTemplate' | 'deleteTemplate'>
+    private readonly api: Pick<
+      Api,
+      'listTemplates' | 'createTemplate' | 'updateTemplate' | 'deleteTemplate'
+    >
   ) {}
 
   list(): Promise<Template[]> {
@@ -13,6 +16,10 @@ export class TemplateService {
 
   create(template: NewTemplate): Promise<Template> {
     return this.api.createTemplate(template)
+  }
+
+  update(edit: TemplateEdit): Promise<Template> {
+    return this.api.updateTemplate(edit)
   }
 
   delete(id: string): Promise<void> {

@@ -29,7 +29,12 @@ function setup(): {
       })),
       chooseDownloadFolder: vi.fn()
     },
-    templates: { list: vi.fn(async () => []), add: vi.fn(), delete: vi.fn(async () => undefined) },
+    templates: {
+      list: vi.fn(async () => []),
+      add: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(async () => undefined)
+    },
     uploads: { chooseFiles: vi.fn(async () => 2), chooseFolder: vi.fn(), uploadPaths: vi.fn() },
     downloads: {
       listFolder: vi.fn(),

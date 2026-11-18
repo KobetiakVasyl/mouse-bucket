@@ -3,9 +3,11 @@ import type { Template } from '../../../../../src/shared/types/template-types'
 import { EMPTY_TEMPLATE_FORM } from '../../../../../src/renderer/src/constants/template-constants'
 import type { TemplateFormValues } from '../../../../../src/renderer/src/types/template-form-types'
 import {
+  formFor,
   isCopyingKeys,
   locationHint,
-  newTemplate
+  newTemplate,
+  templateEdit
 } from '../../../../../src/renderer/src/utils/template-form-utils'
 
 const form = (change: Partial<TemplateFormValues>): TemplateFormValues => ({
@@ -75,5 +77,44 @@ describe('newTemplate', () => {
     const copying = { ...typed, keySource: 'copied' as const }
     expect(isCopyingKeys(copying, [])).toBe(false)
     expect(newTemplate(copying, []).keys.source).toBe('entered')
+  })
+})
+
+describe('formFor and templateEdit', () => {
+  it('starts from the template, keeping its keys', () => {
+    expect(formFor(saved)).toEqual({
+      ...EMPTY_TEMPLATE_FORM,
+      kind: 'upload',
+      name: 'Reports',
+      location: 's3://example-bucket/reports/',
+      keySource: 'kept'
+    })
+    expect(templateEdit({ ...formFor(saved), name: 'New name' }, saved.id, [])).toEqual({
+      id: saved.id,
+      kind: 'upload',
+      name: 'New name',
+      location: 's3://example-bucket/reports/',
+      keys: { source: 'kept' }
+    })
+  })
+
+  it('sends new keys, typed in or copied', () => {
+    const typed = {
+      ...formFor(saved),
+      keySource: 'entered',
+      accessKeyId: 'AKIA1',
+      secretAccessKey: 's'
+    } as const
+    expect(templateEdit(typed, saved.id, []).keys).toEqual({
+      source: 'entered',
+      accessKeyId: 'AKIA1',
+      secretAccessKey: 's'
+    })
+    const other = { ...saved, id: '7a2d3c9f-5b4e-4a6f-8c8b-2d3e4f5a6b7c', name: 'Other' }
+    const copied = { ...formFor(saved), keySource: 'copied', copyFrom: other.id } as const
+    expect(templateEdit(copied, saved.id, [other]).keys).toEqual({
+      source: 'copied',
+      templateId: other.id
+    })
   })
 })

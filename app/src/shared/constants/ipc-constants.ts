@@ -6,6 +6,7 @@ export const Channel = {
   settingsChooseDownloadFolder: 'settings:chooseDownloadFolder',
   templatesList: 'templates:list',
   templatesCreate: 'templates:create',
+  templatesUpdate: 'templates:update',
   templatesDelete: 'templates:delete',
   uploadChooseFiles: 'upload:chooseFiles',
   uploadChooseFolder: 'upload:chooseFolder',

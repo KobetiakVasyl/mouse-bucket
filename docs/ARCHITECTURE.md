@@ -96,6 +96,7 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | `settings:chooseDownloadFolder` | none | the settings, after main's folder picker closed |
 | `templates:list` | none | the templates, without keys |
 | `templates:create` | name, type, S3 location, and either keys or the ID of a template to copy them from | the new template |
+| `templates:update` | the template ID, and the same as `templates:create`, except that the keys may also be kept | the changed template |
 | `templates:delete` | template ID | nothing |
 | `upload:chooseFiles` | upload template ID, and the storage class (Glacier Deep Archive or Standard) | how many files main queued after its file picker closed |
 | `upload:chooseFolder` | the same | how many files main queued from the folder after its folder picker closed |
@@ -119,6 +120,8 @@ A template is a named S3 location plus the IAM keys that reach it:
 Names are unique, ignoring case. When a template is added, main finds the bucket's region with a `HeadBucket` request. S3 reports the region even when the keys may not list the bucket, so keys that can only upload work too.
 
 A new template can reuse another template's IAM user: main copies the keys from that template's entry in `credentials.bin`, so they never reach the page.
+
+A template can be changed later: its name, type, S3 location and keys. Main asks S3 for the bucket's region again only when the bucket or the keys changed, and needs OS encryption only for new keys, so a rename works even where no keyring runs. The template keeps its ID, so transfers that started with it keep using its current keys.
 
 ## Transfers
 
@@ -173,7 +176,7 @@ Tests live in `app/tests/`, apart from the code they test. There are three kinds
 - `npm run test:e2e` builds the app in staging mode, then Playwright starts the build in `out/` with the Electron in `node_modules/`. It's the unpackaged build, because the packaged app's fuses block the debugger connection Playwright drives it through. The launch check covers the packaged app (see [ENVIRONMENTS.md](ENVIRONMENTS.md#continuous-integration)).
 - Each test starts its own copy of the app, one test at a time (`app/tests/e2e/support/app.ts`). Its app folder is a fresh folder under `.cache/tmp/e2e/` with a `package.json` that points at the build. The app keeps its data next to its folder, so each test starts with only the templates and settings it seeds, and never sees `app/data/`. The folder is deleted when the test ends.
 - Test windows stay off the desktop, so running the tests doesn't flicker. The fixture starts Electron with `-r app/tests/e2e/support/quiet-window.cjs`, which makes each window transparent, keeps it off the taskbar and off the screen, and never focuses or maximizes it. The windows still count as shown, so their pages render as usual.
-- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles`, `upload:chooseFolder` and `templates:create`. The sample transfers also answer `transfers:pause`, `transfers:resume` and `transfers:cancel`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
+- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles`, `upload:chooseFolder` and `templates:create`. The sample transfers also answer `transfers:pause`, `transfers:resume` and `transfers:cancel`, and `app:status` reports OS encryption as available, because CI's Linux runner has no keyring and the Templates form would stay disabled. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
 
 ## Stack
 

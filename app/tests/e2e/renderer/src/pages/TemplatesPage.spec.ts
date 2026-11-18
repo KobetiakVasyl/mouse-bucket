@@ -54,3 +54,31 @@ test('deletes a template only after confirming', async ({ page }) => {
   await expect(page.getByRole('row', { name: /Zeta/ })).toBeVisible()
   await expect(page.getByRole('row', { name: /Alpha/ })).toBeHidden()
 })
+
+test('renames a template, keeping its keys, and keeps the change', async ({ page }) => {
+  await page.getByRole('row', { name: /Zeta/ }).getByRole('button', { name: 'Edit' }).click()
+  const form = page.getByRole('form', { name: 'Edit Zeta' })
+  await expect(form.getByLabel('S3 location')).toHaveValue('s3://example-bucket/zeta/')
+  await expect(form.getByRole('button', { name: 'Keep the current keys' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
+  await expect(form.getByLabel('Access key ID')).toBeHidden()
+  await form.getByLabel('Name').fill('Zeta reports')
+  await form.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByRole('status')).toHaveText('Saved "Zeta reports".')
+  await expect(page.getByRole('form', { name: 'New template' })).toBeVisible()
+  await page.reload()
+  await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
+  await menuItem(page, 'Templates').click()
+  await expect(page.getByRole('row', { name: /Zeta reports/ })).toBeVisible()
+})
+
+test('stops editing with Cancel', async ({ page }) => {
+  await page.getByRole('row', { name: /Alpha/ }).getByRole('button', { name: 'Edit' }).click()
+  await page
+    .getByRole('form', { name: 'Edit Alpha' })
+    .getByRole('button', { name: 'Cancel' })
+    .click()
+  await expect(page.getByRole('form', { name: 'New template' })).toBeVisible()
+})

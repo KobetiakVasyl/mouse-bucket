@@ -9,7 +9,7 @@ import type {
   UploadRequest
 } from './s3-types'
 import type { Settings, SettingsUpdate } from './settings-types'
-import type { NewTemplate, Template } from './template-types'
+import type { NewTemplate, Template, TemplateEdit } from './template-types'
 import type { Transfer } from './transfer-types'
 
 export type InvokeChannel = (typeof Channel)[keyof typeof Channel]
@@ -28,6 +28,7 @@ export interface Requests {
   'settings:chooseDownloadFolder': undefined
   'templates:list': undefined
   'templates:create': NewTemplate
+  'templates:update': TemplateEdit
   'templates:delete': string
   'upload:chooseFiles': UploadRequest
   'upload:chooseFolder': UploadRequest
@@ -50,6 +51,7 @@ export interface Responses {
   'settings:chooseDownloadFolder': Settings
   'templates:list': Template[]
   'templates:create': Template
+  'templates:update': Template
   'templates:delete': void
   // How many files were queued; 0 when the dialog was cancelled.
   'upload:chooseFiles': number
@@ -75,6 +77,7 @@ export interface Api {
   chooseDownloadFolder(): Promise<Settings>
   listTemplates(): Promise<Template[]>
   createTemplate(template: NewTemplate): Promise<Template>
+  updateTemplate(edit: TemplateEdit): Promise<Template>
   deleteTemplate(id: string): Promise<void>
   chooseFilesToUpload(request: UploadRequest): Promise<number>
   chooseFolderToUpload(request: UploadRequest): Promise<number>

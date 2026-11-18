@@ -1,8 +1,13 @@
-// Adds, lists and deletes templates: their S3 location in templates.json, their IAM keys encrypted in credentials.bin. See docs/SECURITY.md.
+// Adds, changes, lists and deletes templates: their S3 location in templates.json, their IAM keys encrypted in credentials.bin. See docs/SECURITY.md.
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { WHOLE_BUCKET_MESSAGE } from '../../shared/constants/s3-location-constants'
-import type { NewTemplate, Template, TemplateKind } from '../../shared/types/template-types'
+import type {
+  NewTemplate,
+  Template,
+  TemplateEdit,
+  TemplateKind
+} from '../../shared/types/template-types'
 import { parseS3Location } from '../../shared/validation/s3-location-validation'
 import { DATA_FILES } from '../constants/data-file-constants'
 import { NO_ENCRYPTION_MESSAGE } from '../constants/error-constants'
@@ -72,19 +77,37 @@ export class TemplateService {
   // Checks the location, takes the keys as typed or copied from another template, and asks S3 for the bucket's region.
   async add(input: NewTemplate): Promise<Template> {
     if (!(await this.vault.available())) throw new UserError(NO_ENCRYPTION_MESSAGE)
-    const parsed = parseS3Location(input.location)
-    if ('error' in parsed) throw new UserError(parsed.error)
-    const { bucket, prefix } = parsed.location
-    if (input.kind === 'download' && prefix !== '') {
-      throw new UserError(WHOLE_BUCKET_MESSAGE)
-    }
-    // Copied keys stay in main: the page only names the template to copy them from.
-    const credentials =
-      input.keys.source === 'entered'
-        ? { accessKeyId: input.keys.accessKeyId, secretAccessKey: input.keys.secretAccessKey }
-        : await this.credentialsFor(input.keys.templateId)
+    const { bucket, prefix } = this.locationOf(input)
+    const credentials = await this.keysOf(input.keys)
     const region = await this.s3.findRegion(credentials, bucket)
-    return this.save({ name: input.name, kind: input.kind, bucket, prefix, region }, credentials)
+    return this.save(
+      null,
+      { name: input.name, kind: input.kind, bucket, prefix, region },
+      credentials
+    )
+  }
+
+  // Changes a template, which may keep its keys. S3 is asked for the bucket's region again only when the bucket or
+  // the keys changed, and OS encryption is needed only for new keys, so renaming works anywhere.
+  async update(edit: TemplateEdit): Promise<Template> {
+    const current = await this.get(edit.id)
+    const { bucket, prefix } = this.locationOf(edit)
+    const credentials = edit.keys.source === 'kept' ? null : await this.keysOf(edit.keys)
+    if (credentials !== null && !(await this.vault.available())) {
+      throw new UserError(NO_ENCRYPTION_MESSAGE)
+    }
+    const region =
+      credentials === null && bucket === current.bucket
+        ? current.region
+        : await this.s3.findRegion(
+            credentials === null ? await this.credentialsFor(edit.id) : credentials,
+            bucket
+          )
+    return this.save(
+      edit.id,
+      { name: edit.name, kind: edit.kind, bucket, prefix, region },
+      credentials
+    )
   }
 
   delete(id: string): Promise<void> {
@@ -98,18 +121,59 @@ export class TemplateService {
     })
   }
 
+  // A download template points at a whole bucket, an upload template at a folder or a whole bucket.
+  private locationOf(details: { kind: TemplateKind; location: string }): {
+    bucket: string
+    prefix: string
+  } {
+    const parsed = parseS3Location(details.location)
+    if ('error' in parsed) throw new UserError(parsed.error)
+    if (details.kind === 'download' && parsed.location.prefix !== '') {
+      throw new UserError(WHOLE_BUCKET_MESSAGE)
+    }
+    return parsed.location
+  }
+
+  // Copied keys stay in main: the page only names the template to copy them from.
+  private async keysOf(keys: NewTemplate['keys']): Promise<Credentials> {
+    if (keys.source === 'entered') {
+      return { accessKeyId: keys.accessKeyId, secretAccessKey: keys.secretAccessKey }
+    }
+    return this.credentialsFor(keys.templateId)
+  }
+
+  // Saves a new template (id null) or replaces one, with new keys or, for a changed one, its own (credentials null).
   // Names are unique, ignoring case.
-  private save(details: Omit<Template, 'id'>, credentials: Credentials): Promise<Template> {
+  private save(
+    id: string | null,
+    details: Omit<Template, 'id'>,
+    credentials: Credentials | null
+  ): Promise<Template> {
     return this.serial(async () => {
-      if (!(await this.vault.available())) throw new UserError(NO_ENCRYPTION_MESSAGE)
-      const templates = await this.list()
-      const name = details.name.toLocaleLowerCase()
-      if (templates.some((template) => template.name.toLocaleLowerCase() === name)) {
-        throw new UserError(`A template named "${details.name}" already exists.`)
+      if (credentials !== null && !(await this.vault.available())) {
+        throw new UserError(NO_ENCRYPTION_MESSAGE)
       }
-      const template: Template = { id: randomUUID(), ...details }
-      await this.writeCredentials({ ...(await this.readCredentials()), [template.id]: credentials })
-      await this.writeTemplates([...templates, template])
+      const templates = await this.list()
+      if (id !== null && !templates.some((template) => template.id === id)) {
+        throw new UserError('That template no longer exists.')
+      }
+      const name = details.name.toLocaleLowerCase()
+      const taken = templates.some(
+        (template) => template.id !== id && template.name.toLocaleLowerCase() === name
+      )
+      if (taken) throw new UserError(`A template named "${details.name}" already exists.`)
+      const template: Template = { id: id === null ? randomUUID() : id, ...details }
+      if (credentials !== null) {
+        await this.writeCredentials({
+          ...(await this.readCredentials()),
+          [template.id]: credentials
+        })
+      }
+      await this.writeTemplates(
+        id === null
+          ? [...templates, template]
+          : templates.map((existing) => (existing.id === id ? template : existing))
+      )
       return template
     })
   }

@@ -17,6 +17,7 @@ const api: Api = {
   chooseDownloadFolder: () => invoke(Channel.settingsChooseDownloadFolder),
   listTemplates: () => invoke(Channel.templatesList),
   createTemplate: (template) => invoke(Channel.templatesCreate, template),
+  updateTemplate: (edit) => invoke(Channel.templatesUpdate, edit),
   deleteTemplate: (id) => invoke(Channel.templatesDelete, id),
   chooseFilesToUpload: (request) => invoke(Channel.uploadChooseFiles, request),
   chooseFolderToUpload: (request) => invoke(Channel.uploadChooseFolder, request),
