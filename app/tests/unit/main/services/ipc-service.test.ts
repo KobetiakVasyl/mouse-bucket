@@ -42,7 +42,14 @@ function setup(): {
       deleteFile: vi.fn(),
       restoreFile: vi.fn()
     },
-    transfers: { list: vi.fn(() => []), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn() }
+    transfers: { list: vi.fn(() => []), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn() },
+    updates: {
+      status: { status: 'unsupported' },
+      check: vi.fn(async () => ({ status: 'current' as const })),
+      download: vi.fn(async () => undefined),
+      install: vi.fn()
+    },
+    version: '0.2.0'
   }
   const registry = {
     handle: (channel: string, listener: Listener) => {

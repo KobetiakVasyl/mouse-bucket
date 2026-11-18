@@ -56,3 +56,11 @@ test.describe('with a download template', () => {
     await expect(dialog.getByLabel('Days to keep the copy')).toHaveValue('3')
   })
 })
+
+test('shows the version, and that only an installed copy updates itself', async ({ page }) => {
+  await menuItem(page, 'Settings').click()
+  const updates = page.getByRole('region', { name: 'Updates' })
+  await expect(updates).toContainText(/Version \d+\.\d+\.\d+/)
+  await expect(updates).toContainText('Updates work only in an installed copy of the app.')
+  await expect(updates.getByRole('button', { name: 'Check for updates' })).toBeHidden()
+})

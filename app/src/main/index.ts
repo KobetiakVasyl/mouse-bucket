@@ -2,8 +2,9 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { app, ipcMain, powerSaveBlocker, safeStorage, screen, session } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import icon from '../../resources/icon.png?asset'
-import { TRANSFERS_CHANGED } from '../shared/constants/ipc-constants'
+import { TRANSFERS_CHANGED, UPDATES_CHANGED } from '../shared/constants/ipc-constants'
 import { DATA_FILES } from './constants/data-file-constants'
 import { LAUNCH_CHECK_SWITCH, LaunchCheckExit } from './constants/launch-check-constants'
 import {
@@ -25,9 +26,11 @@ import { TemplateService } from './services/template-service'
 import { TransferRunnerService } from './services/transfer-runner-service'
 import { TransferService } from './services/transfer-service'
 import { TransferStoreService } from './services/transfer-store-service'
+import { UpdateService } from './services/update-service'
 import { UploadService } from './services/upload-service'
 import { WindowService } from './services/window-service'
 import { WindowStateService } from './services/window-state-service'
+import { canUpdate } from './utils/update-utils'
 import { windowPlacement } from './utils/window-utils'
 
 const environment = EnvironmentService.fromMode(import.meta.env.MODE)
@@ -90,13 +93,25 @@ async function start(): Promise<void> {
   await transfers.restore()
   const uploads = new UploadService(templates, transfers, dialogs)
   const downloads = new DownloadService(templates, s3, transfers, settings)
+  const updatable = canUpdate({
+    isPackaged: app.isPackaged,
+    platform: process.platform,
+    appImagePath: process.env['APPIMAGE']
+  })
+  const updates = new UpdateService(
+    updatable ? autoUpdater : null,
+    environment.isStaging,
+    (state) => WindowService.sendToAll(UPDATES_CHANGED, state)
+  )
   new IpcService(ipcMain, appUrl, process.platform).register({
     vault,
     settings,
     templates,
     uploads,
     downloads,
-    transfers
+    transfers,
+    updates,
+    version: app.getVersion()
   })
 
   const windowState = new WindowStateService(join(userData, DATA_FILES.windowState))

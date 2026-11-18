@@ -1,4 +1,4 @@
-// The Settings page: the theme, the defaults for uploads and restores, and the download folder. See docs/UI.md.
+// The Settings page: the theme, the defaults for uploads and restores, the download folder, and updates. See docs/UI.md.
 import { useState } from 'react'
 import type { Settings, SettingsUpdate } from '../../../shared/types/settings-types'
 import { THEME_OPTIONS } from '../constants/settings-constants'
@@ -7,14 +7,17 @@ import { PageHeading } from '../theme/components/PageHeading'
 import { ToggleGroup } from '../theme/components/ToggleGroup'
 import { DefaultsSettings } from '../theme/compositions/DefaultsSettings'
 import { DownloadFolderSetting } from '../theme/compositions/DownloadFolderSetting'
+import { UpdatesSetting } from '../theme/compositions/UpdatesSetting'
 import { messageOf } from '../utils/error-utils'
 
 export function SettingsPage({
   settings,
+  version,
   onChange,
   onChooseDownloadFolder
 }: {
   settings: Settings
+  version: string
   onChange: (update: SettingsUpdate) => Promise<void>
   onChooseDownloadFolder: () => Promise<void>
 }): React.JSX.Element {
@@ -50,6 +53,7 @@ export function SettingsPage({
           busy={choosing}
           onChange={chooseDownloadFolder}
         />
+        <UpdatesSetting version={version} />
       </div>
       <ErrorMessage message={error} />
     </>

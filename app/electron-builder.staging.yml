@@ -10,3 +10,10 @@ nsis:
   artifactName: MouseBucket-Staging-${version}-setup.${ext}
 appImage:
   artifactName: MouseBucket-Staging-${version}.${ext}
+# Staging updates from its own pre-releases: staging.yml, not production's latest.yml.
+publish:
+  provider: github
+  owner: KobetiakVasyl
+  repo: mouse-bucket
+  channel: staging
+  releaseType: prerelease

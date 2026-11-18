@@ -15,8 +15,11 @@ export class IpcService {
   ) {}
 
   register(services: IpcServices): void {
-    const { vault, settings, templates, uploads, downloads, transfers } = services
-    this.handle(Channel.appStatus, async () => ({ encryptionAvailable: await vault.available() }))
+    const { vault, settings, templates, uploads, downloads, transfers, updates, version } = services
+    this.handle(Channel.appStatus, async () => ({
+      encryptionAvailable: await vault.available(),
+      version
+    }))
     this.handle(Channel.settingsGet, () => settings.get())
     this.handle(Channel.settingsUpdate, (update) => settings.update(update))
     this.handle(Channel.settingsChooseDownloadFolder, (_input, event) =>
@@ -41,6 +44,10 @@ export class IpcService {
     this.handle(Channel.transfersPause, async (id) => transfers.pause(id))
     this.handle(Channel.transfersResume, async (id) => transfers.resume(id))
     this.handle(Channel.transfersCancel, async (id) => transfers.cancel(id))
+    this.handle(Channel.updatesStatus, async () => updates.status)
+    this.handle(Channel.updatesCheck, () => updates.check())
+    this.handle(Channel.updatesDownload, () => updates.download())
+    this.handle(Channel.updatesInstall, async () => updates.install())
   }
 
   private handle<C extends InvokeChannel>(channel: C, handler: IpcHandler<C>): void {

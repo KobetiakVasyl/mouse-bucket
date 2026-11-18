@@ -5,6 +5,7 @@ import type { DownloadService } from '../services/download-service'
 import type { SettingsService } from '../services/settings-service'
 import type { TemplateService } from '../services/template-service'
 import type { TransferService } from '../services/transfer-service'
+import type { UpdateService } from '../services/update-service'
 import type { UploadService } from '../services/upload-service'
 import type { KeyVault } from './key-vault-types'
 
@@ -22,4 +23,7 @@ export interface IpcServices {
   uploads: Pick<UploadService, 'chooseFiles' | 'chooseFolder' | 'uploadPaths'>
   downloads: Pick<DownloadService, 'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'>
   transfers: Pick<TransferService, 'list' | 'pause' | 'resume' | 'cancel'>
+  updates: Pick<UpdateService, 'status' | 'check' | 'download' | 'install'>
+  // The running app's version, such as 0.2.0, or 0.2.0-staging.17 for a staging build.
+  version: string
 }

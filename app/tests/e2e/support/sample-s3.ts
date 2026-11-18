@@ -46,7 +46,7 @@ export const SAMPLE: SampleS3 = {
 
 // Runs inside the app's main process through Playwright, so it can use only its arguments.
 export function installSampleS3(
-  { ipcMain, BrowserWindow }: typeof import('electron'),
+  { app, ipcMain, BrowserWindow }: typeof import('electron'),
   sample: SampleS3
 ): void {
   const listings = structuredClone(sample.listings)
@@ -163,7 +163,7 @@ export function installSampleS3(
   replace('transfers:resume', (payload) => changeTransfer(payload, 'running'))
   replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
   // CI's Linux runner has no keyring, so the app would refuse to store keys. The tests need the forms enabled.
-  replace('app:status', () => ({ encryptionAvailable: true }))
+  replace('app:status', () => ({ encryptionAvailable: true, version: app.getVersion() }))
   replace('templates:create', (payload) => {
     const location = field(payload, 'location').replace(/^s3:\/\//, '')
     const slash = location.indexOf('/')

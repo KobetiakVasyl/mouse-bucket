@@ -115,6 +115,7 @@ export default function App(): React.JSX.Element {
     settings: () => (
       <SettingsPage
         settings={settings}
+        version={status.version}
         onChange={updateSettings}
         onChooseDownloadFolder={async () => {
           const next = await settingsService.chooseDownloadFolder()

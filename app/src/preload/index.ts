@@ -1,8 +1,9 @@
 // The renderer's only bridge to main: one typed method per IPC channel. See docs/ARCHITECTURE.md.
 import { contextBridge, ipcRenderer, type IpcRendererEvent, webUtils } from 'electron'
-import { Channel, TRANSFERS_CHANGED } from '../shared/constants/ipc-constants'
+import { Channel, TRANSFERS_CHANGED, UPDATES_CHANGED } from '../shared/constants/ipc-constants'
 import type { Api, IpcResult } from '../shared/types/ipc-types'
 import type { Transfer } from '../shared/types/transfer-types'
+import type { UpdateState } from '../shared/types/update-types'
 
 async function invoke<T>(channel: string, payload?: unknown): Promise<T> {
   const result: IpcResult<T> = await ipcRenderer.invoke(channel, payload)
@@ -39,6 +40,17 @@ const api: Api = {
     ipcRenderer.on(TRANSFERS_CHANGED, forward)
     return () => {
       ipcRenderer.removeListener(TRANSFERS_CHANGED, forward)
+    }
+  },
+  getUpdateStatus: () => invoke(Channel.updatesStatus),
+  checkForUpdates: () => invoke(Channel.updatesCheck),
+  downloadUpdate: () => invoke(Channel.updatesDownload),
+  installUpdate: () => invoke(Channel.updatesInstall),
+  onUpdateChanged: (listener) => {
+    const forward = (_event: IpcRendererEvent, state: UpdateState): void => listener(state)
+    ipcRenderer.on(UPDATES_CHANGED, forward)
+    return () => {
+      ipcRenderer.removeListener(UPDATES_CHANGED, forward)
     }
   }
 }

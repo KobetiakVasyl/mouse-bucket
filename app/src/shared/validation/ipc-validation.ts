@@ -35,5 +35,9 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.transfersList]: NoPayload,
   [Channel.transfersPause]: TransferIdSchema,
   [Channel.transfersResume]: TransferIdSchema,
-  [Channel.transfersCancel]: TransferIdSchema
+  [Channel.transfersCancel]: TransferIdSchema,
+  [Channel.updatesStatus]: NoPayload,
+  [Channel.updatesCheck]: NoPayload,
+  [Channel.updatesDownload]: NoPayload,
+  [Channel.updatesInstall]: NoPayload
 }

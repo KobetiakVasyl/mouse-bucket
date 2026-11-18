@@ -1,4 +1,4 @@
-# Typecheck, lint, format-check, test and build the app on Linux and Windows, then build installers on pushes. See docs/ENVIRONMENTS.md.
+# Typecheck, lint, format-check, test and build the app on Linux and Windows, then build installers on pushes and publish them as GitHub releases. See docs/ENVIRONMENTS.md and docs/PACKAGING.md.
 name: CI
 
 on:
@@ -66,6 +66,8 @@ jobs:
         os: [ubuntu-24.04, windows-2025]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     env:
       npm_config_cache: ${{ github.workspace }}/.cache/npm
       APP_ENVIRONMENT: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
@@ -90,6 +92,14 @@ jobs:
             .cache/electron-builder
           key: electron-builder-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
       - run: npm ci
+      - name: Give staging builds their own version, so they update only from staging pre-releases
+        if: env.APP_ENVIRONMENT == 'staging'
+        shell: bash
+        run: npm pkg set version="$(node -p "require('./package.json').version")-staging.${{ github.run_number }}"
+      - name: Note the version for the release
+        id: version
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Build the app for this branch's environment
         run: npx electron-vite build --mode ${{ env.APP_ENVIRONMENT }}
       - name: Build the installers
@@ -106,5 +116,46 @@ jobs:
           path: |
             app/dist/MouseBucket*-setup.exe
             app/dist/MouseBucket*.AppImage
+            app/dist/*.blockmap
+            app/dist/latest*.yml
+            app/dist/staging*.yml
           if-no-files-found: error
           retention-days: 14
+
+  release:
+    name: Release
+    needs: installers
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The only job that can write to the repo. It runs no build code: it publishes what the installers jobs built.
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.installers.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installers-*
+          path: release
+          merge-multiple: true
+      - name: Publish a draft production release, to publish by hand
+        if: github.ref_name == 'production'
+        run: |
+          tag="v${VERSION}"
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" release/* --draft --target "$GITHUB_SHA" --title "MouseBucket ${VERSION}" --generate-notes
+          elif [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release upload "$tag" release/* --clobber
+          else
+            echo "::warning::Release $tag is already published. Raise the version in app/package.json for the next release."
+          fi
+      - name: Publish a staging pre-release, keeping the newest 5
+        if: github.ref_name == 'staging'
+        run: |
+          gh release create "v${VERSION}" release/* --prerelease --target "$GITHUB_SHA" --title "MouseBucket Staging ${VERSION}" --notes "Staging build of ${GITHUB_SHA}."
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | grep -- '-staging\.' | tail -n +6 | while read -r old; do
+            gh release delete "$old" --yes --cleanup-tag
+          done

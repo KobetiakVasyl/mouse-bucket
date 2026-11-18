@@ -18,8 +18,15 @@ export const Channel = {
   transfersList: 'transfers:list',
   transfersPause: 'transfers:pause',
   transfersResume: 'transfers:resume',
-  transfersCancel: 'transfers:cancel'
+  transfersCancel: 'transfers:cancel',
+  updatesStatus: 'updates:status',
+  updatesCheck: 'updates:check',
+  updatesDownload: 'updates:download',
+  updatesInstall: 'updates:install'
 } as const
 
 // Main sends this event with the full transfer list whenever it changes.
 export const TRANSFERS_CHANGED = 'transfers:changed'
+
+// Main sends this event with the update state whenever it changes.
+export const UPDATES_CHANGED = 'updates:changed'

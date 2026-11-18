@@ -1,6 +1,6 @@
 # Architecture
 
-An Electron app with three processes and a shared contract layer. There is no backend: the main process talks to S3 directly over HTTPS.
+An Electron app with three processes and a shared contract layer. There is no backend: the main process talks to S3 directly over HTTPS, and to GitHub Releases only when asked to check for an update.
 
 ```
 Renderer (React, sandboxed)  <-- typed IPC via window.api -->  Main (Node)  -- HTTPS -->  S3 bucket
@@ -91,7 +91,7 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 
 | Channel | Payload | Returns |
 |---|---|---|
-| `app:status` | none | whether OS encryption is available for keys |
+| `app:status` | none | whether OS encryption is available for keys, and the app's version |
 | `settings:get`, `settings:update` | none, or the settings to change, apart from the download folder | the settings |
 | `settings:chooseDownloadFolder` | none | the settings, after main's folder picker closed |
 | `templates:list` | none | the templates, without keys |
@@ -107,8 +107,10 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | `download:restore` | download template ID, S3 key, speed (Standard or Bulk), days | nothing, once S3 accepted the restore |
 | `transfers:list` | none | the transfers |
 | `transfers:pause`, `transfers:resume`, `transfers:cancel` | a transfer ID | nothing. Cancel also deletes what the transfer moved |
+| `updates:status`, `updates:check` | none | where updating stands: unsupported, idle, checking, current, available, downloading, ready or failed |
+| `updates:download`, `updates:install` | none | nothing. Install quits the app and starts the downloaded installer |
 
-Main also sends `transfers:changed`, with the full transfer list, whenever a transfer changes. Progress reaches it at most every 200 ms.
+Main also sends `transfers:changed`, with the full transfer list, whenever a transfer changes, and `updates:changed` whenever the update state does. Progress reaches it at most every 200 ms.
 
 ## Templates
 
@@ -185,6 +187,6 @@ Tests live in `app/tests/`, apart from the code they test. There are three kinds
 - Tailwind CSS (see [UI.md](UI.md)).
 - `@aws-sdk/client-s3`, in main only.
 - zod for the IPC payload schemas.
-- electron-builder for installers (see [PACKAGING.md](PACKAGING.md)).
+- electron-builder for installers, and electron-updater for updates (see [PACKAGING.md](PACKAGING.md)).
 - Vitest, with `aws-sdk-client-mock` for S3, and Playwright for end-to-end tests.
 - ESLint (with typescript-eslint and the React plugins) and Prettier.

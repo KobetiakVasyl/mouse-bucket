@@ -124,8 +124,8 @@ export function HowItWorksPage(): React.JSX.Element {
               template.
             </li>
             <li>
-              Keys only ever go to AWS, as the signatures on each request. The app sends nothing
-              anywhere else.
+              Keys only ever go to AWS, as the signatures on each request. Apart from AWS, the app
+              contacts only GitHub, and only when you check for updates in Settings.
             </li>
           </ul>
         </Card>

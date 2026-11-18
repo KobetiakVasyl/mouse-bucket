@@ -37,6 +37,21 @@ How the app is built into installers and licensed.
 - Bundled files that aren't npm packages, such as the font, are listed in `app/electron.vite.config.ts` with their license file, and the plugin adds them to the renderer's notices.
 - Electron's own license files ship with every build.
 
+## Releases
+
+CI publishes the installers it builds as GitHub Releases of `KobetiakVasyl/mouse-bucket` (the `release` job in [.github/workflows/ci.yml](../.github/workflows/ci.yml), see [ENVIRONMENTS.md](ENVIRONMENTS.md#continuous-integration)):
+
+- **Production:** a push to `production` creates a draft release `v<version>`, with the version from `app/package.json`. Publish it by hand on GitHub, after checking it; until then no copy of the app sees it. Another push while it's a draft replaces its files. Once it's published, a push with the same version releases nothing and CI warns, so raise the version in `app/package.json` for the next release.
+- **Staging:** every push to `staging` publishes a pre-release `v<version>-staging.<CI run number>`, built with that version. Only the newest five staging pre-releases are kept.
+- Each release holds the installers, their `.blockmap` files, and the update metadata electron-builder writes: `latest.yml` and `latest-linux.yml` for production, `staging.yml` and `staging-linux.yml` for staging (the `publish` settings in `app/electron-builder.yml` and `app/electron-builder.staging.yml`). `npm run dist` and `npm run dist:staging` pass `--publish never`, so a local build never publishes.
+
 ## Updates
 
-The app doesn't update itself.
+The app updates itself from those releases, but only when asked: Settings has "Check for updates", and the app contacts GitHub at no other time (`app/src/main/services/update-service.ts`, with electron-updater).
+
+- Only installed builds update: the Windows installer's install, and the AppImage, which is replaced by the new one. A run from source, or another Linux build, says that updates need an installed copy.
+- After a check finds a newer version, "Download the update" downloads it, showing its progress, and "Restart and install" quits the app and starts it. Quitting pauses running transfers, as always (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)). Nothing downloads or installs on its own.
+- Production follows GitHub's latest published release, which never includes pre-releases. Staging allows pre-releases, and its versions, such as `0.2.0-staging.17`, make electron-updater pick only releases whose version has the same `staging` tag, and read `staging.yml`. So each app only ever updates to its own builds.
+- On Windows, the update runs the NSIS installer with `--updated`, which keeps `data\` (`app/build/installer.nsh`).
+- The installers aren't signed (see [Installers](#installers)), so an update isn't checked against a publisher signature. It's checked against the SHA-512 in the release's update metadata, fetched over HTTPS from GitHub. Whoever can publish releases on the repo can therefore ship code to every copy, which is why only CI's `release` job may write to the repo, and why the GitHub account needs two-factor authentication.
+- Downloading through the app itself doesn't add the "downloaded from the internet" mark that SmartScreen checks, so only the first install from a browser shows SmartScreen's warning.

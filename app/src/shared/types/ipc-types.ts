@@ -11,6 +11,7 @@ import type {
 import type { Settings, SettingsUpdate } from './settings-types'
 import type { NewTemplate, Template, TemplateEdit } from './template-types'
 import type { Transfer } from './transfer-types'
+import type { UpdateState } from './update-types'
 
 export type InvokeChannel = (typeof Channel)[keyof typeof Channel]
 
@@ -18,6 +19,7 @@ export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: string }
 
 export interface AppStatus {
   encryptionAvailable: boolean
+  version: string
 }
 
 // What the renderer sends on each invoke channel.
@@ -41,6 +43,10 @@ export interface Requests {
   'transfers:pause': string
   'transfers:resume': string
   'transfers:cancel': string
+  'updates:status': undefined
+  'updates:check': undefined
+  'updates:download': undefined
+  'updates:install': undefined
 }
 
 export interface Responses {
@@ -67,6 +73,11 @@ export interface Responses {
   'transfers:resume': void
   // Stops the transfer and deletes what it moved so far.
   'transfers:cancel': void
+  'updates:status': UpdateState
+  // The state once GitHub answered.
+  'updates:check': UpdateState
+  'updates:download': void
+  'updates:install': void
 }
 
 // window.api, which the preload exposes to the renderer.
@@ -92,4 +103,9 @@ export interface Api {
   resumeTransfer(id: string): Promise<void>
   cancelTransfer(id: string): Promise<void>
   onTransfersChanged(listener: (transfers: Transfer[]) => void): () => void
+  getUpdateStatus(): Promise<UpdateState>
+  checkForUpdates(): Promise<UpdateState>
+  downloadUpdate(): Promise<void>
+  installUpdate(): Promise<void>
+  onUpdateChanged(listener: (state: UpdateState) => void): () => void
 }

@@ -43,3 +43,9 @@ linux:
 appImage:
   artifactName: MouseBucket-${version}.${ext}
 npmRebuild: false
+# Update metadata for electron-updater. CI publishes production releases as drafts, published by hand. See docs/PACKAGING.md.
+publish:
+  provider: github
+  owner: KobetiakVasyl
+  repo: mouse-bucket
+  releaseType: draft

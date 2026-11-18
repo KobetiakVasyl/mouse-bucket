@@ -50,10 +50,11 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
   - Edit turns the form into one that changes that template, filled in with its type, name and S3 location, and scrolls to it. The IAM user starts as "Keep the current keys", and can instead take new keys or another template's. "Save changes" or Cancel turns it back into the form that adds one.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
-- **Settings**, in three sections:
+- **Settings**, in four sections:
   - **Appearance:** the dark or light theme.
   - **Defaults:** the storage class the Upload page starts with (Glacier Deep Archive unless changed), and the speed and days the Restore dialog starts with (Bulk and 7 days unless changed). Days save only while they're a whole number from 1 to 365.
   - **Download folder:** where downloads are saved (the system's Downloads folder unless changed), with "Change…" opening the system's folder picker.
+  - **Updates:** the app's version and "Check for updates". A newer version can then be downloaded, with its progress, and installed with "Restart and install" (see [PACKAGING.md](PACKAGING.md#updates)). A copy that can't update itself, such as one run from source, says so.
 
 Upload and Browse pick a template from large tiles: the first 6 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 
