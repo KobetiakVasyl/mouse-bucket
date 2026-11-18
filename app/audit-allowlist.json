@@ -1,7 +1,1 @@
-[
-  {
-    "id": "GHSA-fc5q-39xc-vjpf",
-    "package": "picomatch",
-    "reason": "No patched release exists. Only build tools use it (Vite, Vitest, typescript-eslint and electron-builder), on glob patterns from this repo, and it isn't shipped in the app."
-  }
-]
+[]
