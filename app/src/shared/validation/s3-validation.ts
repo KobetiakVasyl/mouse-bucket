@@ -12,6 +12,11 @@ export const UploadRequestSchema = z
   .object({ templateId: TemplateIdSchema, storageClass: UploadStorageClassSchema })
   .strict()
 
+// Files and folders dropped on the page, by the paths the preload read from them.
+export const UploadPathsRequestSchema = UploadRequestSchema.extend({
+  paths: z.array(z.string().min(1).max(4096)).min(1).max(10_000)
+}).strict()
+
 export const FolderRequestSchema = z
   .object({
     templateId: TemplateIdSchema,

@@ -5,6 +5,7 @@ import type {
   FolderListing,
   FolderRequest,
   RestoreRequest,
+  UploadPathsRequest,
   UploadRequest
 } from './s3-types'
 import type { Settings, SettingsUpdate } from './settings-types'
@@ -29,6 +30,8 @@ export interface Requests {
   'templates:create': NewTemplate
   'templates:delete': string
   'upload:chooseFiles': UploadRequest
+  'upload:chooseFolder': UploadRequest
+  'upload:paths': UploadPathsRequest
   'download:list': FolderRequest
   'download:file': DownloadRequest
   'download:delete': DownloadRequest
@@ -50,6 +53,8 @@ export interface Responses {
   'templates:delete': void
   // How many files were queued; 0 when the dialog was cancelled.
   'upload:chooseFiles': number
+  'upload:chooseFolder': number
+  'upload:paths': number
   'download:list': FolderListing
   // The name the file is saved under in the download folder.
   'download:file': string
@@ -72,6 +77,9 @@ export interface Api {
   createTemplate(template: NewTemplate): Promise<Template>
   deleteTemplate(id: string): Promise<void>
   chooseFilesToUpload(request: UploadRequest): Promise<number>
+  chooseFolderToUpload(request: UploadRequest): Promise<number>
+  // The preload reads the dropped files' paths, so the page never handles them.
+  uploadDroppedFiles(request: UploadRequest, files: File[]): Promise<number>
   listFolder(request: FolderRequest): Promise<FolderListing>
   downloadFile(request: DownloadRequest): Promise<string>
   deleteFile(request: DownloadRequest): Promise<void>

@@ -125,6 +125,22 @@ export function installSampleS3(
     publish()
     return 2
   })
+  replace('upload:chooseFolder', () => {
+    for (const name of ['Photos/2026/snow.jpg', 'Photos/beach.jpg']) {
+      transfers.push({
+        id: `upload-${transfers.length}`,
+        kind: 'upload',
+        templateName: 'Sample',
+        name,
+        bytesDone: 0,
+        bytesTotal: 1_000_000,
+        status: 'queued'
+      })
+    }
+    publish()
+    return 2
+  })
+
   // The sample transfers answer the transfer buttons themselves, since main's queue doesn't know them.
   const changeTransfer = (id: unknown, status: 'running' | 'paused' | 'cancelled'): undefined => {
     const index = transfers.findIndex((transfer) => transfer.id === id)

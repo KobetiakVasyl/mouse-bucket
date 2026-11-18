@@ -38,9 +38,10 @@ export function HowItWorksPage(): React.JSX.Element {
 
         <Card title="Uploading">
           <p>
-            Pick an upload template, choose files with &ldquo;Choose files…&rdquo;, and they upload
-            in the background, three at a time. Each file keeps its name in the folder, and a file
-            with the same name there is replaced.
+            Pick an upload template, then choose files or a folder, or drop them on the Upload page.
+            They upload in the background, three at a time. Each file keeps its name in the folder,
+            a folder keeps its name and the paths inside it, and a file with the same name there is
+            replaced.
           </p>
           <ul className="list-disc space-y-1 pl-6">
             <li>

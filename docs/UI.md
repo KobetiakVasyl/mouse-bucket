@@ -35,7 +35,7 @@ A side menu on the left starts with the app's icon and name, then lists Home, Te
   - Pick an upload template.
   - Choose the storage class from a drop-down: Glacier Deep Archive or Standard, with a line on what the chosen one means. It starts with the default from Settings.
   - The upload settings show where files go and how S3 stores them (see [ARCHITECTURE.md](ARCHITECTURE.md#transfers)). Tags and metadata are shown as coming soon.
-  - "Choose files…" opens the system's file picker, and the chosen files join the transfers.
+  - "Choose files…" and "Choose a folder…" open the system's pickers, and the chosen files, or every file in the folder, join the transfers. They sit in a dashed drop zone, which takes files and folders dragged onto it from the computer, and highlights while something is dragged over it. A drop that brings nothing from the computer says so.
 - **Browse:** reached from the Browse tile.
   - Pick a download template, then browse its bucket: a breadcrumb for the folder path, then folders and files with their size, storage class and date. "Load more" fetches the next 1,000 entries.
   - Files in Glacier Flexible Retrieval or Glacier Deep Archive show whether they're archived, restoring, or restored until a date.

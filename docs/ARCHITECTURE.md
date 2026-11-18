@@ -98,6 +98,8 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | `templates:create` | name, type, S3 location, and either keys or the ID of a template to copy them from | the new template |
 | `templates:delete` | template ID | nothing |
 | `upload:chooseFiles` | upload template ID, and the storage class (Glacier Deep Archive or Standard) | how many files main queued after its file picker closed |
+| `upload:chooseFolder` | the same | how many files main queued from the folder after its folder picker closed |
+| `upload:paths` | the same, and the paths the preload read from files and folders dropped on the page | how many files main queued |
 | `download:list` | download template ID, folder prefix, continuation token | one page of subfolders, and of files with their storage class and restore state |
 | `download:file` | download template ID, S3 key | the name main saves the file under in the download folder |
 | `download:delete` | download template ID, S3 key | nothing, once S3 deleted the file |
@@ -111,7 +113,7 @@ Main also sends `transfers:changed`, with the full transfer list, whenever a tra
 
 A template is a named S3 location plus the IAM keys that reach it:
 
-- **Upload templates** point at a folder (a key prefix) or a whole bucket. Uploaded files keep their names, so a file's key is the folder plus its name, and an existing object with that key is replaced.
+- **Upload templates** point at a folder (a key prefix) or a whole bucket. Uploaded files keep their names, so a file's key is the folder plus its name, and an existing object with that key is replaced. An uploaded folder keeps its name too: each file in it, at any depth, gets the key `<template folder><folder name>/<path inside the folder>`. Links inside a folder are skipped, so a link to a parent folder can't loop.
 - **Download templates** point at a whole bucket, which the Download page browses one folder level at a time.
 
 Names are unique, ignoring case. When a template is added, main finds the bucket's region with a `HeadBucket` request. S3 reports the region even when the keys may not list the bucket, so keys that can only upload work too.
@@ -170,7 +172,7 @@ Tests live in `app/tests/`, apart from the code they test. There are three kinds
 
 - `npm run test:e2e` builds the app in staging mode, then Playwright starts the build in `out/` with the Electron in `node_modules/`. It's the unpackaged build, because the packaged app's fuses block the debugger connection Playwright drives it through. The launch check covers the packaged app (see [ENVIRONMENTS.md](ENVIRONMENTS.md#continuous-integration)).
 - Each test starts its own copy of the app, one test at a time (`app/tests/e2e/support/app.ts`). Its app folder is a fresh folder under `.cache/tmp/e2e/` with a `package.json` that points at the build. The app keeps its data next to its folder, so each test starts with only the templates and settings it seeds, and never sees `app/data/`. The folder is deleted when the test ends.
-- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles` and `templates:create`. The sample transfers also answer `transfers:pause`, `transfers:resume` and `transfers:cancel`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
+- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles`, `upload:chooseFolder` and `templates:create`. The sample transfers also answer `transfers:pause`, `transfers:resume` and `transfers:cancel`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
 
 ## Stack
 

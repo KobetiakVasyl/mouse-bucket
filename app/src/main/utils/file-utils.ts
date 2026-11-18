@@ -1,7 +1,17 @@
 // Reads and atomically writes the app's files in its data folder, one write at a time. See docs/ENVIRONMENTS.md.
-import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
-import { access, mkdir, open, readFile, rename, stat, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { mkdirSync, renameSync, type Stats, writeFileSync } from 'node:fs'
+import {
+  access,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  rename,
+  stat,
+  writeFile
+} from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 import { TEMPORARY_SUFFIX } from '../constants/data-file-constants'
 
 export async function readIfExists(path: string): Promise<Buffer | undefined> {
@@ -86,4 +96,19 @@ export async function readRange(path: string, start: number, length: number): Pr
   } finally {
     await file.close()
   }
+}
+
+// Every file in a folder, at any depth, sorted by path. Links are skipped, so a link to a parent folder can't loop.
+export async function listFiles(folder: string): Promise<{ path: string; info: Stats }[]> {
+  const entries = await readdir(folder, { withFileTypes: true, recursive: true })
+  const files = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name))
+    .sort()
+  const found: { path: string; info: Stats }[] = []
+  for (const path of files) {
+    const info = await lstat(path)
+    if (info.isFile()) found.push({ path, info })
+  }
+  return found
 }

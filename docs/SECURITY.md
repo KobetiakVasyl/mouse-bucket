@@ -40,7 +40,8 @@ A compromised renderer can therefore only call the typed IPC surface, with valid
 
 The renderer never handles a path on this computer:
 
-- Upload opens the system's file picker from main, and main reads the chosen files itself.
+- Upload opens the system's file or folder picker from main, and main reads the chosen files itself.
+- Files and folders dropped on the Upload page reach main as paths, but the page never handles them: it passes the dropped `File` objects to the preload, which reads each path with Electron's `webUtils.getPathForFile` and sends only those. A `File` the page makes itself has no path, so a compromised page can't name a file to upload. Main still takes only full paths of files and folders that exist.
 - Download writes into the download folder from Settings, and the renderer sends only the S3 key. The page shows the folder but can't set it: `settings:update` rejects it, and only main's folder picker changes it. A stored folder that isn't a full path is ignored.
 - A downloaded file's name comes from the key's last part, with characters Windows forbids (`< > : " / \ | ? *` and control characters) replaced, trailing dots and spaces removed, and reserved names such as `CON` and `NUL` prefixed (`app/src/main/utils/file-name-utils.ts`).
 

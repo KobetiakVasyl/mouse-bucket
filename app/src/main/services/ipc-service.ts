@@ -28,6 +28,10 @@ export class IpcService {
     this.handle(Channel.uploadChooseFiles, (request, event) =>
       uploads.chooseFiles(request, event.sender)
     )
+    this.handle(Channel.uploadChooseFolder, (request, event) =>
+      uploads.chooseFolder(request, event.sender)
+    )
+    this.handle(Channel.uploadPaths, (request) => uploads.uploadPaths(request))
     this.handle(Channel.downloadList, (request) => downloads.listFolder(request))
     this.handle(Channel.downloadFile, (request) => downloads.downloadFile(request))
     this.handle(Channel.downloadDelete, (request) => downloads.deleteFile(request))

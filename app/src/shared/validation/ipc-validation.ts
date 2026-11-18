@@ -6,6 +6,7 @@ import {
   DownloadRequestSchema,
   FolderRequestSchema,
   RestoreRequestSchema,
+  UploadPathsRequestSchema,
   UploadRequestSchema
 } from './s3-validation'
 import { SettingsUpdateSchema } from './settings-validation'
@@ -24,6 +25,8 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.templatesCreate]: NewTemplateSchema,
   [Channel.templatesDelete]: TemplateIdSchema,
   [Channel.uploadChooseFiles]: UploadRequestSchema,
+  [Channel.uploadChooseFolder]: UploadRequestSchema,
+  [Channel.uploadPaths]: UploadPathsRequestSchema,
   [Channel.downloadList]: FolderRequestSchema,
   [Channel.downloadFile]: DownloadRequestSchema,
   [Channel.downloadDelete]: DownloadRequestSchema,

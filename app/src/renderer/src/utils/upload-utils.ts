@@ -13,3 +13,7 @@ export function uploadSettingsRows(template: Template): [string, string][] {
     ['Same file name', 'The file in the bucket is replaced']
   ]
 }
+
+export function queuedMessage(queued: number): string {
+  return `${queued} ${queued === 1 ? 'file' : 'files'} added to the transfers.`
+}

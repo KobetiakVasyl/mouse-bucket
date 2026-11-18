@@ -68,3 +68,22 @@ test('pauses, resumes and cancels a transfer, asking first once something moved'
   await photo.getByRole('button', { name: 'Cancel' }).click()
   await expect(photo).toContainText('Cancelled')
 })
+
+test('adds a chosen folder’s files to the transfers, keeping their paths', async ({ page }) => {
+  await page.getByRole('button', { name: 'Choose a folder…' }).click()
+  await expect(page.getByRole('status')).toHaveText('2 files added to the transfers.')
+  await expect(page.getByText('Upload: Photos/2026/snow.jpg')).toBeVisible()
+})
+
+test('queues nothing for a dropped file that isn’t on this computer', async ({ page }) => {
+  const dropped = await page.evaluateHandle(() => {
+    const transfer = new DataTransfer()
+    transfer.items.add(new File(['made up'], 'made-up.txt'))
+    return transfer
+  })
+  const zone = page.getByRole('region', { name: 'Drop files or folders here' })
+  await zone.dispatchEvent('drop', { dataTransfer: dropped })
+  await expect(page.getByRole('status')).toHaveText(
+    'Nothing to upload. Drop files or folders from this computer.'
+  )
+})

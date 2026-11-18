@@ -5,6 +5,7 @@ import type {
   FolderRequestSchema,
   RestoreRequestSchema,
   RestoreTierSchema,
+  UploadPathsRequestSchema,
   UploadRequestSchema,
   UploadStorageClassSchema
 } from '../validation/s3-validation'
@@ -41,6 +42,7 @@ export interface FolderListing {
 
 export type UploadStorageClass = z.infer<typeof UploadStorageClassSchema>
 export type UploadRequest = z.infer<typeof UploadRequestSchema>
+export type UploadPathsRequest = z.infer<typeof UploadPathsRequestSchema>
 export type FolderRequest = z.infer<typeof FolderRequestSchema>
 export type DownloadRequest = z.infer<typeof DownloadRequestSchema>
 export type RestoreTier = z.infer<typeof RestoreTierSchema>
