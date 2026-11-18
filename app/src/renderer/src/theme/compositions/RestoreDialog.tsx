@@ -1,13 +1,13 @@
-// Asks how fast to restore an archived file and for how many days the copy stays. See docs/UI.md.
+// Asks how fast to restore archived files and for how many days the copies stay. See docs/UI.md.
 import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
 import type { RestoreTier, S3File } from '../../../../shared/types/s3-types'
 import {
   DEFAULT_RESTORE_DAYS,
   DEFAULT_RESTORE_TIER,
-  RESTORE_TIER_OPTIONS,
-  RESTORE_TIMES
+  RESTORE_TIER_OPTIONS
 } from '../../constants/download-constants'
+import { fileCount, restoreTimesFor } from '../../utils/download-utils'
 import { parseRestoreDays } from '../../validation/restore-validation'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
@@ -17,13 +17,13 @@ import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
 
 export function RestoreDialog({
-  file,
+  files,
   busy,
   error,
   onRestore,
   onCancel
 }: {
-  file: S3File
+  files: S3File[]
   busy: boolean
   error: string | undefined
   onRestore: (tier: RestoreTier, days: number) => void
@@ -32,12 +32,21 @@ export function RestoreDialog({
   const [tier, setTier] = useState<RestoreTier>(DEFAULT_RESTORE_TIER)
   const [daysText, setDaysText] = useState(DEFAULT_RESTORE_DAYS)
   const days = parseRestoreDays(daysText)
-  const times = RESTORE_TIMES.get(file.storageClass)
+  const times = restoreTimesFor(files)
   return (
     <Modal title="Restore from the archive" onClose={onCancel}>
       <p className="mb-6">
-        S3 makes a temporary copy of <strong>{file.name}</strong> that can be downloaded. AWS
-        charges for each restore.
+        {files.length === 1 ? (
+          <>
+            S3 makes a temporary copy of <strong>{files[0].name}</strong> that can be downloaded.
+          </>
+        ) : (
+          <>
+            S3 makes temporary copies of <strong>{fileCount(files.length)}</strong> that can be
+            downloaded.
+          </>
+        )}{' '}
+        AWS charges for each restore.
       </p>
       <div className="space-y-5">
         <div>

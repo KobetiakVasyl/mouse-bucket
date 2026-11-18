@@ -7,6 +7,15 @@ export const DOWNLOADABLE_STATES: ReadonlySet<FileAccess['state']> = new Set([
   'restored'
 ])
 
+// The archive classes, slowest to restore first.
+export const ARCHIVE_CLASSES_SLOWEST_FIRST = ['DEEP_ARCHIVE', 'GLACIER']
+
+// No file is selected.
+export const NO_SELECTION: ReadonlySet<string> = new Set()
+
+// How many names the Delete dialog lists before "and N more".
+export const LISTED_NAMES = 5
+
 // Typical restore times, by storage class and speed.
 export const RESTORE_TIMES: ReadonlyMap<string, Record<RestoreTier, string>> = new Map([
   ['DEEP_ARCHIVE', { Standard: 'within 12 hours', Bulk: 'within 48 hours' }],

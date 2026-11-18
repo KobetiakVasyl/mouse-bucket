@@ -1,9 +1,10 @@
-// One folder of a bucket: its subfolders, and its files with size, storage class, date and actions. See docs/UI.md.
+// One folder of a bucket: its subfolders, and its files with a checkbox, size, storage class, date and actions. See docs/UI.md.
 import type { FolderListing, S3File } from '../../../../shared/types/s3-types'
 import { formatBytes, formatDate } from '../../utils/format-utils'
 import { accessNote, folderName, isDownloadable, isEmptyFolder } from '../../utils/download-utils'
 import { storageClassLabel } from '../../utils/storage-utils'
 import { Button } from '../components/Button'
+import { Checkbox } from '../components/Checkbox'
 import { LinkButton } from '../components/LinkButton'
 import { TableFrame } from '../components/TableFrame'
 import { CELL, TABLE_HEAD_ROW, TABLE_ROW } from '../styles/style-constants'
@@ -12,6 +13,9 @@ export function FolderTable({
   listing,
   prefix,
   loadingMore,
+  selected,
+  onSelect,
+  onSelectAll,
   onOpenFolder,
   onDownload,
   onRestore,
@@ -21,6 +25,9 @@ export function FolderTable({
   listing: FolderListing
   prefix: string
   loadingMore: boolean
+  selected: ReadonlySet<string>
+  onSelect: (key: string, selected: boolean) => void
+  onSelectAll: (selected: boolean) => void
   onOpenFolder: (prefix: string) => void
   onDownload: (file: S3File) => void
   onRestore: (file: S3File) => void
@@ -29,11 +36,18 @@ export function FolderTable({
 }): React.JSX.Element {
   if (isEmptyFolder(listing)) return <p className="text-muted">This folder is empty.</p>
   const { nextToken } = listing
+  const allSelected =
+    listing.files.length > 0 && listing.files.every((file) => selected.has(file.key))
   return (
     <>
       <TableFrame>
         <thead>
           <tr className={TABLE_HEAD_ROW}>
+            <th className={`${CELL} w-10`}>
+              {listing.files.length > 0 && (
+                <Checkbox label="Select all files" checked={allSelected} onChange={onSelectAll} />
+              )}
+            </th>
             <th className={CELL}>Name</th>
             <th className={CELL}>Size</th>
             <th className={CELL}>Storage class</th>
@@ -44,6 +58,7 @@ export function FolderTable({
         <tbody>
           {listing.folders.map((folder) => (
             <tr key={folder} className={TABLE_ROW}>
+              <td className={CELL} />
               <td className={CELL}>
                 <LinkButton onClick={() => onOpenFolder(folder)}>
                   {folderName(folder, prefix)}
@@ -57,6 +72,13 @@ export function FolderTable({
           ))}
           {listing.files.map((file) => (
             <tr key={file.key} className={TABLE_ROW}>
+              <td className={CELL}>
+                <Checkbox
+                  label={`Select ${file.name}`}
+                  checked={selected.has(file.key)}
+                  onChange={(checked) => onSelect(file.key, checked)}
+                />
+              </td>
               <td className={`${CELL} break-all`}>{file.name}</td>
               <td className={`${CELL} whitespace-nowrap`}>{formatBytes(file.size)}</td>
               <td className={CELL}>

@@ -12,8 +12,9 @@ export type ShownFolder =
   | { place: FolderPlace; state: 'loaded'; listing: FolderListing }
   | { place: FolderPlace; state: 'failed'; error: string }
 
+// The dialogs act on one file or on the selected files.
 export type FileDialog =
-  { kind: 'none' } | { kind: 'delete'; file: S3File } | { kind: 'restore'; file: S3File }
+  { kind: 'none' } | { kind: 'delete'; files: S3File[] } | { kind: 'restore'; files: S3File[] }
 
 // One folder of the breadcrumb: its name, and its full prefix.
 export interface FolderCrumb {

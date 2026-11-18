@@ -3,11 +3,19 @@ import type { FolderListing, S3File } from '../../../../../src/shared/types/s3-t
 import {
   accessNote,
   appendListing,
+  archivedFiles,
+  deletedMessage,
+  downloadableFiles,
+  fileCount,
   folderCrumbs,
   folderName,
   isDownloadable,
   isEmptyFolder,
-  samePlace
+  namesWithMore,
+  restoreTimesFor,
+  restoringMessage,
+  samePlace,
+  selectedFiles
 } from '../../../../../src/renderer/src/utils/download-utils'
 
 const file = (key: string, access: S3File['access'] = { state: 'available' }): S3File => ({
@@ -77,5 +85,48 @@ describe('isEmptyFolder and appendListing', () => {
       files: [file('x'), file('y')],
       nextToken: null
     })
+  })
+})
+
+describe('selected files', () => {
+  const files = [
+    file('a.pdf'),
+    file('b.zip', { state: 'archived' }),
+    file('c.zip', { state: 'restoring' }),
+    file('d.zip', { state: 'restored', until: '2026-12-01T00:00:00.000Z' })
+  ]
+
+  it('keeps the listing order and splits them by what can be done', () => {
+    const chosen = selectedFiles(files, new Set(['d.zip', 'b.zip', 'a.pdf']))
+    expect(chosen.map((chosenFile) => chosenFile.key)).toEqual(['a.pdf', 'b.zip', 'd.zip'])
+    expect(downloadableFiles(chosen).map((chosenFile) => chosenFile.key)).toEqual([
+      'a.pdf',
+      'd.zip'
+    ])
+    expect(archivedFiles(chosen).map((chosenFile) => chosenFile.key)).toEqual(['b.zip'])
+  })
+
+  it('names one file or counts several', () => {
+    expect(fileCount(1)).toBe('1 file')
+    expect(fileCount(3)).toBe('3 files')
+    expect(deletedMessage([files[0]])).toBe('Deleted a.pdf.')
+    expect(deletedMessage(files)).toBe('Deleted 4 files.')
+    expect(restoringMessage(files.slice(0, 2))).toContain('restoring 2 files')
+  })
+
+  it('lists the first five names, then how many more', () => {
+    const many = ['1', '2', '3', '4', '5', '6', '7'].map((name) => file(name))
+    expect(namesWithMore(many.slice(0, 2))).toBe('1, 2')
+    expect(namesWithMore(many)).toBe('1, 2, 3, 4, 5 and 2 more')
+  })
+
+  it('gives the restore times of the slowest archive class', () => {
+    const flexible = { ...file('f'), storageClass: 'GLACIER' }
+    expect(restoreTimesFor([flexible])).toEqual({
+      Standard: 'in 3 to 5 hours',
+      Bulk: 'in 5 to 12 hours'
+    })
+    expect(restoreTimesFor([flexible, file('g')])?.Bulk).toBe('within 48 hours')
+    expect(restoreTimesFor([{ ...file('h'), storageClass: 'STANDARD' }])).toBeUndefined()
   })
 })

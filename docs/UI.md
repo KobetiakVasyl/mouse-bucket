@@ -41,6 +41,8 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
   - **Download** is offered for files that can be downloaded now. It saves the file into the download folder at once, and says so. When the name is taken, the new file gets a number, such as `report (2).pdf`.
   - **Restore** is offered for archived files. It opens a dialog to choose the speed (Standard or Bulk, with the usual waiting time) and how many days, from 1 to 365, the restored copy stays.
   - **Delete**, in red, asks for confirmation in a dialog first.
+  - Each file has a checkbox, and the column heading's checkbox selects every file shown. With files selected, a bar above the table counts them and offers **Download**, **Restore** and **Delete** for the selection. Each button shows how many of the selected files it applies to: Download the ones that can be downloaded now, Restore the archived ones, and Delete all of them. Delete asks first and lists the files. Opening another folder or template clears the selection.
+  - Actions on several files run one file at a time. If one fails, the files done so far show as done, and the dialog stays open with the rest and the error.
 - **Templates:**
   - The saved templates, each with a red Delete that asks for confirmation first. Deleting a template changes nothing in the bucket.
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.

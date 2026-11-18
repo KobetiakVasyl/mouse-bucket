@@ -1,8 +1,9 @@
-// The Download page: pick a download template, browse its bucket, then download, restore or delete files. See docs/UI.md.
+// The Download page: pick a download template, browse its bucket, then download, restore or delete one file or the selected ones. See docs/UI.md.
 import { useCallback, useEffect, useState } from 'react'
 import type { FolderListing, RestoreTier, S3File } from '../../../shared/types/s3-types'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
+import { NO_SELECTION } from '../constants/download-constants'
 import { downloadService } from '../services/download-service'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
 import { PageHeading } from '../theme/components/PageHeading'
@@ -11,10 +12,21 @@ import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { FolderBreadcrumb } from '../theme/compositions/FolderBreadcrumb'
 import { FolderTable } from '../theme/compositions/FolderTable'
 import { RestoreDialog } from '../theme/compositions/RestoreDialog'
+import { SelectionBar } from '../theme/compositions/SelectionBar'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
 import { TransferList } from '../theme/compositions/TransferList'
 import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-types'
-import { appendListing, downloadStartedMessage, samePlace } from '../utils/download-utils'
+import {
+  appendListing,
+  deletedMessage,
+  downloadsStartedMessage,
+  downloadStartedMessage,
+  fileCount,
+  namesWithMore,
+  restoringMessage,
+  samePlace,
+  selectedFiles
+} from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
@@ -33,6 +45,7 @@ export function DownloadPage({
   }))
   const [shown, setShown] = useState<ShownFolder | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(NO_SELECTION)
   const [dialog, setDialog] = useState<FileDialog>({ kind: 'none' })
   const [dialogBusy, setDialogBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string>()
@@ -40,6 +53,7 @@ export function DownloadPage({
   const [error, setError] = useState<string>()
   const template = selectedTemplate(templates, place.templateId)
   const current = shown !== null && samePlace(shown.place, place) ? shown : null
+  const files = current !== null && current.state === 'loaded' ? current.listing.files : []
 
   useEffect(() => {
     let active = true
@@ -61,6 +75,7 @@ export function DownloadPage({
   const goTo = (next: FolderPlace): void => {
     setMessage(undefined)
     setError(undefined)
+    setSelected(NO_SELECTION)
     setPlace(next)
   }
   const openFolder = (prefix: string): void => goTo({ templateId: place.templateId, prefix })
@@ -72,41 +87,71 @@ export function DownloadPage({
         : previous
     )
 
+  const select = (key: string, on: boolean): void =>
+    setSelected((previous) => {
+      const next = new Set(previous)
+      if (on) next.add(key)
+      else next.delete(key)
+      return next
+    })
+
   const closeDialog = useCallback((): void => {
     setDialog({ kind: 'none' })
     setDialogError(undefined)
   }, [])
 
-  const runDialogAction = async (action: () => Promise<void>): Promise<void> => {
+  // Acts on each file in turn. If one fails, the files done so far are shown as done, and the dialog stays open with the rest.
+  const runOnEach = async (
+    targets: S3File[],
+    act: (file: S3File) => Promise<void>,
+    showDone: (keys: ReadonlySet<string>) => void,
+    reopen: (rest: S3File[]) => void,
+    done: string
+  ): Promise<void> => {
     setDialogBusy(true)
     setDialogError(undefined)
+    const finished = new Set<string>()
     try {
-      await action()
+      for (const file of targets) {
+        await act(file)
+        finished.add(file.key)
+      }
       closeDialog()
+      setMessage(done)
     } catch (reason) {
+      reopen(targets.filter((file) => !finished.has(file.key)))
       setDialogError(messageOf(reason))
     } finally {
+      showDone(finished)
       setDialogBusy(false)
     }
   }
 
-  const deleteFile = (file: S3File): Promise<void> =>
-    runDialogAction(async () => {
-      await downloadService.delete({ templateId: template.id, key: file.key })
-      changeFiles((files) => files.filter((candidate) => candidate.key !== file.key))
-      setMessage(`Deleted ${file.name}.`)
-    })
+  const deleteFiles = (targets: S3File[]): Promise<void> =>
+    runOnEach(
+      targets,
+      (file) => downloadService.delete({ templateId: template.id, key: file.key }),
+      (keys) => {
+        changeFiles((listed) => listed.filter((file) => !keys.has(file.key)))
+        setSelected((previous) => new Set([...previous].filter((key) => !keys.has(key))))
+      },
+      (rest) => setDialog({ kind: 'delete', files: rest }),
+      deletedMessage(targets)
+    )
 
-  const restoreFile = (file: S3File, tier: RestoreTier, days: number): Promise<void> =>
-    runDialogAction(async () => {
-      await downloadService.restore({ templateId: template.id, key: file.key, tier, days })
-      changeFiles((files) =>
-        files.map((candidate) =>
-          candidate.key === file.key ? { ...candidate, access: { state: 'restoring' } } : candidate
-        )
-      )
-      setMessage(`S3 is restoring ${file.name}. Download it once the list shows it as restored.`)
-    })
+  const restoreFiles = (targets: S3File[], tier: RestoreTier, days: number): Promise<void> =>
+    runOnEach(
+      targets,
+      (file) => downloadService.restore({ templateId: template.id, key: file.key, tier, days }),
+      (keys) =>
+        changeFiles((listed) =>
+          listed.map((file) =>
+            keys.has(file.key) ? { ...file, access: { state: 'restoring' } } : file
+          )
+        ),
+      (rest) => setDialog({ kind: 'restore', files: rest }),
+      restoringMessage(targets)
+    )
 
   const loadMore = async (listing: FolderListing, continuationToken: string): Promise<void> => {
     setLoadingMore(true)
@@ -124,12 +169,20 @@ export function DownloadPage({
     }
   }
 
-  const download = async (file: S3File): Promise<void> => {
+  // Queues each file in turn, and stops at the first one main refuses.
+  const download = async (targets: S3File[]): Promise<void> => {
     setMessage(undefined)
     setError(undefined)
     try {
-      const savedAs = await downloadService.download({ templateId: template.id, key: file.key })
-      setMessage(downloadStartedMessage(file.name, savedAs))
+      const savedAs: string[] = []
+      for (const file of targets) {
+        savedAs.push(await downloadService.download({ templateId: template.id, key: file.key }))
+      }
+      setMessage(
+        targets.length === 1
+          ? downloadStartedMessage(targets[0].name, savedAs[0])
+          : downloadsStartedMessage(targets.length)
+      )
     } catch (reason) {
       setError(messageOf(reason))
     }
@@ -139,7 +192,7 @@ export function DownloadPage({
     <>
       <PageHeading title="Download">
         Open folders to find a file. Download saves it in your download folder; archived files need
-        a restore first.
+        a restore first. Select several files to act on them together.
       </PageHeading>
       <TemplatePicker
         templates={templates}
@@ -151,16 +204,30 @@ export function DownloadPage({
       {current === null && <p className="text-muted">Loading…</p>}
       {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
       {current !== null && current.state === 'loaded' && (
-        <FolderTable
-          listing={current.listing}
-          prefix={place.prefix}
-          loadingMore={loadingMore}
-          onOpenFolder={openFolder}
-          onDownload={(file) => void download(file)}
-          onRestore={(file) => setDialog({ kind: 'restore', file })}
-          onDelete={(file) => setDialog({ kind: 'delete', file })}
-          onLoadMore={(token) => void loadMore(current.listing, token)}
-        />
+        <>
+          <SelectionBar
+            files={selectedFiles(files, selected)}
+            onDownload={(targets) => void download(targets)}
+            onRestore={(targets) => setDialog({ kind: 'restore', files: targets })}
+            onDelete={(targets) => setDialog({ kind: 'delete', files: targets })}
+            onClear={() => setSelected(NO_SELECTION)}
+          />
+          <FolderTable
+            listing={current.listing}
+            prefix={place.prefix}
+            loadingMore={loadingMore}
+            selected={selected}
+            onSelect={select}
+            onSelectAll={(on) =>
+              setSelected(on ? new Set(files.map((file) => file.key)) : NO_SELECTION)
+            }
+            onOpenFolder={openFolder}
+            onDownload={(file) => void download([file])}
+            onRestore={(file) => setDialog({ kind: 'restore', files: [file] })}
+            onDelete={(file) => setDialog({ kind: 'delete', files: [file] })}
+            onLoadMore={(token) => void loadMore(current.listing, token)}
+          />
+        </>
       )}
 
       <StatusMessage message={message} className="mt-4" />
@@ -169,26 +236,31 @@ export function DownloadPage({
 
       {dialog.kind === 'delete' && (
         <ConfirmDialog
-          title="Delete this file?"
+          title={
+            dialog.files.length === 1
+              ? 'Delete this file?'
+              : `Delete ${fileCount(dialog.files.length)}?`
+          }
           message={
             <p>
-              <strong>{dialog.file.name}</strong> is deleted from {template.bucket}. The app
-              can&apos;t bring it back.
+              <strong>{namesWithMore(dialog.files)}</strong>{' '}
+              {dialog.files.length === 1 ? 'is' : 'are'} deleted from {template.bucket}. The app
+              can&apos;t bring {dialog.files.length === 1 ? 'it' : 'them'} back.
             </p>
           }
           confirmLabel="Delete"
           busy={dialogBusy}
           error={dialogError}
-          onConfirm={() => void deleteFile(dialog.file)}
+          onConfirm={() => void deleteFiles(dialog.files)}
           onCancel={closeDialog}
         />
       )}
       {dialog.kind === 'restore' && (
         <RestoreDialog
-          file={dialog.file}
+          files={dialog.files}
           busy={dialogBusy}
           error={dialogError}
-          onRestore={(tier, days) => void restoreFile(dialog.file, tier, days)}
+          onRestore={(tier, days) => void restoreFiles(dialog.files, tier, days)}
           onCancel={closeDialog}
         />
       )}
