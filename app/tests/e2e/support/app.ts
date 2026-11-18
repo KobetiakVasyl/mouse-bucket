@@ -20,6 +20,7 @@ export interface AppSetup {
 }
 
 const MAIN = appPath('out/main/index.js')
+const QUIET_WINDOW = appPath('tests/e2e/support/quiet-window.cjs')
 const RUNS = repoPath('.cache/tmp/e2e/')
 
 export function uploadTemplate(name: string, prefix = `${name.toLowerCase()}/`): Template {
@@ -62,7 +63,8 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
     for (const [name, value] of Object.entries(process.env)) {
       if (value !== undefined && name !== 'ELECTRON_RUN_AS_NODE') env[name] = value
     }
-    const app = await electron.launch({ args: [root], env })
+    // Electron's -r loads the script before the app, so the test windows stay off the desktop.
+    const app = await electron.launch({ args: ['-r', QUIET_WINDOW, root], env })
     // Main registers its handlers before it opens the window, so swapping them earlier would race.
     await app.firstWindow()
     await app.evaluate(installSampleS3, SAMPLE)

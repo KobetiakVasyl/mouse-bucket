@@ -58,6 +58,11 @@ export default defineConfig(
     files: ['src/renderer/**', 'src/shared/**'],
     rules: { 'no-restricted-imports': ['error', noElectronOrNode] }
   },
+  // CommonJS files, such as the e2e window script that NODE_OPTIONS loads, can only use require.
+  {
+    files: ['**/*.cjs'],
+    rules: { '@typescript-eslint/no-require-imports': 'off' }
+  },
   {
     files: ['**/*.mjs'],
     rules: {
