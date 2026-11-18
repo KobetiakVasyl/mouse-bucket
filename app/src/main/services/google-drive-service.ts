@@ -111,6 +111,8 @@ export class GoogleDriveService implements PlatformStorage<DriveAccess> {
       if (options.storageClass !== null) throw new UserError('Google Drive has no storage classes.')
       const connection = this.connect(access.credentials)
       let sessionUrl = options.uploadId
+      // A saved session URL that isn't Google's is never sent anything; the upload starts over instead.
+      if (sessionUrl !== null && !this.isSessionUrl(sessionUrl)) throw new UploadExpiredError()
       if (sessionUrl === null) {
         sessionUrl = await this.startSession(connection, access, key, fileSize, signal)
         onCreated(sessionUrl)

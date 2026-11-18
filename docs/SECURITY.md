@@ -35,7 +35,7 @@ Every handler in main is registered by `app/src/main/services/ipc-service.ts`, w
 - **Payload check:** main checks the payload against the channel's zod schema before using it, and rejects anything else, including unknown fields.
 - **Safe errors:** failures reach the renderer as a short message from `app/src/main/utils/error-utils.ts`, with its texts in `app/src/main/constants/error-constants.ts`: the text of an error main raised on purpose, a fixed explanation of a known AWS, Azure, Google or file error, or "Something went wrong" with the error's name. The raw message of an unknown error never reaches the renderer.
 
-A compromised renderer can therefore only call the typed IPC surface, with valid payloads. On Google Drive, where a sign-in reaches the whole Drive but a template points at one folder, main also lets the page name only folders and files it listed under that template's folder during this run (`app/src/main/services/google-drive-service.ts`), so a page can't reach the rest of the Drive through a template.
+A compromised renderer can therefore only call the typed IPC surface, with valid payloads. On Google Drive, where a sign-in reaches the whole Drive but a template points at one folder, main also lets the page name only folders and files it listed under that template's folder during this run (`app/src/main/services/google-drive-service.ts`), so a page can't name anything outside the template's current folder. Editing the template can still point it at any folder the signed-in account reaches, as the Templates page does, so this limit guards the template's folder, not the rest of the account.
 
 ## File paths
 
@@ -65,7 +65,7 @@ Google Drive has no keys to type in. Each user makes their own OAuth client in G
 - The server answers only a `GET /` with its own `Host`, so a page that rebinds its name to `127.0.0.1` is turned away, and only a code with the matching state counts. Its page loads nothing (`default-src 'none'`).
 - It stops after the first answer, when the user cancels in the app, or after 5 minutes, whichever comes first. Only one sign-in runs at a time.
 - The refresh token, the client ID and the client secret are kept in `credentials.bin` with the other keys. The secret of a Desktop client isn't confidential by Google's own design, and is kept encrypted all the same.
-- While a Google Drive upload is unfinished, `transfers.json` holds its resumable session URL. That URL can only finish that one upload, for at most a week. Main sends to a session URL only when it's on `https://www.googleapis.com`.
+- While a Google Drive upload is unfinished, `transfers.json` holds its resumable session URL. That URL can only finish that one upload, for at most a week. Main sends to a session URL only when it's on `https://www.googleapis.com`, both when a session starts and when a saved one resumes; a saved URL anywhere else starts the upload over.
 
 ## Secrets
 

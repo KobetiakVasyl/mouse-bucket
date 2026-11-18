@@ -150,6 +150,13 @@ describe('GoogleDriveService uploads', () => {
     await expect(upload({ uploadId: SESSION })).rejects.toBeInstanceOf(UploadExpiredError)
   })
 
+  it("sends nothing to a saved session URL that isn't Google's, and starts over", async () => {
+    await expect(upload({ uploadId: 'https://example.com/upload?id=1' })).rejects.toBeInstanceOf(
+      UploadExpiredError
+    )
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it('refuses a storage class, which Google Drive has none of', async () => {
     await expect(upload({ storageClass: 'STANDARD' })).rejects.toThrow('no storage classes')
   })
