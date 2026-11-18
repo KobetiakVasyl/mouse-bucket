@@ -1,0 +1,29 @@
+# Linux container for checking the Linux build. See docs/ENVIRONMENTS.md.
+name: aws-s3-desktop
+
+services:
+  linux:
+    build:
+      context: docker/linux
+      args:
+        USER_UID: ${LINUX_UID:-1000}
+        USER_GID: ${LINUX_GID:-1000}
+    image: aws-s3-desktop-linux
+    init: true
+    security_opt:
+      - seccomp=unconfined
+    shm_size: 1gb
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - node_modules:/workspace/app/node_modules
+      - data:/workspace/app/data
+      - out:/workspace/app/out
+      - ${LINUX_X11_DIR:-/run/desktop/mnt/host/wslg/.X11-unix}:/tmp/.X11-unix
+    environment:
+      DISPLAY: ${DISPLAY:-:0}
+
+volumes:
+  node_modules:
+  data:
+  out:

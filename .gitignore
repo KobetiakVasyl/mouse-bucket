@@ -1,0 +1,25 @@
+# VS Code Local History extension backups
+.history/
+
+# Open decisions and plans, kept on the author's machine only
+local/
+
+# Dependencies and download caches
+node_modules/
+.cache/
+
+# App build output, app data from runs from source, and tool output
+app/dist/
+app/out/
+app/data/
+.eslintcache
+*.log*
+
+# Env files hold secrets; only the template is committed
+.env
+.env.*
+!.env.example
+
+# Claude Code personal files
+CLAUDE.local.md
+.claude/settings.local.json

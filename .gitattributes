@@ -1,0 +1,2 @@
+# LF line endings everywhere, so files work in the Linux container. See docs/ENVIRONMENTS.md.
+* text=auto eol=lf

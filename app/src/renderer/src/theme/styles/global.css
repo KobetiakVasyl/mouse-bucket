@@ -1,0 +1,52 @@
+/* Grayscale theme, dark or light, with red only for destructive actions, green only for restoring, and Montserrat everywhere. See docs/UI.md. */
+@import 'tailwindcss';
+@import './fonts.css';
+
+@theme {
+  --color-*: initial;
+  --font-*: initial;
+  --font-sans: 'Montserrat', 'Liberation Sans', Arial, sans-serif;
+  --default-font-family: var(--font-sans);
+}
+
+/* Each role has a dark and a light shade, and components use only these roles. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-muted: var(--muted);
+  --color-ink: var(--ink);
+  --color-danger: var(--danger);
+  --color-positive: var(--positive);
+}
+
+@layer base {
+  :root {
+    --paper: #f7f7f7;
+    --surface: #ffffff;
+    --hover: #ebebeb;
+    --line: #d1d1d1;
+    --muted: #595959;
+    --ink: #141414;
+    --danger: #c81e1e;
+    --positive: #15803d;
+    color-scheme: light;
+  }
+
+  :root.dark {
+    --paper: #111111;
+    --surface: #1a1a1a;
+    --hover: #262626;
+    --line: #3d3d3d;
+    --muted: #a6a6a6;
+    --ink: #f0f0f0;
+    --danger: #f26b6b;
+    --positive: #4ade80;
+    color-scheme: dark;
+  }
+
+  html {
+    @apply bg-paper text-ink;
+  }
+}

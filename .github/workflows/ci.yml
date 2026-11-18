@@ -1,0 +1,161 @@
+# Typecheck, lint, format-check, test and build the app on Linux and Windows, then build installers on pushes and publish them as GitHub releases. See docs/ENVIRONMENTS.md and docs/PACKAGING.md.
+name: CI
+
+on:
+  push:
+    branches: [staging, production]
+  pull_request:
+    branches: [staging, production]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: App (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      npm_config_cache: ${{ github.workspace }}/.cache/npm
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Keep Electron's download between runs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/electron
+          key: electron-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm test
+      - name: End-to-end tests, on the staging build (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+      - name: End-to-end tests, on the staging build (Windows)
+        if: runner.os == 'Windows'
+        run: npm run test:e2e
+      - run: npx electron-vite build --mode production
+
+  installers:
+    name: Installers (${{ matrix.os }})
+    needs: app
+    if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    env:
+      npm_config_cache: ${{ github.workspace }}/.cache/npm
+      APP_ENVIRONMENT: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+      BUILDER_CONFIG: ${{ github.ref_name == 'production' && 'electron-builder.yml' || 'electron-builder.staging.yml' }}
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Keep Electron's and electron-builder's downloads between runs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .cache/electron
+            .cache/electron-builder
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('app/package-lock.json') }}
+      - run: npm ci
+      - name: Give staging builds their own version, so they update only from staging pre-releases
+        if: env.APP_ENVIRONMENT == 'staging'
+        shell: bash
+        run: npm pkg set version="$(node -p "require('./package.json').version")-staging.${{ github.run_number }}"
+      - name: Note the version for the release
+        id: version
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Build the app for this branch's environment
+        run: npx electron-vite build --mode ${{ env.APP_ENVIRONMENT }}
+      - name: Build the installers
+        run: node scripts/with-caches.mjs electron-builder --config ${{ env.BUILDER_CONFIG }} --publish never
+      - name: Start the built app and check that it renders (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run launch-check -- ${{ env.APP_ENVIRONMENT }}
+      - name: Start the built app and check that it renders (Windows)
+        if: runner.os == 'Windows'
+        run: npm run launch-check -- ${{ env.APP_ENVIRONMENT }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installers-${{ env.APP_ENVIRONMENT }}-${{ matrix.os }}
+          path: |
+            app/dist/MouseBucket*-setup.exe
+            app/dist/MouseBucket*.AppImage
+            app/dist/*.blockmap
+            app/dist/latest*.yml
+            app/dist/staging*.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Release
+    needs: installers
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    # The only job that can write to the repo. It runs no build code: it publishes what the installers jobs built.
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.installers.outputs.version }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: installers-*
+          path: release
+          merge-multiple: true
+      - name: Publish a draft production release, to publish by hand
+        if: github.ref_name == 'production'
+        run: |
+          tag="v${VERSION}"
+          if ! gh release view "$tag" > /dev/null 2>&1; then
+            gh release create "$tag" release/* --draft --target "$GITHUB_SHA" --title "MouseBucket ${VERSION}" --generate-notes
+          elif [ "$(gh release view "$tag" --json isDraft --jq .isDraft)" = "true" ]; then
+            gh release upload "$tag" release/* --clobber
+          else
+            echo "::warning::Release $tag is already published. Raise the version in app/package.json for the next release."
+          fi
+      - name: Publish a staging pre-release, keeping the newest 5
+        if: github.ref_name == 'staging'
+        run: |
+          gh release create "v${VERSION}" release/* --prerelease --target "$GITHUB_SHA" --title "MouseBucket Staging ${VERSION}" --notes "Staging build of ${GITHUB_SHA}."
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | grep -- '-staging\.' | tail -n +6 | while read -r old; do
+            gh release delete "$old" --yes --cleanup-tag
+          done

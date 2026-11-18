@@ -1,0 +1,51 @@
+appId: io.github.kobetiakvasyl.mousebucket
+productName: MouseBucket
+directories:
+  buildResources: build
+files:
+  - '!src/*'
+  - '!data/**'
+  - '!scripts/*'
+  - '!vite-plugins/*'
+  - '!tests/*'
+  - '!audit-allowlist.json'
+  - '!electron-builder*.yml'
+  - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!{vitest.config.ts,playwright.config.ts}'
+  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml}'
+  - '!{.env,.env.*,.npmrc}'
+  - '!tsconfig*.json'
+asarUnpack:
+  - resources/**
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  enableCookieEncryption: true
+  loadBrowserProcessSpecificV8Snapshot: false
+win:
+  executableName: MouseBucket
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: true
+  artifactName: MouseBucket-${version}-setup.${ext}
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  createDesktopShortcut: always
+linux:
+  target:
+    - AppImage
+  category: Utility
+appImage:
+  artifactName: MouseBucket-${version}.${ext}
+npmRebuild: false
+# Update metadata for electron-updater. CI publishes production releases as drafts, published by hand. See docs/PACKAGING.md.
+publish:
+  provider: github
+  owner: KobetiakVasyl
+  repo: mouse-bucket
+  releaseType: draft

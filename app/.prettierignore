@@ -1,0 +1,5 @@
+out
+dist
+data
+tsconfig.json
+tsconfig.*.json
