@@ -1,9 +1,16 @@
-// What the page may send to browse a bucket, and to download, delete or restore a file. See docs/ARCHITECTURE.md.
+// What the page may send to upload files, browse a bucket, and download, delete or restore a file. See docs/ARCHITECTURE.md.
 import { z } from 'zod'
 import { RESTORE_DAYS } from '../constants/storage-constants'
 import { TemplateIdSchema } from './template-validation'
 
 const KeySchema = z.string().min(1).max(1024)
+
+// The storage classes an upload may use.
+export const UploadStorageClassSchema = z.enum(['DEEP_ARCHIVE', 'STANDARD'])
+
+export const UploadRequestSchema = z
+  .object({ templateId: TemplateIdSchema, storageClass: UploadStorageClassSchema })
+  .strict()
 
 export const FolderRequestSchema = z
   .object({

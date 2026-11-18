@@ -44,6 +44,7 @@ describe('uploadFile', () => {
     const progress: number[] = []
     await service.uploadFile(BUCKET, {
       key: 'a/notes.txt',
+      storageClass: 'DEEP_ARCHIVE',
       filePath,
       fileSize: 5,
       signal: new AbortController().signal,

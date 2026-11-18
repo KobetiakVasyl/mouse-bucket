@@ -22,7 +22,9 @@ export class IpcService {
     this.handle(Channel.templatesList, () => templates.list())
     this.handle(Channel.templatesCreate, (input) => templates.add(input))
     this.handle(Channel.templatesDelete, (id) => templates.delete(id))
-    this.handle(Channel.uploadChooseFiles, (id, event) => uploads.chooseFiles(id, event.sender))
+    this.handle(Channel.uploadChooseFiles, (request, event) =>
+      uploads.chooseFiles(request, event.sender)
+    )
     this.handle(Channel.downloadList, (request) => downloads.listFolder(request))
     this.handle(Channel.downloadFile, (request, event) =>
       downloads.downloadFile(request, event.sender)

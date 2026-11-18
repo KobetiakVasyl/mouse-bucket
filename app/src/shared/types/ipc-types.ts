@@ -1,6 +1,12 @@
 // The IPC contract: what each channel accepts and returns, the result envelope, and window.api. See docs/ARCHITECTURE.md.
 import type { Channel } from '../constants/ipc-constants'
-import type { DownloadRequest, FolderListing, FolderRequest, RestoreRequest } from './s3-types'
+import type {
+  DownloadRequest,
+  FolderListing,
+  FolderRequest,
+  RestoreRequest,
+  UploadRequest
+} from './s3-types'
 import type { Settings, SettingsUpdate } from './settings-types'
 import type { NewTemplate, Template } from './template-types'
 import type { Transfer } from './transfer-types'
@@ -21,7 +27,7 @@ export interface Requests {
   'templates:list': undefined
   'templates:create': NewTemplate
   'templates:delete': string
-  'upload:chooseFiles': string
+  'upload:chooseFiles': UploadRequest
   'download:list': FolderRequest
   'download:file': DownloadRequest
   'download:delete': DownloadRequest
@@ -56,7 +62,7 @@ export interface Api {
   listTemplates(): Promise<Template[]>
   createTemplate(template: NewTemplate): Promise<Template>
   deleteTemplate(id: string): Promise<void>
-  chooseFilesToUpload(templateId: string): Promise<number>
+  chooseFilesToUpload(request: UploadRequest): Promise<number>
   listFolder(request: FolderRequest): Promise<FolderListing>
   downloadFile(request: DownloadRequest): Promise<boolean>
   deleteFile(request: DownloadRequest): Promise<void>

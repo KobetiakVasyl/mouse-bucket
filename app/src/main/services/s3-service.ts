@@ -12,7 +12,7 @@ import {
   S3Client
 } from '@aws-sdk/client-s3'
 import { Upload } from '@aws-sdk/lib-storage'
-import { UPLOAD_CHECKSUM, UPLOAD_STORAGE_CLASS } from '../../shared/constants/storage-constants'
+import { UPLOAD_CHECKSUM } from '../../shared/constants/storage-constants'
 import type { FolderListing, RestoreTier } from '../../shared/types/s3-types'
 import { DISCOVERY_REGION, PART_FILE_SUFFIX, UPLOAD_QUEUE_SIZE } from '../constants/s3-constants'
 import type { BucketAccess, Credentials } from '../types/credential-types'
@@ -63,9 +63,9 @@ export class S3Service {
     })
   }
 
-  // Sends one local file as Glacier Deep Archive with a CRC64NVME checksum, in parts for large files.
+  // Sends one local file in the chosen storage class with a CRC64NVME checksum, in parts for large files.
   uploadFile(access: BucketAccess, options: UploadFileOptions): Promise<void> {
-    const { key, filePath, fileSize, signal, onProgress } = options
+    const { key, storageClass, filePath, fileSize, signal, onProgress } = options
     return this.withBucket(access, async (client) => {
       signal.throwIfAborted()
       const body = createReadStream(filePath)
@@ -76,7 +76,7 @@ export class S3Service {
           Bucket: access.bucket,
           Key: key,
           Body: body,
-          StorageClass: UPLOAD_STORAGE_CLASS,
+          StorageClass: storageClass,
           ChecksumAlgorithm: UPLOAD_CHECKSUM
         },
         partSize: partSizeFor(fileSize),

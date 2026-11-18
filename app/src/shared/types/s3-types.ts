@@ -1,10 +1,12 @@
-// S3 locations, folder listings and files, and the requests that browse, download, delete or restore them. See docs/ARCHITECTURE.md.
+// S3 locations, folder listings and files, and the requests that upload, browse, download, delete or restore them. See docs/ARCHITECTURE.md.
 import type { z } from 'zod'
 import type {
   DownloadRequestSchema,
   FolderRequestSchema,
   RestoreRequestSchema,
-  RestoreTierSchema
+  RestoreTierSchema,
+  UploadRequestSchema,
+  UploadStorageClassSchema
 } from '../validation/s3-validation'
 
 export interface S3Location {
@@ -37,6 +39,8 @@ export interface FolderListing {
   nextToken: string | null
 }
 
+export type UploadStorageClass = z.infer<typeof UploadStorageClassSchema>
+export type UploadRequest = z.infer<typeof UploadRequestSchema>
 export type FolderRequest = z.infer<typeof FolderRequestSchema>
 export type DownloadRequest = z.infer<typeof DownloadRequestSchema>
 export type RestoreTier = z.infer<typeof RestoreTierSchema>

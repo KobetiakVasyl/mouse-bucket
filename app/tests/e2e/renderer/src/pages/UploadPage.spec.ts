@@ -22,9 +22,21 @@ test('shows ten template tiles and the rest in a drop-down', async ({ page }) =>
 })
 
 test('shows the settings every upload uses', async ({ page }) => {
-  for (const value of ['Glacier Deep Archive', "The bucket's default encryption", 'CRC64NVME']) {
+  for (const value of ["The bucket's default encryption", 'CRC64NVME']) {
     await expect(page.getByText(value, { exact: true })).toBeVisible()
   }
+})
+
+test('starts with Deep Archive and can switch to Standard', async ({ page }) => {
+  const storageClass = page.getByRole('group', { name: 'Storage class' })
+  const deepArchive = storageClass.getByRole('button', { name: 'Glacier Deep Archive' })
+  await expect(deepArchive).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByText(/billed for at least 180 days/)).toBeVisible()
+  await storageClass.getByRole('button', { name: 'Standard' }).click()
+  await expect(deepArchive).toHaveAttribute('aria-pressed', 'false')
+  await expect(
+    page.getByText('Files can be downloaded at once, but cost more to store.')
+  ).toBeVisible()
 })
 
 test('adds the chosen files to the transfers', async ({ page }) => {

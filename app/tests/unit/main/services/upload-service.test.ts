@@ -53,7 +53,9 @@ describe('UploadService', () => {
   it('queues each chosen file under the template’s folder, keeping its name', async () => {
     const file = appPath('package.json')
     const { service, queued, uploaded } = setup([file])
-    expect(await service.chooseFiles(TEMPLATE.id, SENDER)).toBe(1)
+    expect(
+      await service.chooseFiles({ templateId: TEMPLATE.id, storageClass: 'STANDARD' }, SENDER)
+    ).toBe(1)
     expect(queued[0].details).toMatchObject({
       kind: 'upload',
       templateName: 'Reports',
@@ -61,13 +63,18 @@ describe('UploadService', () => {
     })
     const progress = vi.fn()
     await queued[0].task({ signal: new AbortController().signal, progress })
-    expect(uploaded[0]).toMatchObject({ key: 'reports/package.json', filePath: file })
+    expect(uploaded[0]).toMatchObject({
+      key: 'reports/package.json',
+      storageClass: 'STANDARD',
+      filePath: file
+    })
     uploaded[0].onProgress(3)
     expect(progress).toHaveBeenCalledWith(3, uploaded[0].fileSize)
   })
 
   it('skips folders and queues nothing when the picker is cancelled', async () => {
-    expect(await setup([join(appPath('src'))]).service.chooseFiles(TEMPLATE.id, SENDER)).toBe(0)
-    expect(await setup([]).service.chooseFiles(TEMPLATE.id, SENDER)).toBe(0)
+    const request = { templateId: TEMPLATE.id, storageClass: 'DEEP_ARCHIVE' } as const
+    expect(await setup([join(appPath('src'))]).service.chooseFiles(request, SENDER)).toBe(0)
+    expect(await setup([]).service.chooseFiles(request, SENDER)).toBe(0)
   })
 })

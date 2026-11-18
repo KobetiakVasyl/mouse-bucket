@@ -1,9 +1,8 @@
 // The How it works page: what MouseBucket is and how each part of it works. See docs/UI.md.
-import { UPLOAD_CHECKSUM, UPLOAD_STORAGE_CLASS } from '../../../shared/constants/storage-constants'
+import { UPLOAD_CHECKSUM } from '../../../shared/constants/storage-constants'
 import { Card } from '../theme/components/Card'
 import { PageHeading } from '../theme/components/PageHeading'
 import { PolicyExample } from '../theme/compositions/PolicyExample'
-import { storageClassLabel } from '../utils/storage-utils'
 
 export function HowItWorksPage(): React.JSX.Element {
   return (
@@ -45,8 +44,9 @@ export function HowItWorksPage(): React.JSX.Element {
           </p>
           <ul className="list-disc space-y-1 pl-6">
             <li>
-              Storage class: {storageClassLabel(UPLOAD_STORAGE_CLASS)}, S3&apos;s cheapest, for
-              files you rarely need back.
+              Storage class: Glacier Deep Archive, S3&apos;s cheapest, for files you rarely need
+              back, or Standard, for files you want to download at once. Uploads start with the one
+              chosen in Settings, and the Upload page can change it for each upload.
             </li>
             <li>
               Checksum: {UPLOAD_CHECKSUM}. S3 checks it on arrival, so a file that changed on the

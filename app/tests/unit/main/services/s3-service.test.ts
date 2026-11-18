@@ -128,6 +128,7 @@ describe('uploadFile', () => {
     controller.abort()
     const upload = service.uploadFile(BUCKET, {
       key: 'k',
+      storageClass: 'STANDARD',
       filePath: 'never-read.txt',
       fileSize: 0,
       signal: controller.signal,

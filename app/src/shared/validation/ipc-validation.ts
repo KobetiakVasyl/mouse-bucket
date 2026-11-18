@@ -2,7 +2,12 @@
 import { z } from 'zod'
 import { Channel } from '../constants/ipc-constants'
 import type { InvokeChannel, Requests } from '../types/ipc-types'
-import { DownloadRequestSchema, FolderRequestSchema, RestoreRequestSchema } from './s3-validation'
+import {
+  DownloadRequestSchema,
+  FolderRequestSchema,
+  RestoreRequestSchema,
+  UploadRequestSchema
+} from './s3-validation'
 import { SettingsUpdateSchema } from './settings-validation'
 import { NewTemplateSchema, TemplateIdSchema } from './template-validation'
 
@@ -16,7 +21,7 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.templatesList]: NoPayload,
   [Channel.templatesCreate]: NewTemplateSchema,
   [Channel.templatesDelete]: TemplateIdSchema,
-  [Channel.uploadChooseFiles]: TemplateIdSchema,
+  [Channel.uploadChooseFiles]: UploadRequestSchema,
   [Channel.downloadList]: FolderRequestSchema,
   [Channel.downloadFile]: DownloadRequestSchema,
   [Channel.downloadDelete]: DownloadRequestSchema,

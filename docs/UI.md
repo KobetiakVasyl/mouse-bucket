@@ -32,6 +32,7 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
 - **Home:** an Upload tile and a Download tile, and the transfers. A tile is disabled until a template of its type exists.
 - **Upload:**
   - Pick an upload template.
+  - Choose the storage class with toggle buttons: Glacier Deep Archive or Standard, each with a line on what it means. It starts with the default from Settings.
   - The upload settings show where files go and how S3 stores them (see [ARCHITECTURE.md](ARCHITECTURE.md#transfers)). Tags and metadata are shown as coming soon.
   - "Choose files…" opens the system's file picker, and the chosen files join the transfers.
 - **Download:**
@@ -45,7 +46,7 @@ A side menu on the left lists Home, Templates, How it works and Settings, with "
   - A form that adds one: type, name, S3 location, and the IAM user. The form explains the location as it's typed and names the IAM permissions each type needs.
   - The IAM user is either typed in (access key ID and secret access key) or copied from a saved template. A copy happens in main, so the keys never reach the page.
 - **How it works:** what MouseBucket is, and how templates, uploading, downloading and restoring, deleting, transfers and the keys work, with example IAM policies for each template type. It needs no template, so it opens even before one exists.
-- **Settings:** the dark or light theme.
+- **Settings:** the dark or light theme, and the storage class the Upload page starts with (Glacier Deep Archive unless changed).
 
 Upload and Download pick a template from tiles: the first 10 templates by name, case-insensitively, each showing its S3 location. Any others are in a "More templates" drop-down below them (`app/src/renderer/src/utils/template-utils.ts`).
 

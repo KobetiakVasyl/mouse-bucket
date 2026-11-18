@@ -14,18 +14,33 @@ afterEach(async () => {
 })
 
 describe('SettingsService', () => {
-  it('starts dark, with the welcome page not yet seen', async () => {
+  it('starts dark, with the welcome page not yet seen and uploads to Deep Archive', async () => {
     expect(await new SettingsService(join(dir, 'settings.json')).get()).toEqual({
       theme: 'dark',
-      welcomeSeen: false
+      welcomeSeen: false,
+      defaultStorageClass: 'DEEP_ARCHIVE'
     })
   })
 
   it('keeps updates across instances', async () => {
     const path = join(dir, 'settings.json')
     await new SettingsService(path).update({ theme: 'light' })
-    await new SettingsService(path).update({ welcomeSeen: true })
-    expect(await new SettingsService(path).get()).toEqual({ theme: 'light', welcomeSeen: true })
+    await new SettingsService(path).update({ welcomeSeen: true, defaultStorageClass: 'STANDARD' })
+    expect(await new SettingsService(path).get()).toEqual({
+      theme: 'light',
+      welcomeSeen: true,
+      defaultStorageClass: 'STANDARD'
+    })
+  })
+
+  it('fills in settings that an older settings.json lacks', async () => {
+    const path = join(dir, 'settings.json')
+    await writeFile(path, '{"theme":"light","welcomeSeen":true}')
+    expect(await new SettingsService(path).get()).toEqual({
+      theme: 'light',
+      welcomeSeen: true,
+      defaultStorageClass: 'DEEP_ARCHIVE'
+    })
   })
 
   it('falls back to the defaults for a damaged or invalid file', async () => {

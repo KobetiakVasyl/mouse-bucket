@@ -1,5 +1,4 @@
-// What every upload sends to S3, and how long a restore may last. See docs/ARCHITECTURE.md.
-export const UPLOAD_STORAGE_CLASS = 'DEEP_ARCHIVE'
+// The checksum every upload sends to S3, and how long a restore may last. See docs/ARCHITECTURE.md.
 export const UPLOAD_CHECKSUM = 'CRC64NVME'
 
 // How many days a restored copy may stay.

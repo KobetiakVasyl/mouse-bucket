@@ -1,5 +1,6 @@
-// The Upload page: pick an upload template, see the upload settings, then pick files. See docs/UI.md.
+// The Upload page: pick an upload template and a storage class, see the upload settings, then pick files. See docs/UI.md.
 import { useState } from 'react'
+import type { UploadStorageClass } from '../../../shared/types/s3-types'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
 import { uploadService } from '../services/upload-service'
@@ -17,12 +18,15 @@ import { transfersOfKind } from '../utils/transfer-utils'
 // Shown only while at least one upload template exists.
 export function UploadPage({
   templates,
-  transfers
+  transfers,
+  defaultStorageClass
 }: {
   templates: Template[]
   transfers: Transfer[]
+  defaultStorageClass: UploadStorageClass
 }): React.JSX.Element {
   const [selectedId, setSelectedId] = useState(() => sortByName(templates)[0].id)
+  const [storageClass, setStorageClass] = useState(defaultStorageClass)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string>()
   const [error, setError] = useState<string>()
@@ -33,7 +37,7 @@ export function UploadPage({
     setMessage(undefined)
     setError(undefined)
     try {
-      const queued = await uploadService.chooseFiles(template.id)
+      const queued = await uploadService.chooseFiles({ templateId: template.id, storageClass })
       if (queued > 0) {
         setMessage(`${queued} ${queued === 1 ? 'file' : 'files'} added to the transfers.`)
       }
@@ -48,7 +52,11 @@ export function UploadPage({
     <>
       <PageHeading title="Upload">Files keep their names on the way to the bucket.</PageHeading>
       <TemplatePicker templates={templates} selectedId={selectedId} onSelect={setSelectedId} />
-      <UploadSettings template={template} />
+      <UploadSettings
+        template={template}
+        storageClass={storageClass}
+        onStorageClassChange={setStorageClass}
+      />
 
       <Button className="mt-6" variant="primary" disabled={busy} onClick={() => void chooseFiles()}>
         Choose files…

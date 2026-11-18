@@ -96,7 +96,7 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | `templates:list` | none | the templates, without keys |
 | `templates:create` | name, type, S3 location, and either keys or the ID of a template to copy them from | the new template |
 | `templates:delete` | template ID | nothing |
-| `upload:chooseFiles` | upload template ID | how many files main queued after its file picker closed |
+| `upload:chooseFiles` | upload template ID, and the storage class (Glacier Deep Archive or Standard) | how many files main queued after its file picker closed |
 | `download:list` | download template ID, folder prefix, continuation token | one page of subfolders, and of files with their storage class and restore state |
 | `download:file` | download template ID, S3 key | whether main queued it after its Save dialog closed |
 | `download:delete` | download template ID, S3 key | nothing, once S3 deleted the file |
@@ -120,8 +120,8 @@ A new template can reuse another template's IAM user: main copies the keys from 
 
 - Main runs uploads and downloads from a queue, three at a time, and each keeps going while the window is minimized.
 - Uploads use `@aws-sdk/lib-storage`. Files are sent in 8 MiB parts, or larger parts for files over about 78 GiB, so no file needs more than S3's 10,000 parts. A failed or cancelled upload aborts its multipart upload.
-- Every upload uses the same settings (`app/src/shared/constants/storage-constants.ts`):
-  - Storage class Glacier Deep Archive (`DEEP_ARCHIVE`).
+- Each upload is stored as Glacier Deep Archive (`DEEP_ARCHIVE`) or Standard (`STANDARD`), chosen on the Upload page. The page starts with the default from Settings, which is Glacier Deep Archive until changed.
+- Apart from the storage class, every upload uses the same settings (`app/src/shared/constants/storage-constants.ts`):
   - A CRC64NVME checksum, for each part and for the whole file, which S3 checks on arrival. `lib-storage` sends CRC64NVME part checksums from version 3.1170.0.
   - No encryption header, so the bucket's default encryption applies.
   - No tags and no metadata yet.

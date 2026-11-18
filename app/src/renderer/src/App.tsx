@@ -73,7 +73,11 @@ export default function App(): React.JSX.Element {
   const pages: Record<Page, () => React.JSX.Element> = {
     home: () => <HomePage templates={templates} transfers={transfers} onNavigate={setPage} />,
     upload: () => (
-      <UploadPage templates={templatesOfKind(templates, 'upload')} transfers={transfers} />
+      <UploadPage
+        templates={templatesOfKind(templates, 'upload')}
+        transfers={transfers}
+        defaultStorageClass={settings.defaultStorageClass}
+      />
     ),
     download: () => (
       <DownloadPage templates={templatesOfKind(templates, 'download')} transfers={transfers} />

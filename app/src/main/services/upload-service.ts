@@ -2,6 +2,7 @@
 import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { WebContents } from 'electron'
+import type { UploadRequest, UploadStorageClass } from '../../shared/types/s3-types'
 import type { Template } from '../../shared/types/template-types'
 import type { DialogService } from './dialog-service'
 import type { S3Service } from './s3-service'
@@ -17,21 +18,29 @@ export class UploadService {
   ) {}
 
   // Main opens the file picker itself, so the page never handles a local path. Returns how many files were queued.
-  async chooseFiles(templateId: string, sender: WebContents): Promise<number> {
+  async chooseFiles(
+    { templateId, storageClass }: UploadRequest,
+    sender: WebContents
+  ): Promise<number> {
     const template = await this.templates.getOfKind(templateId, 'upload')
     const filePaths = await this.dialogs.chooseFiles(sender, `Upload to ${template.name}`)
     let queued = 0
     for (const filePath of filePaths) {
       const info = await stat(filePath)
       if (!info.isFile()) continue
-      this.queue(template, filePath, info.size)
+      this.queue(template, storageClass, filePath, info.size)
       queued++
     }
     return queued
   }
 
   // A file keeps its name: its key is the template's folder plus the name.
-  private queue(template: Template, filePath: string, fileSize: number): void {
+  private queue(
+    template: Template,
+    storageClass: UploadStorageClass,
+    filePath: string,
+    fileSize: number
+  ): void {
     const name = basename(filePath)
     this.transfers.add(
       { kind: 'upload', templateName: template.name, name, bytesTotal: fileSize },
@@ -39,6 +48,7 @@ export class UploadService {
         const access = await this.templates.accessFor(template)
         await this.s3.uploadFile(access, {
           key: `${template.prefix}${name}`,
+          storageClass,
           filePath,
           fileSize,
           signal,

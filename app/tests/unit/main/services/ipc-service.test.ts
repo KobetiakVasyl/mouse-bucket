@@ -19,7 +19,11 @@ function setup(): {
     vault: { available: async () => true },
     settings: {
       get: vi.fn(),
-      update: vi.fn(async () => ({ theme: 'light' as const, welcomeSeen: true }))
+      update: vi.fn(async () => ({
+        theme: 'light' as const,
+        welcomeSeen: true,
+        defaultStorageClass: 'DEEP_ARCHIVE' as const
+      }))
     },
     templates: { list: vi.fn(async () => []), add: vi.fn(), delete: vi.fn(async () => undefined) },
     uploads: { chooseFiles: vi.fn(async () => 2) },
@@ -60,11 +64,15 @@ describe('IpcService', () => {
 
   it('passes a valid payload to the service and wraps its answer', async () => {
     const { invoke, services } = setup()
-    expect(await invoke(Channel.uploadChooseFiles, TEMPLATE_ID)).toEqual({ ok: true, value: 2 })
-    expect(services.uploads.chooseFiles).toHaveBeenCalledWith(TEMPLATE_ID, {})
+    const request = { templateId: TEMPLATE_ID, storageClass: 'STANDARD' }
+    expect(await invoke(Channel.uploadChooseFiles, request)).toEqual({ ok: true, value: 2 })
+    expect(services.uploads.chooseFiles).toHaveBeenCalledWith(request, {})
+    expect(
+      await invoke(Channel.uploadChooseFiles, { ...request, storageClass: 'GLACIER' })
+    ).toMatchObject({ ok: false })
     expect(await invoke(Channel.settingsUpdate, { theme: 'light' })).toEqual({
       ok: true,
-      value: { theme: 'light', welcomeSeen: true }
+      value: { theme: 'light', welcomeSeen: true, defaultStorageClass: 'DEEP_ARCHIVE' }
     })
   })
 
