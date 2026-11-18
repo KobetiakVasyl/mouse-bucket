@@ -1,5 +1,6 @@
 // The Browse page: pick a download template, browse its bucket, container or Drive folder, then download, restore or
-// delete one file or the selected ones. See docs/UI.md.
+// delete one file or the selected ones. The open folder's location can be copied, or start a new upload template. See
+// docs/UI.md.
 import { useCallback, useEffect, useState } from 'react'
 import type {
   FolderEntry,
@@ -8,11 +9,15 @@ import type {
   RestoreTier,
   StoredFile
 } from '../../../shared/types/storage-types'
+import { DRIVE_ROOT_ID } from '../../../shared/constants/location-constants'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
-import { NO_SELECTION } from '../constants/download-constants'
+import { DEFAULT_FILE_SORT, NO_SELECTION } from '../constants/download-constants'
 import { STORAGE_HEADINGS } from '../constants/platform-constants'
+import { appService } from '../services/app-service'
 import { downloadService } from '../services/download-service'
+import { Button } from '../theme/components/Button'
+import { CopyButton } from '../theme/components/CopyButton'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
 import { PageLayout } from '../theme/components/PageLayout'
 import { Section } from '../theme/components/Section'
@@ -25,7 +30,7 @@ import { RestoreDialog } from '../theme/compositions/RestoreDialog'
 import { SelectionBar } from '../theme/compositions/SelectionBar'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
 import { TransferList } from '../theme/compositions/TransferList'
-import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-types'
+import type { FileDialog, FileSort, FolderPlace, ShownFolder } from '../types/download-types'
 import {
   appendListing,
   deletedMessage,
@@ -35,25 +40,30 @@ import {
   fileCount,
   folderOf,
   namesWithMore,
+  nextSort,
   restoringMessage,
   samePlace,
   selectedFiles
 } from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
-import { rootLabel } from '../utils/location-utils'
+import { folderLocation, rootLabel } from '../utils/location-utils'
+import { uploadDraft } from '../utils/template-form-utils'
+import type { TemplateFormValues } from '../types/template-form-types'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
-import { DeleteIcon } from '../theme/components/icons'
+import { AddIcon, DeleteIcon } from '../theme/components/icons'
 
 // Shown only while at least one download template exists.
 export function DownloadPage({
   templates,
   transfers,
-  restoreDefaults
+  restoreDefaults,
+  onNewUploadTemplate
 }: {
   templates: Template[]
   transfers: Transfer[]
   restoreDefaults: { tier: RestoreTier; days: number }
+  onNewUploadTemplate: (draft: TemplateFormValues) => void
 }): React.JSX.Element {
   const [place, setPlace] = useState<FolderPlace>(() => ({
     templateId: sortByName(templates)[0].id,
@@ -62,6 +72,8 @@ export function DownloadPage({
   const [shown, setShown] = useState<ShownFolder | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<string>>(NO_SELECTION)
+  // The sort stays while other folders and templates open.
+  const [sort, setSort] = useState<FileSort>(DEFAULT_FILE_SORT)
   const [dialog, setDialog] = useState<FileDialog>({ kind: 'none' })
   const [dialogBusy, setDialogBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string>()
@@ -70,6 +82,14 @@ export function DownloadPage({
   const template = selectedTemplate(templates, place.templateId)
   const current = shown !== null && samePlace(shown.place, place) ? shown : null
   const files = current !== null && current.state === 'loaded' ? current.listing.files : []
+  const folder = folderOf(place)
+  const folderName =
+    place.path.length === 0 ? rootLabel(template) : place.path[place.path.length - 1].name
+  // My Drive has no link to copy.
+  const copyable = !(
+    template.platform === 'google-drive' &&
+    (folder === '' ? template.folderId : folder) === DRIVE_ROOT_ID
+  )
 
   useEffect(() => {
     let active = true
@@ -224,6 +244,25 @@ export function DownloadPage({
         description={
           <FolderBreadcrumb root={rootLabel(template)} path={place.path} onOpenPath={openPath} />
         }
+        actions={
+          <>
+            {copyable && (
+              <CopyButton
+                text={folderLocation(template, folder)}
+                label={template.platform === 'google-drive' ? 'Copy link' : 'Copy URL'}
+                className="text-sm"
+                onCopy={(text) => appService.copy(text)}
+              />
+            )}
+            <Button
+              className="text-sm"
+              onClick={() => onNewUploadTemplate(uploadDraft(template, folder, folderName))}
+            >
+              <AddIcon />
+              New upload template here
+            </Button>
+          </>
+        }
         className="mt-10"
       >
         {current === null && <p className="text-muted">Loading…</p>}
@@ -240,6 +279,8 @@ export function DownloadPage({
             <FolderTable
               listing={current.listing}
               storageHeading={STORAGE_HEADINGS[template.platform]}
+              sort={sort}
+              onSort={(by) => setSort((current) => nextSort(current, by))}
               loadingMore={loadingMore}
               selected={selected}
               onSelect={select}

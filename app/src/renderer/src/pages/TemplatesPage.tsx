@@ -9,6 +9,7 @@ import { Section } from '../theme/components/Section'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { TemplateForm } from '../theme/compositions/TemplateForm'
 import { TemplateTable } from '../theme/compositions/TemplateTable'
+import type { TemplateFormValues } from '../types/template-form-types'
 import { messageOf } from '../utils/error-utils'
 import { DeleteIcon } from '../theme/components/icons'
 
@@ -16,6 +17,7 @@ export function TemplatesPage({
   templates,
   encryptionAvailable,
   firstRun,
+  draft,
   onCreated,
   onUpdated,
   onDeleted
@@ -23,6 +25,7 @@ export function TemplatesPage({
   templates: Template[]
   encryptionAvailable: boolean
   firstRun: boolean
+  draft: TemplateFormValues | null
   onCreated: (template: Template) => void
   onUpdated: (template: Template) => void
   onDeleted: (id: string) => void
@@ -99,6 +102,7 @@ export function TemplatesPage({
         key={editing === null ? 'new' : editing.id}
         templates={templates}
         editing={editing}
+        draft={draft}
         encryptionAvailable={encryptionAvailable}
         message={message}
         onCreate={create}

@@ -52,6 +52,7 @@ import { TemplateKeyFields } from './TemplateKeyFields'
 export function TemplateForm({
   templates,
   editing,
+  draft,
   encryptionAvailable,
   message,
   onCreate,
@@ -60,6 +61,8 @@ export function TemplateForm({
 }: {
   templates: Template[]
   editing: Template | null
+  // A new template to start from instead of an empty form, such as one Browse made for a folder.
+  draft: TemplateFormValues | null
   encryptionAvailable: boolean
   message: string | undefined
   onCreate: (template: NewTemplate) => Promise<void>
@@ -67,7 +70,7 @@ export function TemplateForm({
   onCancelEdit: () => void
 }): React.JSX.Element {
   const [form, setForm] = useState<TemplateFormValues>(() =>
-    editing === null ? EMPTY_TEMPLATE_FORM : formFor(editing)
+    editing === null ? (draft ?? EMPTY_TEMPLATE_FORM) : formFor(editing)
   )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()

@@ -12,12 +12,13 @@ const file = (
   key: string,
   size: number,
   storageClass: string,
-  access: StoredFile['access']
+  access: StoredFile['access'],
+  lastModified = '2026-11-01T09:30:00.000Z'
 ): StoredFile => ({
   key,
   name: key.slice(key.lastIndexOf('/') + 1),
   size,
-  lastModified: '2026-11-01T09:30:00.000Z',
+  lastModified,
   storageClass,
   access
 })
@@ -27,13 +28,34 @@ export const SAMPLE: SampleStorage = {
     '': {
       folders: [{ id: 'photos/', name: 'photos' }],
       files: [
-        file('backup.tar.gz', 3_435_973_837, 'DEEP_ARCHIVE', { state: 'archived' }),
-        file('contracts.zip', 545_259_520, 'GLACIER', {
-          state: 'restored',
-          until: '2026-12-01T00:00:00.000Z'
-        }),
-        file('invoice.pdf', 250_880, 'STANDARD', { state: 'available' }),
-        file('photos-2025.zip', 1_181_116_006, 'DEEP_ARCHIVE', { state: 'restoring' })
+        file(
+          'backup.tar.gz',
+          3_435_973_837,
+          'DEEP_ARCHIVE',
+          { state: 'archived' },
+          '2026-10-01T09:30:00.000Z'
+        ),
+        file(
+          'contracts.zip',
+          545_259_520,
+          'GLACIER',
+          { state: 'restored', until: '2026-12-01T00:00:00.000Z' },
+          '2026-11-05T09:30:00.000Z'
+        ),
+        file(
+          'invoice.pdf',
+          250_880,
+          'STANDARD',
+          { state: 'available' },
+          '2026-11-10T09:30:00.000Z'
+        ),
+        file(
+          'photos-2025.zip',
+          1_181_116_006,
+          'DEEP_ARCHIVE',
+          { state: 'restoring' },
+          '2026-09-15T09:30:00.000Z'
+        )
       ],
       nextToken: null
     },
@@ -163,6 +185,11 @@ export function installSampleStorage(
   replace('transfers:pause', (payload) => changeTransfer(payload, 'paused'))
   replace('transfers:resume', (payload) => changeTransfer(payload, 'running'))
   replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
+  // Copied text is kept for the test to read, instead of going to the computer's clipboard.
+  replace('app:copyText', (payload) => {
+    Reflect.set(globalThis, 'sampleClipboard', payload)
+    return undefined
+  })
   // CI's Linux runner has no keyring, so the app would refuse to store keys. The tests need the forms enabled.
   replace('app:status', () => ({ encryptionAvailable: true, version: app.getVersion() }))
   // A new template as main would save it, without asking the platform; Google's sign-in is skipped too.

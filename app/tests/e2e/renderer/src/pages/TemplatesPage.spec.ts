@@ -1,4 +1,11 @@
-import { downloadTemplate, expect, menuItem, test, uploadTemplate } from '../../../support/app'
+import {
+  copiedText,
+  downloadTemplate,
+  expect,
+  menuItem,
+  test,
+  uploadTemplate
+} from '../../../support/app'
 
 test.use({
   setup: {
@@ -132,4 +139,19 @@ test('copies keys only from templates on the same platform', async ({ page }) =>
       .getByRole('button', { name: 'Copy from a template' })
   ).toBeHidden()
   await expect(page.getByLabel('OAuth client ID')).toBeVisible()
+})
+
+test('shows how to make an IAM user in CloudShell, and copies the script', async ({
+  app,
+  page
+}) => {
+  await page
+    .getByRole('button', { name: 'No keys yet? Make an IAM user with AWS CloudShell' })
+    .click()
+  await expect(page.getByText('Paste this script and press Enter.')).toBeVisible()
+  await page.getByRole('button', { name: 'Copy', exact: true }).click()
+  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible()
+  const script = await copiedText(app)
+  expect(script).toContain('aws iam create-user --user-name mousebucket')
+  expect(script).toContain('aws iam create-access-key --user-name mousebucket')
 })

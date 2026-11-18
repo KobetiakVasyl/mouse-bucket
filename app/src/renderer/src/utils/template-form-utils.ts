@@ -9,7 +9,8 @@ import { kindProblem, parseLocation } from '../../../shared/validation/location-
 import { PERMISSIONS } from '../constants/permission-constants'
 import { ACCESS_HINTS, LOCATION_EXAMPLES } from '../constants/platform-constants'
 import type { TemplateFormValues } from '../types/template-form-types'
-import { formatLocation, locationInput } from './location-utils'
+import { EMPTY_TEMPLATE_FORM } from '../constants/template-constants'
+import { folderLocation, formatLocation, locationInput } from './location-utils'
 import { selectedTemplate } from './template-utils'
 
 export function locationHint(form: TemplateFormValues): string {
@@ -114,4 +115,21 @@ export function templateEdit(
 export function accessHint(form: TemplateFormValues): string {
   if (form.platform === 's3') return `The IAM user needs ${PERMISSIONS[form.kind].summary}`
   return ACCESS_HINTS[form.platform][form.kind]
+}
+
+// The form for a new upload template into a folder Browse has open, named after it, with the download template's keys.
+export function uploadDraft(
+  template: Template,
+  folder: string,
+  folderName: string
+): TemplateFormValues {
+  return {
+    ...EMPTY_TEMPLATE_FORM,
+    platform: template.platform,
+    kind: 'upload',
+    name: folderName,
+    location: folderLocation(template, folder),
+    keySource: 'copied',
+    copyFrom: template.id
+  }
 }

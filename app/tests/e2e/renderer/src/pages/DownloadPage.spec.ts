@@ -1,5 +1,6 @@
 import {
   azureTemplate,
+  copiedText,
   downloadTemplate,
   driveTemplate,
   expect,
@@ -104,6 +105,47 @@ test('downloads, restores and deletes the selected files', async ({ page }) => {
   await expect(page.getByRole('status')).toHaveText('Deleted 4 files.')
   await expect(page.getByRole('row', { name: /invoice\.pdf/ })).toBeHidden()
   await expect(bar).toBeHidden()
+})
+
+test('sorts the files by name or by date, either way', async ({ page }) => {
+  const fileNames = page
+    .getByRole('row')
+    .filter({ has: page.getByRole('checkbox') })
+    .filter({
+      hasNot: page.getByRole('checkbox', { name: 'Select all files' })
+    })
+  await expect(fileNames.first()).toContainText('backup.tar.gz')
+  const modified = page.getByRole('columnheader', { name: 'Modified' })
+  await modified.getByRole('button').click()
+  await expect(modified).toHaveAttribute('aria-sort', 'descending')
+  await expect(fileNames.first()).toContainText('invoice.pdf')
+  await expect(fileNames.last()).toContainText('photos-2025.zip')
+  await modified.getByRole('button').click()
+  await expect(modified).toHaveAttribute('aria-sort', 'ascending')
+  await expect(fileNames.first()).toContainText('photos-2025.zip')
+  await page.getByRole('columnheader', { name: 'Name' }).getByRole('button').click()
+  await expect(fileNames.first()).toContainText('backup.tar.gz')
+})
+
+test("copies the open folder's URL, and starts an upload template for it", async ({
+  app,
+  page
+}) => {
+  await page.getByRole('button', { name: 'photos', exact: true }).click()
+  await page.getByRole('button', { name: 'Copy URL' }).click()
+  await expect(page.getByRole('button', { name: 'Copied' })).toBeVisible()
+  expect(await copiedText(app)).toBe('s3://example-archive/photos/')
+
+  await page.getByRole('button', { name: 'New upload template here' }).click()
+  const form = page.getByRole('form', { name: 'New template' })
+  await expect(form.getByLabel('Name')).toHaveValue('photos')
+  await expect(form.getByLabel('S3 location')).toHaveValue('s3://example-archive/photos/')
+  await expect(
+    form.getByRole('group', { name: 'Type' }).getByRole('button', { name: 'Upload' })
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(form.getByRole('combobox', { name: 'Copy the keys of' })).toHaveText(/^Archive/)
+  await form.getByRole('button', { name: 'Add template' }).click()
+  await expect(page.getByRole('status')).toHaveText('Added "photos".')
 })
 
 test.describe('on Azure', () => {

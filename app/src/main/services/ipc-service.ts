@@ -15,12 +15,23 @@ export class IpcService {
   ) {}
 
   register(services: IpcServices): void {
-    const { vault, settings, templates, google, uploads, downloads, transfers, updates, version } =
-      services
+    const {
+      vault,
+      clipboard,
+      settings,
+      templates,
+      google,
+      uploads,
+      downloads,
+      transfers,
+      updates,
+      version
+    } = services
     this.handle(Channel.appStatus, async () => ({
       encryptionAvailable: await vault.available(),
       version
     }))
+    this.handle(Channel.appCopyText, async (text) => clipboard.writeText(text))
     this.handle(Channel.settingsGet, () => settings.get())
     this.handle(Channel.settingsUpdate, (update) => settings.update(update))
     this.handle(Channel.settingsChooseDownloadFolder, (_input, event) =>

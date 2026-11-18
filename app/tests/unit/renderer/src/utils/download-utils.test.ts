@@ -12,10 +12,12 @@ import {
   isDownloadable,
   isEmptyFolder,
   namesWithMore,
+  nextSort,
   restoreTimesFor,
   restoringMessage,
   samePlace,
-  selectedFiles
+  selectedFiles,
+  sortFiles
 } from '../../../../../src/renderer/src/utils/download-utils'
 
 const file = (key: string, access: StoredFile['access'] = { state: 'available' }): StoredFile => ({
@@ -134,5 +136,48 @@ describe('selected files', () => {
     })
     expect(restoreTimesFor([flexible, file('g')])?.Bulk).toBe('within 48 hours')
     expect(restoreTimesFor([{ ...file('h'), storageClass: 'STANDARD' }])).toBeUndefined()
+  })
+})
+
+describe('sortFiles and nextSort', () => {
+  const dated = (name: string, lastModified: string): StoredFile => ({
+    ...file(name),
+    lastModified
+  })
+  const files = [
+    dated('b10.txt', '2026-11-03T00:00:00.000Z'),
+    dated('B2.txt', '2026-11-01T00:00:00.000Z'),
+    dated('a.txt', '2026-11-03T00:00:00.000Z'),
+    dated('no-date.txt', '')
+  ]
+  const names = (sorted: StoredFile[]): string[] => sorted.map((sortedFile) => sortedFile.name)
+
+  it('sorts names naturally, ignoring case, either way', () => {
+    expect(names(sortFiles(files, { by: 'name', direction: 'ascending' }))).toEqual([
+      'a.txt',
+      'B2.txt',
+      'b10.txt',
+      'no-date.txt'
+    ])
+    expect(names(sortFiles(files, { by: 'name', direction: 'descending' }))[0]).toBe('no-date.txt')
+  })
+
+  it('sorts by date, keeping name order for the same date, with undated files oldest', () => {
+    expect(names(sortFiles(files, { by: 'modified', direction: 'descending' }))).toEqual([
+      'a.txt',
+      'b10.txt',
+      'B2.txt',
+      'no-date.txt'
+    ])
+    expect(names(sortFiles(files, { by: 'modified', direction: 'ascending' }))[0]).toBe(
+      'no-date.txt'
+    )
+  })
+
+  it('turns the sorted column round, and starts another column its own first way', () => {
+    const byName = { by: 'name', direction: 'ascending' } as const
+    expect(nextSort(byName, 'name')).toEqual({ by: 'name', direction: 'descending' })
+    expect(nextSort(byName, 'modified')).toEqual({ by: 'modified', direction: 'descending' })
+    expect(nextSort({ by: 'modified', direction: 'descending' }, 'name')).toEqual(byName)
   })
 })

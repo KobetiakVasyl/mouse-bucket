@@ -1,5 +1,5 @@
 // A handler for one invoke channel, the services behind them, and the parts of Electron's IPC that main uses. See docs/ARCHITECTURE.md.
-import type { IpcMain, IpcMainInvokeEvent } from 'electron'
+import type { Clipboard, IpcMain, IpcMainInvokeEvent } from 'electron'
 import type { InvokeChannel, Requests, Responses } from '../../shared/types/ipc-types'
 import type { DownloadService } from '../services/download-service'
 import type { GoogleSignInService } from '../services/google-sign-in-service'
@@ -19,6 +19,7 @@ export type IpcRegistry = Pick<IpcMain, 'handle'>
 
 export interface IpcServices {
   vault: Pick<KeyVault, 'available'>
+  clipboard: Pick<Clipboard, 'writeText'>
   settings: Pick<SettingsService, 'get' | 'update' | 'chooseDownloadFolder'>
   templates: Pick<TemplateService, 'list' | 'add' | 'update' | 'delete'>
   google: Pick<GoogleSignInService, 'cancel'>

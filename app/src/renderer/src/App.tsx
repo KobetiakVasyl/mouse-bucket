@@ -18,6 +18,7 @@ import { SideMenu } from './theme/compositions/SideMenu'
 import { UpdatesDialog } from './theme/compositions/UpdatesDialog'
 import type { AppData, AppLoad } from './types/app-types'
 import type { Page } from './types/navigation-types'
+import type { TemplateFormValues } from './types/template-form-types'
 import { messageOf } from './utils/error-utils'
 import { pageToShow } from './utils/navigation-utils'
 import { templatesOfKind } from './utils/template-utils'
@@ -25,6 +26,8 @@ import { templatesOfKind } from './utils/template-utils'
 export default function App(): React.JSX.Element {
   const [load, setLoad] = useState<AppLoad>({ state: 'loading' })
   const [page, setPage] = useState<Page>('home')
+  // A new template Browse started for a folder; it's dropped as soon as the user goes anywhere else.
+  const [draft, setDraft] = useState<TemplateFormValues | null>(null)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [updatesOpen, setUpdatesOpen] = useState(false)
   const transfers = useTransfers()
@@ -71,10 +74,15 @@ export default function App(): React.JSX.Element {
     if (!settings.welcomeSeen) updateSettings({ welcomeSeen: true }).catch(() => undefined)
   }
 
+  const navigate = (next: Page): void => {
+    setDraft(null)
+    setPage(next)
+  }
+
   const shown = pageToShow(page, templates)
 
   const pages: Record<Page, () => React.JSX.Element> = {
-    home: () => <HomePage templates={templates} transfers={transfers} onNavigate={setPage} />,
+    home: () => <HomePage templates={templates} transfers={transfers} onNavigate={navigate} />,
     upload: () => (
       <UploadPage
         templates={templatesOfKind(templates, 'upload')}
@@ -88,6 +96,10 @@ export default function App(): React.JSX.Element {
         templates={templatesOfKind(templates, 'download')}
         transfers={transfers}
         restoreDefaults={{ tier: settings.defaultRestoreTier, days: settings.defaultRestoreDays }}
+        onNewUploadTemplate={(next) => {
+          setDraft(next)
+          setPage('templates')
+        }}
       />
     ),
     templates: () => (
@@ -95,9 +107,11 @@ export default function App(): React.JSX.Element {
         templates={templates}
         encryptionAvailable={status.encryptionAvailable}
         firstRun={templates.length === 0}
+        draft={draft}
         onCreated={(template) => {
           changeData((data) => ({ ...data, templates: [...data.templates, template] }))
-          if (templates.length === 0) setPage('home')
+          setDraft(null)
+          if (templates.length === 0) navigate('home')
         }}
         onUpdated={(template) =>
           changeData((data) => ({
@@ -132,7 +146,7 @@ export default function App(): React.JSX.Element {
     <div className="flex h-screen">
       <SideMenu
         current={shown}
-        onNavigate={setPage}
+        onNavigate={navigate}
         onCheckForUpdates={() => setUpdatesOpen(true)}
         onShowWelcome={() => setWelcomeOpen(true)}
       />
@@ -145,7 +159,7 @@ export default function App(): React.JSX.Element {
           onClose={closeWelcome}
           onShowHowItWorks={() => {
             closeWelcome()
-            setPage('how-it-works')
+            navigate('how-it-works')
           }}
         />
       )}

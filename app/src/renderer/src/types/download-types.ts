@@ -17,3 +17,12 @@ export type FileDialog =
   | { kind: 'none' }
   | { kind: 'delete'; files: StoredFile[] }
   | { kind: 'restore'; files: StoredFile[] }
+
+// The columns the files can be sorted by, and which way.
+export type FileSortKey = 'name' | 'modified'
+export type SortDirection = 'ascending' | 'descending'
+
+export interface FileSort {
+  by: FileSortKey
+  direction: SortDirection
+}

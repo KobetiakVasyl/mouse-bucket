@@ -57,3 +57,15 @@ export function formatLocation(location: StorageLocation): string {
   if (location.platform === 'azure') return formatAzureLocation(location)
   return location.folderId === DRIVE_ROOT_ID ? DRIVE_ROOT_NAME : 'the Drive folder in that link'
 }
+
+// The location of a folder Browse has open, as the template form takes it: '' is the template's top. On Google Drive,
+// a folder's ID, and My Drive for the root, which has no link.
+export function folderLocation(template: Template, folder: string): string {
+  if (template.platform === 's3')
+    return formatS3Location({ bucket: template.bucket, prefix: folder })
+  if (template.platform === 'azure') {
+    const { account, container } = template
+    return formatAzureLocation({ account, container, prefix: folder })
+  }
+  return driveFolderInput(folder === '' ? template.folderId : folder)
+}

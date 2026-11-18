@@ -13,6 +13,7 @@ async function invoke<T>(channel: string, payload?: unknown): Promise<T> {
 
 const api: Api = {
   getStatus: () => invoke(Channel.appStatus),
+  copyText: (text) => invoke(Channel.appCopyText, text),
   getSettings: () => invoke(Channel.settingsGet),
   updateSettings: (update) => invoke(Channel.settingsUpdate, update),
   chooseDownloadFolder: () => invoke(Channel.settingsChooseDownloadFolder),

@@ -25,6 +25,7 @@ export interface AppStatus {
 // What the renderer sends on each invoke channel.
 export interface Requests {
   'app:status': undefined
+  'app:copyText': string
   'settings:get': undefined
   'settings:update': SettingsUpdate
   'settings:chooseDownloadFolder': undefined
@@ -52,6 +53,8 @@ export interface Requests {
 
 export interface Responses {
   'app:status': AppStatus
+  // Main writes the text to the clipboard, which the page itself may not.
+  'app:copyText': void
   'settings:get': Settings
   'settings:update': Settings
   // The settings with the chosen folder, or unchanged when the picker was cancelled.
@@ -86,6 +89,7 @@ export interface Responses {
 // window.api, which the preload exposes to the renderer.
 export interface Api {
   getStatus(): Promise<AppStatus>
+  copyText(text: string): Promise<void>
   getSettings(): Promise<Settings>
   updateSettings(update: SettingsUpdate): Promise<Settings>
   chooseDownloadFolder(): Promise<Settings>

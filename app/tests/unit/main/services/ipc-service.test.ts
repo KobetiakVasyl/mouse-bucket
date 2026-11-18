@@ -17,6 +17,7 @@ function setup(): {
   const listeners = new Map<string, Listener>()
   const services: IpcServices = {
     vault: { available: async () => true },
+    clipboard: { writeText: vi.fn() },
     settings: {
       get: vi.fn(),
       update: vi.fn(async () => ({
@@ -100,6 +101,17 @@ describe('IpcService', () => {
         downloadFolder: '/home/me/Downloads'
       }
     })
+  })
+
+  it('copies text through main, and refuses anything but text', async () => {
+    const { invoke, services } = setup()
+    expect(await invoke(Channel.appCopyText, 'aws iam create-user')).toEqual({
+      ok: true,
+      value: undefined
+    })
+    expect(services.clipboard.writeText).toHaveBeenCalledWith('aws iam create-user')
+    expect(await invoke(Channel.appCopyText, { text: 'x' })).toMatchObject({ ok: false })
+    expect(await invoke(Channel.appCopyText, '')).toMatchObject({ ok: false })
   })
 
   it('cancels a Google sign-in waiting in the browser', async () => {

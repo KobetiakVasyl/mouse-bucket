@@ -114,6 +114,11 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
   }
 })
 
+// The text the app last copied, which the sample handlers keep instead of the clipboard.
+export function copiedText(app: ElectronApplication): Promise<unknown> {
+  return app.evaluate(() => Reflect.get(globalThis, 'sampleClipboard'))
+}
+
 // An item of the side menu, such as 'Templates'.
 export function menuItem(page: Page, name: string): ReturnType<Page['getByRole']> {
   return page.getByRole('navigation', { name: 'Main menu' }).getByRole('button', { name })

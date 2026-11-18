@@ -3,6 +3,7 @@ import type { TemplateKind } from '../../../../shared/types/template-types'
 import { PERMISSIONS } from '../../constants/permission-constants'
 import { TEMPLATE_KIND_LABELS } from '../../constants/template-constants'
 import { policyJson } from '../../utils/permission-utils'
+import { appService } from '../../services/app-service'
 import { CodeBlock } from '../components/CodeBlock'
 
 export function PolicyExample({ kind }: { kind: TemplateKind }): React.JSX.Element {
@@ -12,7 +13,7 @@ export function PolicyExample({ kind }: { kind: TemplateKind }): React.JSX.Eleme
       <h3 className="mb-1 font-semibold">
         {TEMPLATE_KIND_LABELS[kind]} templates: {summary}
       </h3>
-      <CodeBlock text={policyJson(statements)} />
+      <CodeBlock text={policyJson(statements)} onCopy={(text) => appService.copy(text)} />
     </div>
   )
 }

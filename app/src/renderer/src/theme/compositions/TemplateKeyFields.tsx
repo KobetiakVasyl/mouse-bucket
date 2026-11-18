@@ -1,9 +1,12 @@
-// The keys a template's platform takes when typed in: S3's access key pair, an Azure storage account key, or the user's
-// own Google OAuth client, which signs in through the browser. See docs/UI.md.
-import type { ChangeEvent } from 'react'
+// The keys a template's platform takes when typed in: S3's access key pair, with the way to make an IAM user in
+// CloudShell, an Azure storage account key, or the user's own Google OAuth client, which signs in through the browser.
+// See docs/UI.md.
+import { type ChangeEvent, useState } from 'react'
 import type { TemplateFormTextField, TemplateFormValues } from '../../types/template-form-types'
 import { Field } from '../components/Field'
+import { LinkButton } from '../components/LinkButton'
 import { INPUT_CLASS } from '../styles/style-constants'
+import { CloudShellSetup } from './CloudShellSetup'
 
 export function TemplateKeyFields({
   form,
@@ -12,9 +15,22 @@ export function TemplateKeyFields({
   form: TemplateFormValues
   onChange: (field: TemplateFormTextField) => (event: ChangeEvent<HTMLInputElement>) => void
 }): React.JSX.Element {
+  const [settingUp, setSettingUp] = useState(false)
   if (form.platform === 's3') {
     return (
       <>
+        <div>
+          <LinkButton onClick={() => setSettingUp((open) => !open)}>
+            {settingUp
+              ? 'Hide the IAM user setup'
+              : 'No keys yet? Make an IAM user with AWS CloudShell'}
+          </LinkButton>
+          {settingUp && (
+            <div className="mt-3 rounded-xl border border-line bg-surface p-4">
+              <CloudShellSetup />
+            </div>
+          )}
+        </div>
         <Field label="Access key ID">
           <input
             className={INPUT_CLASS}

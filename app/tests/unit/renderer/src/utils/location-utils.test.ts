@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Template } from '../../../../../src/shared/types/template-types'
 import {
   driveFolderInput,
+  folderLocation,
   formatAzureLocation,
   formatLocation,
   formatS3Location,
@@ -53,5 +54,19 @@ describe('formatLocation', () => {
     expect(formatLocation({ platform: 'google-drive', folderId: '1AbCdEfGhIjKlMnOp' })).toBe(
       'the Drive folder in that link'
     )
+  })
+})
+
+describe('folderLocation', () => {
+  it("writes an open folder's location the way the template form takes it", () => {
+    expect(folderLocation(S3, 'photos/2025/')).toBe('s3://b1/photos/2025/')
+    expect(folderLocation(AZURE, '')).toBe('https://myaccount.blob.core.windows.net/backups/')
+    expect(folderLocation(DRIVE, '')).toBe(
+      'https://drive.google.com/drive/folders/1AbCdEfGhIjKlMnOp'
+    )
+    expect(folderLocation(DRIVE, 'sub-folder-1234')).toBe(
+      'https://drive.google.com/drive/folders/sub-folder-1234'
+    )
+    expect(folderLocation({ ...DRIVE, folderId: 'root' }, '')).toBe('My Drive')
   })
 })

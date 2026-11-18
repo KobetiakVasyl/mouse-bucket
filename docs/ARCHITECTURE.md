@@ -93,6 +93,7 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | Channel | Payload | Returns |
 |---|---|---|
 | `app:status` | none | whether OS encryption is available for keys, and the app's version |
+| `app:copyText` | the text, up to 20,000 characters | nothing, once main put it on the clipboard |
 | `settings:get`, `settings:update` | none, or the settings to change, apart from the download folder | the settings |
 | `settings:chooseDownloadFolder` | none | the settings, after main's folder picker closed |
 | `templates:list` | none | the templates, without keys |
@@ -172,7 +173,7 @@ While any transfer is waiting, running or retrying, the computer doesn't go to s
 - An Azure restore (Set Blob Tier) rehydrates the blob into the Hot, Cool or Cold tier for good, at standard priority, within 15 hours, or high priority, within an hour for blobs under 10 GB. Once it's there, it's simply available.
 - Google Drive has nothing to restore. Google Docs, Sheets, Slides and other Google files have no content of their own to download, so the list marks them as unavailable.
 - Delete removes one file by its key, after the page asked for confirmation: `DeleteObject` on S3, where a bucket with versioning on keeps older versions; Delete Blob with its snapshots on Azure, where an account with soft delete on keeps it for its retention days; and on Google Drive, moving it to the trash, where it stays for 30 days.
-- On S3, download templates need `s3:ListBucket`, `s3:GetObject`, `s3:RestoreObject` and `s3:DeleteObject`, and upload templates `s3:PutObject` and `s3:AbortMultipartUpload`. An Azure account key and a Google sign-in reach everything their account can. `app/src/renderer/src/constants/permission-constants.ts` holds these, with example policies, for the Templates and How it works pages.
+- On S3, download templates need `s3:ListBucket`, `s3:GetObject`, `s3:RestoreObject` and `s3:DeleteObject`, and upload templates `s3:PutObject` and `s3:AbortMultipartUpload`. The IAM user the CloudShell script makes, `mousebucket`, gets all six of those actions on every bucket in the account. An Azure account key and a Google sign-in reach everything their account can. `app/src/renderer/src/constants/permission-constants.ts` holds these, with example policies, for the Templates and How it works pages.
 
 ## Tests
 

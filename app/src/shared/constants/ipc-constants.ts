@@ -1,6 +1,7 @@
 // IPC channel names, shared by preload and main. See docs/ARCHITECTURE.md.
 export const Channel = {
   appStatus: 'app:status',
+  appCopyText: 'app:copyText',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
   settingsChooseDownloadFolder: 'settings:chooseDownloadFolder',

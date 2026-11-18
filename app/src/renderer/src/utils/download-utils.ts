@@ -9,10 +9,11 @@ import type { Platform } from '../../../shared/types/template-types'
 import {
   ARCHIVE_CLASSES_SLOWEST_FIRST,
   DOWNLOADABLE_STATES,
+  FIRST_SORT_DIRECTIONS,
   LISTED_NAMES,
   RESTORE_TIMES
 } from '../constants/download-constants'
-import type { FolderPlace } from '../types/download-types'
+import type { FileSort, FileSortKey, FolderPlace } from '../types/download-types'
 import { formatDate } from './format-utils'
 
 // The folder a place lists: the last one opened, or '' for the template's top.
@@ -122,4 +123,30 @@ export function restoringMessage(files: StoredFile[], platform: Platform): strin
     return `Azure is rehydrating ${what}. Download ${it} once the list no longer shows ${it} as archived.`
   }
   return `S3 is restoring ${what}. Download ${it} once the list shows ${it} as restored.`
+}
+
+// The sort after clicking a column: the other way round on the column already sorted, otherwise that column's first way.
+export function nextSort(current: FileSort, by: FileSortKey): FileSort {
+  if (current.by !== by) return { by, direction: FIRST_SORT_DIRECTIONS[by] }
+  return { by, direction: current.direction === 'ascending' ? 'descending' : 'ascending' }
+}
+
+// When a file was last changed, in milliseconds; a file without a date, as Google Drive may send, counts as the oldest.
+function modifiedMs(file: StoredFile): number {
+  const ms = Date.parse(file.lastModified)
+  return Number.isNaN(ms) ? Number.NEGATIVE_INFINITY : ms
+}
+
+function byName(a: StoredFile, b: StoredFile): number {
+  return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
+}
+
+// The files in the chosen order. Files with the same date keep name order.
+export function sortFiles(files: StoredFile[], sort: FileSort): StoredFile[] {
+  const sign = sort.direction === 'ascending' ? 1 : -1
+  return [...files].sort((a, b) => {
+    if (sort.by === 'name') return sign * byName(a, b)
+    const difference = modifiedMs(a) - modifiedMs(b)
+    return difference === 0 ? byName(a, b) : sign * Math.sign(difference)
+  })
 }
