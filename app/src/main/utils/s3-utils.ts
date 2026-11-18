@@ -59,3 +59,26 @@ export function bucketRegionHeader(error: unknown): string {
   const region = propertyOf(headers, 'x-amz-bucket-region')
   return typeof region === 'string' ? region : ''
 }
+
+// How many parts a file is sent in, at least one.
+export function partCount(fileSize: number, partSize: number): number {
+  return Math.max(1, Math.ceil(fileSize / partSize))
+}
+
+// Where a part starts in the file, and how long it is; only the last part may be shorter.
+export function partRange(
+  partNumber: number,
+  partSize: number,
+  fileSize: number
+): { start: number; length: number } {
+  const start = (partNumber - 1) * partSize
+  return { start, length: Math.min(partSize, fileSize - start) }
+}
+
+// How many bytes of the file the given parts hold.
+export function partsBytes(partNumbers: number[], partSize: number, fileSize: number): number {
+  return partNumbers.reduce(
+    (total, partNumber) => total + partRange(partNumber, partSize, fileSize).length,
+    0
+  )
+}

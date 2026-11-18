@@ -8,6 +8,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel,
+  cancelLabel = 'Cancel',
   busy,
   error,
   onConfirm,
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   title: string
   message: ReactNode
   confirmLabel: string
+  cancelLabel?: string
   busy: boolean
   error: string | undefined
   onConfirm: () => void
@@ -26,7 +28,7 @@ export function ConfirmDialog({
       <div className="mb-6">{message}</div>
       <div className="flex justify-end gap-3">
         <Button onClick={onCancel} autoFocus>
-          Cancel
+          {cancelLabel}
         </Button>
         <Button variant="danger" disabled={busy} onClick={onConfirm}>
           {confirmLabel}

@@ -13,6 +13,8 @@ export const Channel = {
   downloadDelete: 'download:delete',
   downloadRestore: 'download:restore',
   transfersList: 'transfers:list',
+  transfersPause: 'transfers:pause',
+  transfersResume: 'transfers:resume',
   transfersCancel: 'transfers:cancel'
 } as const
 

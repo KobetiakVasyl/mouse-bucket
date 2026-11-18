@@ -2,9 +2,9 @@
 export const DOWNLOAD_FOLDER_DIALOG_TITLE = 'Choose the download folder'
 
 export const QUIT_DIALOG = {
-  buttons: ['Keep transferring', 'Quit and cancel them'],
+  buttons: ['Keep transferring', 'Pause and quit'],
   message: 'Uploads or downloads are still running.',
-  detail: "Quitting cancels every transfer that hasn't finished."
+  detail: 'Quitting pauses them. Resume them next time, and they continue where they stopped.'
 }
 
 // The index of the quit button in QUIT_DIALOG.buttons.

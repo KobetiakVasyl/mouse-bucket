@@ -45,3 +45,27 @@ test('adds the chosen files to the transfers', async ({ page }) => {
   await expect(page.getByText('Upload: report.pdf')).toBeVisible()
   await expect(page.getByText('Upload: photo.jpg')).toBeVisible()
 })
+
+test('pauses, resumes and cancels a transfer, asking first once something moved', async ({
+  page
+}) => {
+  await page.getByRole('button', { name: 'Choose files…' }).click()
+  const report = page.getByRole('listitem', { name: 'Upload: report.pdf' })
+  await report.getByRole('button', { name: 'Pause' }).click()
+  await expect(report).toContainText('Paused')
+  await report.getByRole('button', { name: 'Resume' }).click()
+  await expect(report).toContainText('In progress')
+
+  await report.getByRole('button', { name: 'Cancel' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Cancel this upload?' })
+  await expect(dialog).toContainText('uploaded so far is deleted from the bucket')
+  await dialog.getByRole('button', { name: 'Keep it' }).click()
+  await expect(report).toContainText('In progress')
+  await report.getByRole('button', { name: 'Cancel' }).click()
+  await dialog.getByRole('button', { name: 'Cancel upload' }).click()
+  await expect(report).toContainText('Cancelled')
+
+  const photo = page.getByRole('listitem', { name: 'Upload: photo.jpg' })
+  await photo.getByRole('button', { name: 'Cancel' }).click()
+  await expect(photo).toContainText('Cancelled')
+})

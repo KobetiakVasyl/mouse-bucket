@@ -131,7 +131,12 @@ describe('uploadFile', () => {
       storageClass: 'STANDARD',
       filePath: 'never-read.txt',
       fileSize: 0,
+      partSize: 8,
+      uploadId: null,
+      parts: [],
       signal: controller.signal,
+      onCreated: () => undefined,
+      onPart: () => undefined,
       onProgress: () => undefined
     })
     await expect(upload).rejects.toMatchObject({ name: 'AbortError' })

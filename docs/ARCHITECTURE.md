@@ -102,7 +102,8 @@ Every result travels in an envelope: `{ ok: true, value }` or `{ ok: false, erro
 | `download:file` | download template ID, S3 key | the name main saves the file under in the download folder |
 | `download:delete` | download template ID, S3 key | nothing, once S3 deleted the file |
 | `download:restore` | download template ID, S3 key, speed (Standard or Bulk), days | nothing, once S3 accepted the restore |
-| `transfers:list`, `transfers:cancel` | none, or a transfer ID | the transfers, or nothing |
+| `transfers:list` | none | the transfers |
+| `transfers:pause`, `transfers:resume`, `transfers:cancel` | a transfer ID | nothing. Cancel also deletes what the transfer moved |
 
 Main also sends `transfers:changed`, with the full transfer list, whenever a transfer changes. Progress reaches it at most every 200 ms.
 
@@ -119,17 +120,31 @@ A new template can reuse another template's IAM user: main copies the keys from 
 
 ## Transfers
 
-- Main runs uploads and downloads from a queue, three at a time, and each keeps going while the window is minimized.
-- Uploads use `@aws-sdk/lib-storage`. Files are sent in 8 MiB parts, or larger parts for files over about 78 GiB, so no file needs more than S3's 10,000 parts. A failed or cancelled upload aborts its multipart upload.
+- Main runs uploads and downloads from a queue, three at a time, and each keeps going while the window is minimized (`app/src/main/services/transfer-service.ts`).
+- A file that fits in one part is sent with a single `PutObject`. A larger file goes as a multipart upload in 8 MiB parts, or larger parts for files over about 78 GiB, so no file needs more than S3's 10,000 parts. Up to four parts of a file are sent at once.
 - Each upload is stored as Glacier Deep Archive (`DEEP_ARCHIVE`) or Standard (`STANDARD`), chosen on the Upload page. The page starts with the default from Settings, which is Glacier Deep Archive until changed.
 - Apart from the storage class, every upload uses the same settings (`app/src/shared/constants/storage-constants.ts`):
-  - A CRC64NVME checksum, for each part and for the whole file, which S3 checks on arrival. `lib-storage` sends CRC64NVME part checksums from version 3.1170.0.
+  - A CRC64NVME checksum, for each part and for the whole file, which S3 checks on arrival. The multipart upload is completed with every part's checksum.
   - No encryption header, so the bucket's default encryption applies.
   - No tags and no metadata yet.
 - The app never changes a bucket's versioning. On a bucket with versioning off, an upload replaces an object with the same key.
 - Downloads go straight into the download folder from Settings, which is the system's Downloads folder until another is chosen. A file is saved under its key's last part, made safe for the disk (see [SECURITY.md](SECURITY.md#file-paths)). When a file, a partial download or a queued download already has that name, the new file gets a number before its extension, such as `report (2).pdf` or `backup (2).tar.gz`, so nothing is overwritten.
-- A download streams into `<file>.part` in that folder, which becomes the file only once complete. A failed or cancelled download deletes the `.part` file.
-- While any transfer is waiting or running, the computer doesn't go to sleep (`powerSaveBlocker` with `prevent-app-suspension`). The screen may still turn off.
+- A download streams into `<file>.part` in that folder, which becomes the file only once complete.
+
+### Resuming
+
+A transfer that stops continues later from where it stopped, instead of starting over:
+
+- **Downloads** keep their `.part` file. The next run asks S3 only for the rest, with a `Range` request from the `.part` file's size. It also sends `If-Match` with the ETag of the version the download began with, so S3 refuses if the file changed in the bucket since then (412). In that case, or when the `.part` file is longer than the file (416), the download starts over.
+- **Uploads** keep their multipart upload ID and each part S3 confirmed, with its ETag and checksum. The next run sends only the missing parts, then completes the upload with all of them. An upload starts over when the local file's size or modification time changed, after stopping the old multipart upload, or when S3 no longer knows the upload (`NoSuchUpload`), for example after a lifecycle rule removed it.
+- **Network errors** (no connection, resets, timeouts, and S3's 5xx answers) are retried by themselves, after 2, 5, 10 and 30 seconds, then every minute, up to eight times (`app/src/main/constants/transfer-constants.ts`). The count starts again whenever bytes move, so a long transfer over a flaky connection keeps going. Other errors, such as access denied, stop the transfer as failed.
+- **Pause** stops a transfer and keeps what it moved. **Resume**, or **Retry** for a failed one, puts it back in the queue. **Cancel** stops it and deletes what it moved: a download's `.part` file, or an upload's multipart upload, so S3 deletes its parts.
+- **Across restarts:** the transfers that haven't finished are saved in `transfers.json` in the app data folder, at most once a second while they run (`app/src/main/services/transfer-store-service.ts`). Quitting pauses them and saves them at once. On the next start they're back in the list as paused, with what they already moved.
+- A transfer resumes with the bucket and region it started with, and the current keys of its template. If the template was deleted, it fails, and Cancel removes it.
+
+### Keeping the computer awake
+
+While any transfer is waiting, running or retrying, the computer doesn't go to sleep (`powerSaveBlocker` with `prevent-app-suspension`). The screen may still turn off.
 
 ## Archived files and deleting
 
@@ -155,14 +170,14 @@ Tests live in `app/tests/`, apart from the code they test. There are three kinds
 
 - `npm run test:e2e` builds the app in staging mode, then Playwright starts the build in `out/` with the Electron in `node_modules/`. It's the unpackaged build, because the packaged app's fuses block the debugger connection Playwright drives it through. The launch check covers the packaged app (see [ENVIRONMENTS.md](ENVIRONMENTS.md#continuous-integration)).
 - Each test starts its own copy of the app, one test at a time (`app/tests/e2e/support/app.ts`). Its app folder is a fresh folder under `.cache/tmp/e2e/` with a `package.json` that points at the build. The app keeps its data next to its folder, so each test starts with only the templates and settings it seeds, and never sees `app/data/`. The folder is deleted when the test ends.
-- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles` and `templates:create`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
+- No test reaches AWS. Once the window is open, the test swaps main's handlers for the channels that would call S3 for handlers that answer with sample data (`app/tests/e2e/support/sample-s3.ts`): `download:list`, `download:file`, `download:delete`, `download:restore`, `upload:chooseFiles` and `templates:create`. The sample transfers also answer `transfers:pause`, `transfers:resume` and `transfers:cancel`. It waits for the window because main registers its own handlers before it opens the window. Everything else runs as built: the preload, the IPC checks, settings, and listing and deleting templates.
 
 ## Stack
 
 - Electron 45, scaffolded with electron-vite's `react-ts` template.
 - React and TypeScript in strict mode.
 - Tailwind CSS (see [UI.md](UI.md)).
-- `@aws-sdk/client-s3` and `@aws-sdk/lib-storage`, in main only.
+- `@aws-sdk/client-s3`, in main only.
 - zod for the IPC payload schemas.
 - electron-builder for installers (see [PACKAGING.md](PACKAGING.md)).
 - Vitest, with `aws-sdk-client-mock` for S3, and Playwright for end-to-end tests.

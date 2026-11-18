@@ -4,8 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vite
 import { DownloadService } from '../../../../src/main/services/download-service'
 import type { S3Service } from '../../../../src/main/services/s3-service'
 import type { BucketAccess } from '../../../../src/main/types/credential-types'
-import type { DownloadFileOptions } from '../../../../src/main/types/s3-service-types'
-import type { TransferTask } from '../../../../src/main/types/transfer-queue-types'
+import type { NewTransferRecord } from '../../../../src/main/types/transfer-queue-types'
 import type { Template } from '../../../../src/shared/types/template-types'
 import { makeTempDir, removeTempDir } from '../../../support/temp-dir'
 
@@ -24,24 +23,25 @@ const ACCESS: BucketAccess = {
 }
 
 let dir: string
-let tasks: TransferTask[]
-let downloaded: DownloadFileOptions[]
+let queued: NewTransferRecord[]
 let s3: {
   listFolder: Mock<S3Service['listFolder']>
-  downloadFile: Mock<S3Service['downloadFile']>
   deleteFile: Mock<S3Service['deleteFile']>
   restoreFile: Mock<S3Service['restoreFile']>
 }
 
+// Every queued download counts as unfinished until the test removes it.
 function service(downloadFolder = dir): DownloadService {
   return new DownloadService(
     { getOfKind: async () => TEMPLATE, accessFor: async () => ACCESS },
     s3,
     {
-      add: (_details, task) => {
-        tasks.push(task)
+      add: (record) => {
+        queued.push(record)
         return 'id'
-      }
+      },
+      downloadTargets: () =>
+        queued.flatMap((record) => (record.kind === 'download' ? [record.targetPath] : []))
     },
     {
       get: async () => ({
@@ -54,22 +54,15 @@ function service(downloadFolder = dir): DownloadService {
   )
 }
 
-const run = (task: TransferTask): Promise<void> =>
-  task({ signal: new AbortController().signal, progress: () => undefined })
-
 beforeEach(async () => {
   dir = await makeTempDir()
-  tasks = []
-  downloaded = []
+  queued = []
   s3 = {
     listFolder: vi.fn<S3Service['listFolder']>(async () => ({
       folders: [],
       files: [],
       nextToken: null
     })),
-    downloadFile: vi.fn<S3Service['downloadFile']>(async (_access, options) => {
-      downloaded.push(options)
-    }),
     deleteFile: vi.fn<S3Service['deleteFile']>(async () => undefined),
     restoreFile: vi.fn<S3Service['restoreFile']>(async () => undefined)
   }
@@ -90,21 +83,33 @@ describe('DownloadService', () => {
     expect(s3.restoreFile).toHaveBeenCalledWith(ACCESS, 'a/b.zip', 'Bulk', 3)
   })
 
-  it('saves straight into the download folder under a safe name', async () => {
+  it('queues a download straight into the download folder under a safe name', async () => {
     const savedAs = await service().downloadFile({ templateId: TEMPLATE.id, key: 'a/b:c.zip' })
     expect(savedAs).toBe('b_c.zip')
-    await run(tasks[0])
-    expect(downloaded[0]).toMatchObject({ key: 'a/b:c.zip', targetPath: join(dir, 'b_c.zip') })
+    expect(queued).toEqual([
+      {
+        kind: 'download',
+        templateId: TEMPLATE.id,
+        templateName: 'Archive',
+        bucket: 'bucket-one',
+        region: 'eu-west-1',
+        key: 'a/b:c.zip',
+        name: 'b_c.zip',
+        targetPath: join(dir, 'b_c.zip'),
+        etag: null,
+        bytesTotal: null
+      }
+    ])
   })
 
-  it('numbers the name when a file, a partial download or a queued download has it', async () => {
+  it('numbers the name when a file, a partial download or an unfinished download has it', async () => {
     const downloads = service()
     const request = { templateId: TEMPLATE.id, key: 'reports/report.pdf' }
     await writeFile(join(dir, 'report.pdf'), 'old')
     await writeFile(join(dir, 'report (2).pdf.part'), 'half')
     expect(await downloads.downloadFile(request)).toBe('report (3).pdf')
     expect(await downloads.downloadFile(request)).toBe('report (4).pdf')
-    await run(tasks[0])
+    queued.shift()
     expect(await downloads.downloadFile(request)).toBe('report (3).pdf')
   })
 
@@ -113,6 +118,6 @@ describe('DownloadService', () => {
     await expect(
       service(missing).downloadFile({ templateId: TEMPLATE.id, key: 'a.zip' })
     ).rejects.toThrow("doesn't exist anymore")
-    expect(tasks).toHaveLength(0)
+    expect(queued).toHaveLength(0)
   })
 })

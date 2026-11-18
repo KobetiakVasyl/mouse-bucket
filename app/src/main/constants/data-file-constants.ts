@@ -3,7 +3,8 @@ export const DATA_FILES = {
   settings: 'settings.json',
   templates: 'templates.json',
   credentials: 'credentials.bin',
-  windowState: 'window-state.json'
+  windowState: 'window-state.json',
+  transfers: 'transfers.json'
 } as const
 
 // Each file is written here first, then renamed over the old one.

@@ -1,5 +1,6 @@
-// Sample S3 answers for end-to-end tests: main's S3 handlers are swapped for fixed data, so tests never reach AWS. See docs/ARCHITECTURE.md.
+// Sample S3 answers for end-to-end tests: main's S3 and transfer handlers are swapped for fixed data, so tests never reach AWS. See docs/ARCHITECTURE.md.
 import type { FolderListing, S3File } from '../../../src/shared/types/s3-types'
+import type { Transfer } from '../../../src/shared/types/transfer-types'
 
 export interface SampleS3 {
   // Listings by folder prefix, '' for the top of the bucket.
@@ -49,7 +50,7 @@ export function installSampleS3(
   sample: SampleS3
 ): void {
   const listings = structuredClone(sample.listings)
-  const transfers: unknown[] = []
+  const transfers: Transfer[] = []
   const publish = (): void => {
     for (const window of BrowserWindow.getAllWindows()) {
       window.webContents.send('transfers:changed', [...transfers])
@@ -124,6 +125,27 @@ export function installSampleS3(
     publish()
     return 2
   })
+  // The sample transfers answer the transfer buttons themselves, since main's queue doesn't know them.
+  const changeTransfer = (id: unknown, status: 'running' | 'paused' | 'cancelled'): undefined => {
+    const index = transfers.findIndex((transfer) => transfer.id === id)
+    if (index !== -1) {
+      const { kind, templateName, name, bytesDone, bytesTotal } = transfers[index]
+      transfers[index] = {
+        id: transfers[index].id,
+        kind,
+        templateName,
+        name,
+        bytesDone,
+        bytesTotal,
+        status
+      }
+    }
+    publish()
+    return undefined
+  }
+  replace('transfers:pause', (payload) => changeTransfer(payload, 'paused'))
+  replace('transfers:resume', (payload) => changeTransfer(payload, 'running'))
+  replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
   replace('templates:create', (payload) => {
     const location = field(payload, 'location').replace(/^s3:\/\//, '')
     const slash = location.indexOf('/')

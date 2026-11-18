@@ -47,7 +47,7 @@ export class WindowService {
     window.focus()
   }
 
-  // Closing quits the app, so it asks first while transfers are pending. See docs/UI.md.
+  // Closing quits the app, so it asks first while transfers are pending, then pauses them to resume later. See docs/UI.md.
   private close(window: BrowserWindow, event: Event): void {
     const { transfers, dialogs, windowState } = this.options
     if (transfers.active) {
@@ -55,7 +55,7 @@ export class WindowService {
         event.preventDefault()
         return
       }
-      transfers.cancelAll()
+      transfers.pauseAll()
     }
     try {
       windowState.saveSync({ bounds: window.getNormalBounds(), maximized: window.isMaximized() })

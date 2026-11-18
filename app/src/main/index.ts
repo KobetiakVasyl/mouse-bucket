@@ -6,7 +6,12 @@ import icon from '../../resources/icon.png?asset'
 import { TRANSFERS_CHANGED } from '../shared/constants/ipc-constants'
 import { DATA_FILES } from './constants/data-file-constants'
 import { LAUNCH_CHECK_SWITCH, LaunchCheckExit } from './constants/launch-check-constants'
-import { PROGRESS_INTERVAL_MS, TRANSFER_CONCURRENCY } from './constants/transfer-constants'
+import {
+  PROGRESS_INTERVAL_MS,
+  RETRY_DELAYS_MS,
+  SAVE_INTERVAL_MS,
+  TRANSFER_CONCURRENCY
+} from './constants/transfer-constants'
 import { DialogService } from './services/dialog-service'
 import { DownloadService } from './services/download-service'
 import { EnvironmentService } from './services/environment-service'
@@ -17,7 +22,9 @@ import { LaunchCheckService } from './services/launch-check-service'
 import { S3Service } from './services/s3-service'
 import { SettingsService } from './services/settings-service'
 import { TemplateService } from './services/template-service'
+import { TransferRunnerService } from './services/transfer-runner-service'
 import { TransferService } from './services/transfer-service'
+import { TransferStoreService } from './services/transfer-store-service'
 import { UploadService } from './services/upload-service'
 import { WindowService } from './services/window-service'
 import { WindowStateService } from './services/window-state-service'
@@ -73,10 +80,15 @@ async function start(): Promise<void> {
   const transfers = new TransferService({
     concurrency: TRANSFER_CONCURRENCY,
     progressIntervalMs: PROGRESS_INTERVAL_MS,
+    saveIntervalMs: SAVE_INTERVAL_MS,
+    retryDelaysMs: RETRY_DELAYS_MS,
     keepAwake: new KeepAwakeService(powerSaveBlocker),
+    runner: new TransferRunnerService(s3, templates),
+    store: new TransferStoreService(join(userData, DATA_FILES.transfers)),
     onChange: (list) => WindowService.sendToAll(TRANSFERS_CHANGED, list)
   })
-  const uploads = new UploadService(templates, s3, transfers, dialogs)
+  await transfers.restore()
+  const uploads = new UploadService(templates, transfers, dialogs)
   const downloads = new DownloadService(templates, s3, transfers, settings)
   new IpcService(ipcMain, appUrl, process.platform).register({
     vault,

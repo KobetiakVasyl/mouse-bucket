@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Transfer, TransferProgress } from '../../../../../src/shared/types/transfer-types'
 import {
+  cancelLosesData,
+  cancelWarning,
   isPending,
+  isResumable,
   transferSummary,
   transferTitle,
   transfersOfKind
@@ -63,5 +66,26 @@ describe('transfersOfKind', () => {
     const upload = transfer()
     const download = transfer('running', { id: 't2', kind: 'download' })
     expect(transfersOfKind([upload, download], 'download')).toEqual([download])
+  })
+})
+
+describe('pausing, resuming and cancelling', () => {
+  it('resumes paused and failed transfers, and pauses pending ones', () => {
+    expect(isResumable(transfer('paused'))).toBe(true)
+    expect(isResumable({ ...transfer('running'), status: 'failed', error: 'x' })).toBe(true)
+    expect(isResumable(transfer('running'))).toBe(false)
+    expect(isPending(transfer('retrying'))).toBe(true)
+    expect(isPending(transfer('paused'))).toBe(false)
+  })
+
+  it('asks before cancelling once something moved, and says what is lost', () => {
+    expect(cancelLosesData(transfer('queued', { bytesDone: 0 }))).toBe(false)
+    expect(cancelLosesData(transfer('paused', { bytesDone: 1 }))).toBe(true)
+    expect(cancelWarning(transfer('paused', { kind: 'download', bytesDone: 2048 }))).toBe(
+      "The 2.0 KB downloaded so far is deleted, and the download can't continue later."
+    )
+    expect(cancelWarning(transfer('paused', { kind: 'upload', bytesDone: 2048 }))).toContain(
+      'uploaded so far is deleted from the bucket'
+    )
   })
 })

@@ -33,6 +33,8 @@ export class IpcService {
     this.handle(Channel.downloadDelete, (request) => downloads.deleteFile(request))
     this.handle(Channel.downloadRestore, (request) => downloads.restoreFile(request))
     this.handle(Channel.transfersList, async () => transfers.list())
+    this.handle(Channel.transfersPause, async (id) => transfers.pause(id))
+    this.handle(Channel.transfersResume, async (id) => transfers.resume(id))
     this.handle(Channel.transfersCancel, async (id) => transfers.cancel(id))
   }
 

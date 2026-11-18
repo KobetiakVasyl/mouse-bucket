@@ -35,7 +35,7 @@ function setup(): {
       deleteFile: vi.fn(),
       restoreFile: vi.fn()
     },
-    transfers: { list: vi.fn(() => []), cancel: vi.fn() }
+    transfers: { list: vi.fn(() => []), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn() }
   }
   const registry = {
     handle: (channel: string, listener: Listener) => {

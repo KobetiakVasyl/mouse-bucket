@@ -54,7 +54,12 @@ Upload and Download pick a template from tiles: the first 10 templates by name, 
 
 While there are no templates, Home, Upload and Download show Templates instead, so a new user lands there. Upload or Download without a template of its type shows Home (`app/src/renderer/src/utils/navigation-utils.ts`).
 
-The transfers list shows each upload and download of this session with its template, status, size and a progress bar, with Cancel while it's pending. Finished transfers stay in the list until the app quits.
+The transfers list shows each upload and download with its template, status, size and a progress bar:
+
+- While it's waiting, running or reconnecting after a network error, it has **Pause** and **Cancel**.
+- Once paused it has **Resume** and **Cancel**, and once failed **Retry** and **Cancel**, with the error. Both continue from where the transfer stopped (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)).
+- Cancel deletes what the transfer moved, so once anything moved it asks first: "Keep it" or "Cancel download" (or upload).
+- Finished and cancelled transfers stay in the list until the app quits. Unfinished ones come back after a restart, paused.
 
 Dialogs (confirmations and Restore) open over the page. Escape or Cancel closes them, and an error inside one is shown in the dialog.
 
@@ -62,5 +67,5 @@ Dialogs (confirmations and Restore) open over the page. Escape or Cancel closes 
 
 - The first start opens the window maximized. After that, the window opens where it was, with its size and maximized state, as saved in `window-state.json` when it closes (`app/src/main/services/window-state-service.ts`, and `windowPlacement` in `app/src/main/utils/window-utils.ts`). If that place is no longer on any screen, for example after a monitor is unplugged, the window opens maximized again.
 - Minimizing keeps transfers running. The app doesn't hide in the background or the system tray: closing the window quits it.
-- Closing the window while transfers are pending asks first, because quitting cancels them.
+- Closing the window while transfers are pending asks first: "Keep transferring" or "Pause and quit". Quitting pauses them, and they can be resumed after the next start.
 - Errors from main are shown as they arrive. They never contain keys.

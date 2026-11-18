@@ -24,6 +24,8 @@ const api: Api = {
   deleteFile: (request) => invoke(Channel.downloadDelete, request),
   restoreFile: (request) => invoke(Channel.downloadRestore, request),
   listTransfers: () => invoke(Channel.transfersList),
+  pauseTransfer: (id) => invoke(Channel.transfersPause, id),
+  resumeTransfer: (id) => invoke(Channel.transfersResume, id),
   cancelTransfer: (id) => invoke(Channel.transfersCancel, id),
   onTransfersChanged: (listener) => {
     const forward = (_event: IpcRendererEvent, transfers: Transfer[]): void => listener(transfers)

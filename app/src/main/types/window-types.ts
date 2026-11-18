@@ -37,7 +37,7 @@ export interface WindowServiceOptions {
   page: PageSource
   preloadPath: string
   icon: string
-  transfers: Pick<TransferService, 'active' | 'cancelAll'>
+  transfers: Pick<TransferService, 'active' | 'pauseAll'>
   windowState: Pick<WindowStateService, 'saveSync'>
   dialogs: Pick<DialogService, 'confirmQuit'>
   // Set only when the app was started with --launch-check.

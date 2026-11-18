@@ -5,13 +5,26 @@ import type { Transfer } from '../../../shared/types/transfer-types'
 
 export class TransferService {
   constructor(
-    private readonly api: Pick<Api, 'listTransfers' | 'cancelTransfer' | 'onTransfersChanged'>
+    private readonly api: Pick<
+      Api,
+      'listTransfers' | 'pauseTransfer' | 'resumeTransfer' | 'cancelTransfer' | 'onTransfersChanged'
+    >
   ) {}
 
   list(): Promise<Transfer[]> {
     return this.api.listTransfers()
   }
 
+  pause(id: string): Promise<void> {
+    return this.api.pauseTransfer(id)
+  }
+
+  // Continues a paused transfer, or tries a failed one again, from where it stopped.
+  resume(id: string): Promise<void> {
+    return this.api.resumeTransfer(id)
+  }
+
+  // Stops the transfer and deletes what it moved so far.
   cancel(id: string): Promise<void> {
     return this.api.cancelTransfer(id)
   }

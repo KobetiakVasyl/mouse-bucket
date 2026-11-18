@@ -14,9 +14,12 @@ export interface TransferProgress extends TransferDetails {
   bytesDone: number
 }
 
+// Retrying waits to try again after a network error. Paused and failed transfers keep what they moved, to resume later.
 // Only a failed transfer has an error message.
 export type Transfer =
-  | (TransferProgress & { status: 'queued' | 'running' | 'done' | 'cancelled' })
+  | (TransferProgress & {
+      status: 'queued' | 'running' | 'retrying' | 'paused' | 'done' | 'cancelled'
+    })
   | (TransferProgress & { status: 'failed'; error: string })
 
 export type TransferStatus = Transfer['status']

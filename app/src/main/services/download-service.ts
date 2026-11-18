@@ -19,16 +19,10 @@ import type { TemplateService } from './template-service'
 import type { TransferService } from './transfer-service'
 
 export class DownloadService {
-  // The lower-cased paths of downloads still in the queue, so two downloads never get the same name.
-  private readonly reserved = new Set<string>()
-
   constructor(
     private readonly templates: Pick<TemplateService, 'getOfKind' | 'accessFor'>,
-    private readonly s3: Pick<
-      S3Service,
-      'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'
-    >,
-    private readonly transfers: Pick<TransferService, 'add'>,
+    private readonly s3: Pick<S3Service, 'listFolder' | 'deleteFile' | 'restoreFile'>,
+    private readonly transfers: Pick<TransferService, 'add' | 'downloadTargets'>,
     private readonly settings: Pick<SettingsService, 'get'>
   ) {}
 
@@ -46,21 +40,20 @@ export class DownloadService {
     const { downloadFolder } = await this.settings.get()
     await this.checkFolder(downloadFolder)
     const targetPath = await this.freePath(downloadFolder, saveNameFor(key))
-    const reservation = targetPath.toLowerCase()
-    this.reserved.add(reservation)
-
-    this.transfers.add(
-      { kind: 'download', templateName: template.name, name: basename(targetPath), bytesTotal: 0 },
-      async ({ signal, progress }) => {
-        try {
-          const access = await this.templates.accessFor(template)
-          await this.s3.downloadFile(access, { key, targetPath, signal, onProgress: progress })
-        } finally {
-          this.reserved.delete(reservation)
-        }
-      }
-    )
-    return basename(targetPath)
+    const name = basename(targetPath)
+    this.transfers.add({
+      kind: 'download',
+      templateId: template.id,
+      templateName: template.name,
+      bucket: template.bucket,
+      region: template.region,
+      key,
+      name,
+      targetPath,
+      etag: null,
+      bytesTotal: null
+    })
+    return name
   }
 
   async deleteFile({ templateId, key }: DownloadRequest): Promise<void> {
@@ -84,11 +77,13 @@ export class DownloadService {
     }
   }
 
-  // The name itself, or the first numbered copy, such as report (2).pdf, that no file, partial download or queued download uses.
+  // The name itself, or the first numbered copy, such as report (2).pdf, that no file, partial download or unfinished
+  // download uses. Names compare ignoring case, as on Windows.
   private async freePath(folder: string, name: string): Promise<string> {
+    const taken = new Set(this.transfers.downloadTargets().map((target) => target.toLowerCase()))
     for (let copy = 1; copy <= MAX_NAME_COPIES; copy++) {
       const candidate = join(folder, numberedName(name, copy))
-      if (this.reserved.has(candidate.toLowerCase())) continue
+      if (taken.has(candidate.toLowerCase())) continue
       if (await pathExists(candidate)) continue
       if (await pathExists(`${candidate}${PART_FILE_SUFFIX}`)) continue
       return candidate

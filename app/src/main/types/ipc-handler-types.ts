@@ -21,5 +21,5 @@ export interface IpcServices {
   templates: Pick<TemplateService, 'list' | 'add' | 'delete'>
   uploads: Pick<UploadService, 'chooseFiles'>
   downloads: Pick<DownloadService, 'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'>
-  transfers: Pick<TransferService, 'list' | 'cancel'>
+  transfers: Pick<TransferService, 'list' | 'pause' | 'resume' | 'cancel'>
 }

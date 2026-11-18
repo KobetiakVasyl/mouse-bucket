@@ -67,6 +67,7 @@ The app's own files in that folder:
 | `templates.json` | Each template's name, type, bucket, folder and region |
 | `credentials.bin` | Each template's IAM keys, encrypted by the OS (see [SECURITY.md](SECURITY.md#keys-at-rest)) |
 | `window-state.json` | The window's size, position and maximized state, saved when it closes (see [UI.md](UI.md#the-apps-window)) |
+| `transfers.json` | The uploads and downloads that haven't finished, so they can resume: their template, bucket, key, local path, and an upload's multipart upload ID and confirmed parts. No keys (see [ARCHITECTURE.md](ARCHITECTURE.md#resuming)) |
 
 Each is written to a temporary file first and then renamed over the old one, so a crash never leaves a half-written file.
 

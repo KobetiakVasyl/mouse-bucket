@@ -12,6 +12,7 @@ import { SettingsUpdateSchema } from './settings-validation'
 import { NewTemplateSchema, TemplateIdSchema } from './template-validation'
 
 const NoPayload = z.undefined()
+const TransferIdSchema = z.string().min(1).max(100)
 
 // Its type ties every schema to the channel's entry in Requests, so the two can't drift apart.
 export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } = {
@@ -28,5 +29,7 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.downloadDelete]: DownloadRequestSchema,
   [Channel.downloadRestore]: RestoreRequestSchema,
   [Channel.transfersList]: NoPayload,
-  [Channel.transfersCancel]: z.string().min(1).max(100)
+  [Channel.transfersPause]: TransferIdSchema,
+  [Channel.transfersResume]: TransferIdSchema,
+  [Channel.transfersCancel]: TransferIdSchema
 }

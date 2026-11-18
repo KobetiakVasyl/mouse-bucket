@@ -34,6 +34,8 @@ export interface Requests {
   'download:delete': DownloadRequest
   'download:restore': RestoreRequest
   'transfers:list': undefined
+  'transfers:pause': string
+  'transfers:resume': string
   'transfers:cancel': string
 }
 
@@ -54,6 +56,9 @@ export interface Responses {
   'download:delete': void
   'download:restore': void
   'transfers:list': Transfer[]
+  'transfers:pause': void
+  'transfers:resume': void
+  // Stops the transfer and deletes what it moved so far.
   'transfers:cancel': void
 }
 
@@ -72,6 +77,8 @@ export interface Api {
   deleteFile(request: DownloadRequest): Promise<void>
   restoreFile(request: RestoreRequest): Promise<void>
   listTransfers(): Promise<Transfer[]>
+  pauseTransfer(id: string): Promise<void>
+  resumeTransfer(id: string): Promise<void>
   cancelTransfer(id: string): Promise<void>
   onTransfersChanged(listener: (transfers: Transfer[]) => void): () => void
 }

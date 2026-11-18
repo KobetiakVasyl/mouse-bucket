@@ -35,5 +35,23 @@ export const KNOWN_ERROR_MESSAGES: ReadonlyMap<string, string> = new Map([
   ['TimeoutError', NETWORK_MESSAGE]
 ])
 
+// Errors worth retrying after a wait, by name (AWS) or code (Node): the network, timeouts and S3 being busy.
+export const RETRYABLE_ERRORS: ReadonlySet<string> = new Set([
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'EPIPE',
+  'ENETUNREACH',
+  'ENETDOWN',
+  'EHOSTUNREACH',
+  'TimeoutError',
+  'RequestTimeout',
+  'SlowDown',
+  'InternalError',
+  'ServiceUnavailable'
+])
+
 // An unknown error's name is shown only when it looks like a plain identifier.
 export const ERROR_NAME_PATTERN = /^[A-Za-z0-9]{1,64}$/

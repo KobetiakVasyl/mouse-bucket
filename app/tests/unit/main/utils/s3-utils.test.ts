@@ -4,6 +4,9 @@ import {
   bucketRegionHeader,
   filesOf,
   foldersOf,
+  partCount,
+  partRange,
+  partsBytes,
   partSizeFor
 } from '../../../../src/main/utils/s3-utils'
 
@@ -51,5 +54,17 @@ describe('bucketRegionHeader', () => {
     const failed = { $response: { headers: { 'x-amz-bucket-region': 'eu-north-1' } } }
     expect(bucketRegionHeader(failed)).toBe('eu-north-1')
     expect(bucketRegionHeader(new Error('no response'))).toBe('')
+  })
+})
+
+describe('parts', () => {
+  it('splits a file into parts where only the last may be shorter', () => {
+    expect(partCount(10, 4)).toBe(3)
+    expect(partCount(8, 4)).toBe(2)
+    expect(partCount(0, 4)).toBe(1)
+    expect(partRange(1, 4, 10)).toEqual({ start: 0, length: 4 })
+    expect(partRange(3, 4, 10)).toEqual({ start: 8, length: 2 })
+    expect(partsBytes([1, 3], 4, 10)).toBe(6)
+    expect(partsBytes([], 4, 10)).toBe(0)
   })
 })

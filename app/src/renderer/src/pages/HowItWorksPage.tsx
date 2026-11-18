@@ -54,7 +54,10 @@ export function HowItWorksPage(): React.JSX.Element {
             </li>
             <li>Encryption: the bucket&apos;s default encryption.</li>
             <li>Versioning: whatever the bucket is set to. The app never changes it.</li>
-            <li>Large files are sent in parts, and a cancelled upload leaves nothing behind.</li>
+            <li>
+              Large files are sent in parts. A stopped upload continues with the parts that are
+              missing, and a cancelled one leaves nothing behind.
+            </li>
           </ul>
         </Card>
 
@@ -78,8 +81,8 @@ export function HowItWorksPage(): React.JSX.Element {
           </ul>
           <p>
             Once the list shows the file as restored, Download works as usual. A download is saved
-            under a temporary name until it&apos;s complete, so a failed download never leaves half
-            a file in place of yours.
+            under a temporary name until it&apos;s complete, so a stopped download never leaves half
+            a file in place of yours, and continues from where it stopped.
           </p>
         </Card>
 
@@ -97,8 +100,15 @@ export function HowItWorksPage(): React.JSX.Element {
           <ul className="list-disc space-y-1 pl-6">
             <li>The computer doesn&apos;t go to sleep, though the screen may still turn off.</li>
             <li>Transfers keep going while the window is minimized.</li>
-            <li>Closing the window quits the app, so it asks first while transfers are running.</li>
-            <li>The transfers list shows everything since the app started.</li>
+            <li>
+              A transfer that loses the connection tries again by itself and continues from where it
+              stopped. Pause, Resume and Retry do the same at your choice.
+            </li>
+            <li>
+              Closing the window quits the app, so it asks first while transfers are running.
+              Quitting pauses them, and they&apos;re back, paused, the next time the app starts.
+            </li>
+            <li>Cancel stops a transfer and deletes what it moved so far.</li>
           </ul>
         </Card>
 

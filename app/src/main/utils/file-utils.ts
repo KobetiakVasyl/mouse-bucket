@@ -1,6 +1,6 @@
 // Reads and atomically writes the app's files in its data folder, one write at a time. See docs/ENVIRONMENTS.md.
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs'
-import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises'
+import { access, mkdir, open, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { TEMPORARY_SUFFIX } from '../constants/data-file-constants'
 
@@ -58,5 +58,32 @@ export function serialize(): <T>(task: () => Promise<T>) => Promise<T> {
     const next = last.then(task, task)
     last = next.catch(() => undefined)
     return next
+  }
+}
+
+// A file's size in bytes, or 0 when it doesn't exist.
+export async function sizeOrZero(path: string): Promise<number> {
+  try {
+    return (await stat(path)).size
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') return 0
+    throw error
+  }
+}
+
+// `length` bytes of a file from `start`, for one part of an upload.
+export async function readRange(path: string, start: number, length: number): Promise<Buffer> {
+  const file = await open(path, 'r')
+  try {
+    const buffer = Buffer.alloc(length)
+    let read = 0
+    while (read < length) {
+      const { bytesRead } = await file.read(buffer, read, length - read, start + read)
+      if (bytesRead === 0) throw new Error('The file got shorter while it was being uploaded.')
+      read += bytesRead
+    }
+    return buffer
+  } finally {
+    await file.close()
   }
 }

@@ -1,11 +1,8 @@
-import { join } from 'node:path'
+import { stat } from 'node:fs/promises'
 import type { WebContents } from 'electron'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { UploadService } from '../../../../src/main/services/upload-service'
-import type { BucketAccess } from '../../../../src/main/types/credential-types'
-import type { UploadFileOptions } from '../../../../src/main/types/s3-service-types'
-import type { TransferTask } from '../../../../src/main/types/transfer-queue-types'
-import type { TransferDetails } from '../../../../src/shared/types/transfer-types'
+import type { NewTransferRecord } from '../../../../src/main/types/transfer-queue-types'
 import type { Template } from '../../../../src/shared/types/template-types'
 import { appPath } from '../../../support/paths'
 
@@ -13,68 +10,57 @@ const TEMPLATE: Template = {
   id: '7d1c3f5e-1b2a-4c3d-8e9f-0a1b2c3d4e5f',
   name: 'Reports',
   kind: 'upload',
-  bucket: 'b1',
+  bucket: 'bucket-one',
   prefix: 'reports/',
   region: 'eu-west-1'
 }
-const ACCESS: BucketAccess = {
-  bucket: 'b1',
-  region: 'eu-west-1',
-  credentials: { accessKeyId: 'AKIAEXAMPLEKEY000001', secretAccessKey: 'secret' }
-}
 const SENDER = {} as WebContents
 
-function setup(chosen: string[]): {
-  service: UploadService
-  queued: { details: TransferDetails; task: TransferTask }[]
-  uploaded: UploadFileOptions[]
-} {
-  const queued: { details: TransferDetails; task: TransferTask }[] = []
-  const uploaded: UploadFileOptions[] = []
+function setup(chosen: string[]): { service: UploadService; queued: NewTransferRecord[] } {
+  const queued: NewTransferRecord[] = []
   const service = new UploadService(
-    { getOfKind: async () => TEMPLATE, accessFor: async () => ACCESS },
+    { getOfKind: async () => TEMPLATE },
     {
-      uploadFile: async (_access, options) => {
-        uploaded.push(options)
-      }
-    },
-    {
-      add: (details, task) => {
-        queued.push({ details, task })
+      add: (record) => {
+        queued.push(record)
         return 'id'
       }
     },
     { chooseFiles: async () => chosen }
   )
-  return { service, queued, uploaded }
+  return { service, queued }
 }
 
 describe('UploadService', () => {
   it('queues each chosen file under the template’s folder, keeping its name', async () => {
     const file = appPath('package.json')
-    const { service, queued, uploaded } = setup([file])
-    expect(
-      await service.chooseFiles({ templateId: TEMPLATE.id, storageClass: 'STANDARD' }, SENDER)
-    ).toBe(1)
-    expect(queued[0].details).toMatchObject({
-      kind: 'upload',
-      templateName: 'Reports',
-      name: 'package.json'
-    })
-    const progress = vi.fn()
-    await queued[0].task({ signal: new AbortController().signal, progress })
-    expect(uploaded[0]).toMatchObject({
-      key: 'reports/package.json',
-      storageClass: 'STANDARD',
-      filePath: file
-    })
-    uploaded[0].onProgress(3)
-    expect(progress).toHaveBeenCalledWith(3, uploaded[0].fileSize)
+    const info = await stat(file)
+    const { service, queued } = setup([file])
+    const request = { templateId: TEMPLATE.id, storageClass: 'STANDARD' } as const
+    expect(await service.chooseFiles(request, SENDER)).toBe(1)
+    expect(queued).toEqual([
+      {
+        kind: 'upload',
+        templateId: TEMPLATE.id,
+        templateName: 'Reports',
+        bucket: 'bucket-one',
+        region: 'eu-west-1',
+        key: 'reports/package.json',
+        name: 'package.json',
+        storageClass: 'STANDARD',
+        filePath: file,
+        fileSize: info.size,
+        fileModifiedMs: info.mtimeMs,
+        partSize: 8 * 1024 * 1024,
+        uploadId: null,
+        parts: []
+      }
+    ])
   })
 
   it('skips folders and queues nothing when the picker is cancelled', async () => {
     const request = { templateId: TEMPLATE.id, storageClass: 'DEEP_ARCHIVE' } as const
-    expect(await setup([join(appPath('src'))]).service.chooseFiles(request, SENDER)).toBe(0)
+    expect(await setup([appPath('src')]).service.chooseFiles(request, SENDER)).toBe(0)
     expect(await setup([]).service.chooseFiles(request, SENDER)).toBe(0)
   })
 })
