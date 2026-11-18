@@ -32,6 +32,8 @@
     "postinstall": "node scripts/with-caches.mjs install-electron"
   },
   "devDependencies": {
+    "@aws-sdk/client-s3": "3.1170.0",
+    "@aws-sdk/lib-storage": "3.1170.0",
     "@electron-toolkit/eslint-config-prettier": "3.0.1",
     "@electron-toolkit/eslint-config-ts": "4.0.0",
     "@electron-toolkit/tsconfig": "2.0.0",
@@ -41,6 +43,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.3.0",
+    "aws-sdk-client-mock": "4.1.0",
     "electron": "45.3.4",
     "electron-builder": "26.18.0",
     "electron-vite": "6.0.0",
@@ -52,7 +55,8 @@
     "tailwindcss": "4.3.5",
     "typescript": "5.9.3",
     "vite": "8.3.8",
-    "vitest": "5.1.0"
+    "vitest": "5.1.0",
+    "zod": "4.6.7"
   },
   "allowScripts": {
     "electron-winstaller": false
