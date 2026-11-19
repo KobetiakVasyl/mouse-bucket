@@ -37,6 +37,7 @@ let blob: {
 let container: {
   getProperties: ReturnType<typeof vi.fn>
   listBlobsByHierarchy: ReturnType<typeof vi.fn>
+  listBlobsFlat: ReturnType<typeof vi.fn>
   getBlockBlobClient: ReturnType<typeof vi.fn>
 }
 const service = (): AzureBlobService =>
@@ -55,6 +56,7 @@ beforeEach(async () => {
   container = {
     getProperties: vi.fn(async () => ({})),
     listBlobsByHierarchy: vi.fn(),
+    listBlobsFlat: vi.fn(),
     getBlockBlobClient: vi.fn(() => blob)
   }
 })
@@ -216,5 +218,53 @@ describe('AzureBlobService browsing and the rest', () => {
     )
     container.getProperties.mockRejectedValueOnce(restError('ContainerNotFound', 404))
     await expect(service().checkContainer(ACCESS)).rejects.toThrow('ContainerNotFound')
+  })
+})
+
+describe('AzureBlobService folders', () => {
+  const item = (name: string, metadata: Record<string, string> = {}): unknown => ({
+    name,
+    metadata,
+    properties: { lastModified: new Date('2026-11-01T10:00:00Z'), contentLength: 2 }
+  })
+  const pagesOf = (items: unknown[]): unknown => ({
+    byPage: () =>
+      (async function* () {
+        yield { segment: { blobItems: items } }
+      })()
+  })
+
+  it('lists every blob under a prefix at any depth, without folder markers', async () => {
+    container.listBlobsFlat.mockReturnValue(
+      pagesOf([
+        item('photos/2025', { hdi_isfolder: 'true' }),
+        item('photos/beach.jpg'),
+        item('photos/2025/snow.jpg')
+      ])
+    )
+    const files = await service().folderFiles(ACCESS, 'photos/')
+    expect(files.map((file) => file.path)).toEqual(['beach.jpg', '2025/snow.jpg'])
+    expect(container.listBlobsFlat).toHaveBeenCalledWith({
+      prefix: 'photos/',
+      includeMetadata: true
+    })
+  })
+
+  it('deletes the files first, then folder markers, deepest first', async () => {
+    container.listBlobsFlat.mockReturnValue(
+      pagesOf([
+        item('photos/2025', { hdi_isfolder: 'true' }),
+        item('photos/2025/deep', { hdi_isfolder: 'true' }),
+        item('photos/beach.jpg')
+      ])
+    )
+    const deleted: string[] = []
+    container.getBlockBlobClient.mockImplementation((name: string) => ({
+      delete: async () => {
+        deleted.push(name)
+      }
+    }))
+    await service().deleteFolder(ACCESS, 'photos/')
+    expect(deleted).toEqual(['photos/beach.jpg', 'photos/2025/deep', 'photos/2025'])
   })
 })

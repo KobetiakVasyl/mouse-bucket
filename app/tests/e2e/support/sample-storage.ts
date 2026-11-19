@@ -124,6 +124,58 @@ export function installSampleStorage(
     publish()
     return key.slice(key.lastIndexOf('/') + 1)
   })
+  // A folder's files at any depth, from the listings of it and of the folders inside it.
+  const filesUnder = (folder: string): StoredFile[] =>
+    Object.entries(listings)
+      .filter(([prefix]) => prefix.startsWith(folder))
+      .flatMap(([, listing]) => listing.files)
+  const nameOf = (folder: string): string =>
+    folder
+      .split('/')
+      .filter((part) => part !== '')
+      .at(-1) ?? folder
+  replace('download:folderSummary', (payload) => {
+    const inside = filesUnder(field(payload, 'folder'))
+    return {
+      files: inside.length,
+      bytes: inside.reduce((total, found) => total + found.size, 0),
+      archived: inside.filter((found) => found.access.state === 'archived').length
+    }
+  })
+  replace('download:folder', (payload) => {
+    const folder = field(payload, 'folder')
+    const inside = filesUnder(folder)
+    const ready = inside.filter((found) => ['available', 'restored'].includes(found.access.state))
+    for (const found of ready) {
+      transfers.push({
+        id: `download-${transfers.length}`,
+        kind: 'download',
+        templateName: 'Sample',
+        name: `${nameOf(folder)}/${found.key.slice(folder.length)}`,
+        bytesDone: found.size,
+        bytesTotal: found.size,
+        status: 'done'
+      })
+    }
+    publish()
+    return { queued: ready.length, skipped: inside.length - ready.length, savedAs: nameOf(folder) }
+  })
+  replace('download:deleteFolder', (payload) => {
+    const folder = field(payload, 'folder')
+    for (const listing of Object.values(listings)) {
+      listing.folders = listing.folders.filter((entry) => entry.id !== folder)
+    }
+    for (const prefix of Object.keys(listings)) {
+      if (prefix.startsWith(folder)) Reflect.deleteProperty(listings, prefix)
+    }
+    return undefined
+  })
+  replace(
+    'download:restoreFolder',
+    (payload) =>
+      filesUnder(field(payload, 'folder')).filter((found) => found.access.state === 'archived')
+        .length
+  )
   replace('upload:chooseFiles', () => {
     transfers.push(
       {

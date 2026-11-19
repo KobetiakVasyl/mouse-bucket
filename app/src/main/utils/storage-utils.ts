@@ -58,6 +58,23 @@ export function checkUploadClass(platform: Platform, storageClass: UploadClass):
   else if (storageClass !== null) throw new UserError('Google Drive has no storage classes.')
 }
 
+// A folder on S3 or Azure is a prefix ending in "/", never the top of the bucket or container.
+export function checkFolderPrefix(prefix: string): void {
+  if (!prefix.endsWith('/') || prefix.split('/').every((part) => part === '')) {
+    throw new UserError("That isn't a folder.")
+  }
+}
+
+// A prefix's last folder name, such as "2025" for "photos/2025/".
+export function prefixName(prefix: string): string {
+  return (
+    prefix
+      .split('/')
+      .filter((part) => part !== '')
+      .at(-1) ?? prefix
+  )
+}
+
 // A folder in a bucket or container, which is a shared name prefix: the prefix opens it, and its last part names it.
 export function prefixFolder(folderPrefix: string, parentPrefix: string): FolderEntry {
   return { id: folderPrefix, name: folderPrefix.slice(parentPrefix.length).replace(/\/$/, '') }

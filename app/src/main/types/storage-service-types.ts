@@ -1,6 +1,6 @@
 // What every platform's service does, and what one upload or download needs apart from where it goes, including where an
 // earlier run stopped. See docs/ARCHITECTURE.md.
-import type { FolderListing, UploadClass } from '../../shared/types/storage-types'
+import type { FolderListing, StoredFile, UploadClass } from '../../shared/types/storage-types'
 import type {
   AzureTemplate,
   DriveTemplate,
@@ -47,8 +47,11 @@ export interface DownloadFileOptions {
   onProgress: (bytesDone: number, bytesTotal: number) => void
 }
 
-// One platform's files: browsing, sending and fetching them from where they stopped, and deleting them. Restores
-// differ by platform, so each service has its own.
+// A file somewhere inside a folder, with its path below that folder, such as "2025/beach.jpg".
+export type TreeFile = StoredFile & { path: string }
+
+// One platform's files: browsing, sending and fetching them from where they stopped, and deleting them, one by one or
+// a whole folder at a time. Restores differ by platform, so each service has its own.
 export interface PlatformStorage<A> {
   listFolder(access: A, folder: string, continuationToken: string | null): Promise<FolderListing>
   uploadFile(access: A, options: UploadFileOptions): Promise<void>
@@ -58,4 +61,10 @@ export interface PlatformStorage<A> {
   deleteFile(access: A, key: string): Promise<void>
   // The name a download is saved under, before it's made safe for this computer.
   fileName(access: A, key: string): Promise<string>
+  // Every file inside a folder from a listing, at any depth.
+  folderFiles(access: A, folder: string): Promise<TreeFile[]>
+  // The folder's own name, for the folder a download goes into.
+  folderName(access: A, folder: string): Promise<string>
+  // Removes the folder with everything inside it.
+  deleteFolder(access: A, folder: string): Promise<void>
 }

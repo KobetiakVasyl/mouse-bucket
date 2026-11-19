@@ -5,6 +5,8 @@ import type { InvokeChannel, Requests } from '../types/ipc-types'
 import {
   DownloadRequestSchema,
   FolderRequestSchema,
+  FolderRestoreRequestSchema,
+  FolderTargetRequestSchema,
   RestoreRequestSchema,
   UploadPathsRequestSchema,
   UploadRequestSchema
@@ -35,6 +37,10 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.downloadFile]: DownloadRequestSchema,
   [Channel.downloadDelete]: DownloadRequestSchema,
   [Channel.downloadRestore]: RestoreRequestSchema,
+  [Channel.downloadFolderSummary]: FolderTargetRequestSchema,
+  [Channel.downloadFolder]: FolderTargetRequestSchema,
+  [Channel.downloadDeleteFolder]: FolderTargetRequestSchema,
+  [Channel.downloadRestoreFolder]: FolderRestoreRequestSchema,
   [Channel.transfersList]: NoPayload,
   [Channel.transfersPause]: TransferIdSchema,
   [Channel.transfersResume]: TransferIdSchema,

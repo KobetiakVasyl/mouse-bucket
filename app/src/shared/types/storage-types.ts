@@ -5,6 +5,8 @@ import type {
   AccessTierSchema,
   DownloadRequestSchema,
   FolderRequestSchema,
+  FolderRestoreRequestSchema,
+  FolderTargetRequestSchema,
   RehydratePrioritySchema,
   RehydrateTierSchema,
   RestoreOptionsSchema,
@@ -42,6 +44,22 @@ export interface FolderEntry {
   name: string
 }
 
+// What a folder holds at any depth, counted before acting on all of it.
+export interface FolderSummary {
+  files: number
+  bytes: number
+  // Files that need a restore before they can be downloaded.
+  archived: number
+}
+
+// What downloading a whole folder queued: its files, the ones skipped because they can't be downloaded now, such as
+// archived ones, and the name of the folder they go into in the download folder.
+export interface FolderDownload {
+  queued: number
+  skipped: number
+  savedAs: string
+}
+
 export interface FolderListing {
   folders: FolderEntry[]
   files: StoredFile[]
@@ -61,3 +79,5 @@ export type RehydrateTier = z.infer<typeof RehydrateTierSchema>
 export type RehydratePriority = z.infer<typeof RehydratePrioritySchema>
 export type RestoreOptions = z.infer<typeof RestoreOptionsSchema>
 export type RestoreRequest = z.infer<typeof RestoreRequestSchema>
+export type FolderTargetRequest = z.infer<typeof FolderTargetRequestSchema>
+export type FolderRestoreRequest = z.infer<typeof FolderRestoreRequestSchema>

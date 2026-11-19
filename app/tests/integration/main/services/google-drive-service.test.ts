@@ -275,3 +275,46 @@ describe('GoogleDriveService browsing', () => {
     await expect(service().listFolder(ACCESS, '', null)).rejects.toThrow('sign-in')
   })
 })
+
+describe('GoogleDriveService folders', () => {
+  const folderMime = 'application/vnd.google-apps.folder'
+
+  it('walks a listed folder at any depth, and moves the folder itself to the trash', async () => {
+    files.list.mockImplementation(async (params: { q: string }) => {
+      if (params.q.startsWith(`'${ROOT}'`)) {
+        return { data: { files: [{ id: 'folder-123456', name: 'Photos', mimeType: folderMime }] } }
+      }
+      if (params.q.startsWith("'folder-123456'")) {
+        return {
+          data: {
+            files: [
+              { id: 'sub-folder-1234', name: 'A/B', mimeType: folderMime },
+              { id: 'file-1234567', name: 'beach.jpg', mimeType: 'image/jpeg', size: '3' }
+            ]
+          }
+        }
+      }
+      return {
+        data: {
+          files: [{ id: 'file-7654321', name: 'snow.jpg', mimeType: 'image/jpeg', size: '4' }]
+        }
+      }
+    })
+    const drive = service()
+    await drive.listFolder(ACCESS, '', null)
+    const found = await drive.folderFiles(ACCESS, 'folder-123456')
+    expect(found.map((file) => [file.key, file.path])).toEqual([
+      ['file-1234567', 'beach.jpg'],
+      ['file-7654321', 'A_B/snow.jpg']
+    ])
+    await drive.deleteFolder(ACCESS, 'folder-123456')
+    expect(files.update).toHaveBeenCalledWith({
+      fileId: 'folder-123456',
+      requestBody: { trashed: true },
+      supportsAllDrives: true
+    })
+    await expect(drive.folderFiles(ACCESS, 'unlisted-12345')).rejects.toThrow(
+      'Open the folder again'
+    )
+  })
+})

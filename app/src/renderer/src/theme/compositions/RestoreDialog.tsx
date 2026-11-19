@@ -2,9 +2,10 @@
 // Settings. See docs/UI.md.
 import { useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
-import type { RestoreTier, StoredFile } from '../../../../shared/types/storage-types'
+import type { FolderEntry, RestoreTier, StoredFile } from '../../../../shared/types/storage-types'
+import type { FoldersCount } from '../../types/download-types'
 import { RESTORE_TIER_HINTS, RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
-import { fileCount, restoreTimesFor } from '../../utils/download-utils'
+import { archivedInsideLine, restoreTimesFor, restoreWhat } from '../../utils/download-utils'
 import { Button } from '../components/Button'
 import { ErrorMessage } from '../components/ErrorMessage'
 import { Modal } from '../components/Modal'
@@ -12,8 +13,11 @@ import { ToggleGroup } from '../components/ToggleGroup'
 import { RestoreIcon } from '../components/icons'
 import { RestoreDaysPicker } from './RestoreDaysPicker'
 
+// With folders, it waits until what's archived inside them is counted.
 export function RestoreDialog({
   files,
+  folders,
+  inside,
   defaultTier,
   defaultDays,
   busy,
@@ -22,6 +26,8 @@ export function RestoreDialog({
   onCancel
 }: {
   files: StoredFile[]
+  folders: FolderEntry[]
+  inside: FoldersCount
   defaultTier: RestoreTier
   defaultDays: number
   busy: boolean
@@ -32,21 +38,16 @@ export function RestoreDialog({
   const [tier, setTier] = useState<RestoreTier>(defaultTier)
   const [days, setDays] = useState<number | null>(defaultDays)
   const times = restoreTimesFor(files)
+  const one = files.length === 1 && folders.length === 0
+  const nothing = files.length === 0 && inside !== null && inside.archived === 0
   return (
     <Modal title="Restore from the archive" onClose={onCancel}>
       <p className="mb-6">
-        {files.length === 1 ? (
-          <>
-            S3 makes a temporary copy of <strong>{files[0].name}</strong> that can be downloaded.
-          </>
-        ) : (
-          <>
-            S3 makes temporary copies of <strong>{fileCount(files.length)}</strong> that can be
-            downloaded.
-          </>
-        )}{' '}
-        AWS charges for each restore.
+        S3 makes {one ? 'a temporary copy' : 'temporary copies'} of{' '}
+        <strong>{restoreWhat(files, folders)}</strong> that can be downloaded. AWS charges for each
+        restore.
       </p>
+      {folders.length > 0 && <p className="-mt-3 mb-6">{archivedInsideLine(folders, inside)}</p>}
       <div className="space-y-5">
         <ToggleGroup
           label="Speed"
@@ -72,7 +73,7 @@ export function RestoreDialog({
         </Button>
         <Button
           variant="positive"
-          disabled={days === null || busy}
+          disabled={days === null || busy || (folders.length > 0 && inside === null) || nothing}
           onClick={() => {
             if (days !== null) onRestore(tier, days)
           }}

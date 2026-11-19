@@ -22,6 +22,7 @@ import type { ConnectDrive, DriveConnection, FetchLike, SessionState } from '../
 import type {
   DownloadFileOptions,
   PlatformStorage,
+  TreeFile,
   UploadFileOptions
 } from '../types/storage-service-types'
 import { resumeOffset, saveDownload } from '../utils/download-utils'
@@ -29,6 +30,7 @@ import {
   driveErrorOf,
   driveFilesOf,
   driveFoldersOf,
+  driveSafeName,
   isGoogleFile,
   quoted,
   receivedBytes,
@@ -207,8 +209,60 @@ export class GoogleDriveService implements PlatformStorage<DriveAccess> {
         supportsAllDrives: true
       })
       if (isGoogleFile(data.mimeType)) throw new UserError(GOOGLE_FILE_REASON)
-      return (data.name ?? key).replace(/[/\\]/g, '_')
+      return driveSafeName(data.name ?? key)
     })
+  }
+
+  // Every file inside a listed folder, at any depth, walking it one folder at a time. What it finds counts as listed.
+  async folderFiles(access: DriveAccess, folder: string): Promise<TreeFile[]> {
+    this.checkListed(access, folder)
+    return this.call(async () => {
+      const { files } = this.connect(access.credentials)
+      const known = this.listedUnder(access)
+      const found: TreeFile[] = []
+      const waiting = [{ id: folder, path: '' }]
+      for (let next = waiting.shift(); next !== undefined; next = waiting.shift()) {
+        let pageToken: string | undefined
+        do {
+          const { data } = await files.list({
+            q: `${quoted(next.id)} in parents and trashed = false`,
+            fields: LIST_FIELDS,
+            pageSize: LISTING_PAGE_SIZE,
+            pageToken,
+            supportsAllDrives: true,
+            includeItemsFromAllDrives: true
+          })
+          const listed = data.files ?? []
+          for (const sub of driveFoldersOf(listed)) {
+            known.add(sub.id)
+            waiting.push({ id: sub.id, path: `${next.path}${driveSafeName(sub.name)}/` })
+          }
+          for (const file of driveFilesOf(listed)) {
+            known.add(file.key)
+            found.push({ ...file, path: `${next.path}${driveSafeName(file.name)}` })
+          }
+          pageToken = data.nextPageToken ?? undefined
+        } while (pageToken !== undefined)
+      }
+      return found
+    })
+  }
+
+  async folderName(access: DriveAccess, folder: string): Promise<string> {
+    this.checkListed(access, folder)
+    return this.call(async () => {
+      const { data } = await this.connect(access.credentials).files.get({
+        fileId: folder,
+        fields: 'name',
+        supportsAllDrives: true
+      })
+      return driveSafeName(data.name ?? folder)
+    })
+  }
+
+  // Moves the folder, with everything in it, to the Drive's trash, from where it can be restored for 30 days.
+  async deleteFolder(access: DriveAccess, folder: string): Promise<void> {
+    return this.deleteFile(access, folder)
   }
 
   // The session takes the file's name, inside the folder at the key's path.

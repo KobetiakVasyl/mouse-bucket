@@ -43,7 +43,11 @@ function setup(): {
       listFolder: vi.fn(),
       downloadFile: vi.fn(),
       deleteFile: vi.fn(),
-      restoreFile: vi.fn()
+      restoreFile: vi.fn(),
+      summarizeFolder: vi.fn(),
+      downloadFolder: vi.fn(async () => ({ queued: 2, skipped: 0, savedAs: 'photos' })),
+      deleteFolder: vi.fn(),
+      restoreFolder: vi.fn()
     },
     transfers: { list: vi.fn(() => []), pause: vi.fn(), resume: vi.fn(), cancel: vi.fn() },
     updates: {
@@ -101,6 +105,23 @@ describe('IpcService', () => {
         downloadFolder: '/home/me/Downloads'
       }
     })
+  })
+
+  it('downloads a whole folder, and refuses one without a folder', async () => {
+    const { invoke, services } = setup()
+    const templateId = '7d1c3f5e-1b2a-4c3d-8e9f-0a1b2c3d4e5f'
+    expect(await invoke(Channel.downloadFolder, { templateId, folder: 'photos/' })).toEqual({
+      ok: true,
+      value: { queued: 2, skipped: 0, savedAs: 'photos' }
+    })
+    expect(services.downloads.downloadFolder).toHaveBeenCalledWith({
+      templateId,
+      folder: 'photos/'
+    })
+    expect(await invoke(Channel.downloadDeleteFolder, { templateId, folder: '' })).toMatchObject({
+      ok: false
+    })
+    expect(services.downloads.deleteFolder).not.toHaveBeenCalled()
   })
 
   it('copies text through main, and refuses anything but text', async () => {

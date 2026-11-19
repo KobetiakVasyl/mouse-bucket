@@ -1,5 +1,6 @@
-// One folder of a bucket, container or Drive folder: its subfolders, and its files with a checkbox, size, storage class or
-// access tier where the platform has one, date and actions, sorted by name or date. See docs/UI.md.
+// One folder of a bucket, container or Drive folder: its subfolders, and its files with their size, storage class or
+// access tier where the platform has one, date and actions, sorted by name or date. Each folder and file has a
+// checkbox. See docs/UI.md.
 import type { FolderEntry, FolderListing, StoredFile } from '../../../../shared/types/storage-types'
 import { formatBytes, formatDate } from '../../utils/format-utils'
 import type { FileSort, FileSortKey } from '../../types/download-types'
@@ -26,7 +27,9 @@ export function FolderTable({
   sort,
   loadingMore,
   selected,
+  selectedFolders,
   onSelect,
+  onSelectFolder,
   onSelectAll,
   onOpenFolder,
   onDownload,
@@ -41,7 +44,9 @@ export function FolderTable({
   sort: FileSort
   loadingMore: boolean
   selected: ReadonlySet<string>
+  selectedFolders: ReadonlySet<string>
   onSelect: (key: string, selected: boolean) => void
+  onSelectFolder: (id: string, selected: boolean) => void
   onSelectAll: (selected: boolean) => void
   onOpenFolder: (folder: FolderEntry) => void
   onDownload: (file: StoredFile) => void
@@ -53,7 +58,8 @@ export function FolderTable({
   if (isEmptyFolder(listing)) return <p className="text-muted">This folder is empty.</p>
   const { nextToken } = listing
   const allSelected =
-    listing.files.length > 0 && listing.files.every((file) => selected.has(file.key))
+    listing.files.every((file) => selected.has(file.key)) &&
+    listing.folders.every((folder) => selectedFolders.has(folder.id))
   const directionOf = (by: FileSortKey): FileSort['direction'] | null =>
     sort.by === by ? sort.direction : null
   return (
@@ -62,9 +68,11 @@ export function FolderTable({
         <thead>
           <tr className={TABLE_HEAD_ROW}>
             <th className={`${CELL} w-10`}>
-              {listing.files.length > 0 && (
-                <Checkbox label="Select all files" checked={allSelected} onChange={onSelectAll} />
-              )}
+              <Checkbox
+                label="Select all files and folders"
+                checked={allSelected}
+                onChange={onSelectAll}
+              />
             </th>
             <SortHeader
               label="Name"
@@ -84,7 +92,13 @@ export function FolderTable({
         <tbody>
           {listing.folders.map((folder) => (
             <tr key={folder.id} className={TABLE_ROW}>
-              <td className={CELL} />
+              <td className={CELL}>
+                <Checkbox
+                  label={`Select folder ${folder.name}`}
+                  checked={selectedFolders.has(folder.id)}
+                  onChange={(checked) => onSelectFolder(folder.id, checked)}
+                />
+              </td>
               <td className={CELL}>
                 <LinkButton onClick={() => onOpenFolder(folder)}>
                   <FolderIcon className="text-muted" />

@@ -24,7 +24,17 @@ export interface IpcServices {
   templates: Pick<TemplateService, 'list' | 'add' | 'update' | 'delete'>
   google: Pick<GoogleSignInService, 'cancel'>
   uploads: Pick<UploadService, 'chooseFiles' | 'chooseFolder' | 'uploadPaths'>
-  downloads: Pick<DownloadService, 'listFolder' | 'downloadFile' | 'deleteFile' | 'restoreFile'>
+  downloads: Pick<
+    DownloadService,
+    | 'listFolder'
+    | 'downloadFile'
+    | 'deleteFile'
+    | 'restoreFile'
+    | 'summarizeFolder'
+    | 'downloadFolder'
+    | 'deleteFolder'
+    | 'restoreFolder'
+  >
   transfers: Pick<TransferService, 'list' | 'pause' | 'resume' | 'cancel'>
   updates: Pick<UpdateService, 'status' | 'check' | 'download' | 'install'>
   // The running app's version, such as 0.2.0, or 0.2.0-staging.17 for a staging build.

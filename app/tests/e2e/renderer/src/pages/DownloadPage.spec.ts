@@ -96,24 +96,52 @@ test('downloads, restores and deletes the selected files', async ({ page }) => {
   await expect(page.getByRole('row', { name: /backup\.tar\.gz/ })).toContainText('Restoring…')
   await expect(bar.getByRole('button', { name: 'Restore (0)' })).toBeDisabled()
 
-  await page.getByRole('checkbox', { name: 'Select all files' }).check()
-  await expect(bar).toContainText('4 files selected')
-  await bar.getByRole('button', { name: 'Delete (4)' }).click()
-  const dialog = page.getByRole('dialog', { name: 'Delete 4 files?' })
-  await expect(dialog).toContainText('backup.tar.gz, contracts.zip, invoice.pdf, photos-2025.zip')
+  await page.getByRole('checkbox', { name: 'Select all files and folders' }).check()
+  await expect(bar).toContainText('1 folder and 4 files selected')
+  await bar.getByRole('button', { name: 'Delete (5)' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Delete 1 folder and 4 files?' })
+  await expect(dialog).toContainText(
+    'photos, backup.tar.gz, contracts.zip, invoice.pdf, photos-2025.zip'
+  )
+  await expect(dialog).toContainText('Inside the folder, at any depth: 1 file, 4.0 MB.')
   await dialog.getByRole('button', { name: 'Delete' }).click()
-  await expect(page.getByRole('status')).toHaveText('Deleted 4 files.')
+  await expect(page.getByRole('status')).toHaveText('Deleted 1 folder and 4 files.')
   await expect(page.getByRole('row', { name: /invoice\.pdf/ })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'photos', exact: true })).toBeHidden()
   await expect(bar).toBeHidden()
+})
+
+test('downloads, restores and deletes a whole folder', async ({ page }) => {
+  await page.getByRole('checkbox', { name: 'Select folder photos' }).check()
+  const bar = page.getByRole('toolbar', { name: 'Selected files' })
+  await expect(bar).toContainText('1 folder selected')
+
+  await bar.getByRole('button', { name: 'Download (1)' }).click()
+  await expect(page.getByRole('status')).toHaveText(
+    'Downloading 1 file into your download folder, with folders saved as photos.'
+  )
+  await expect(page.getByText('Download: photos/beach.jpg')).toBeVisible()
+
+  await bar.getByRole('button', { name: 'Restore (1)' }).click()
+  const restore = page.getByRole('dialog', { name: 'Restore from the archive' })
+  await expect(restore).toContainText('the archived files inside 1 folder')
+  await expect(restore).toContainText('Nothing inside the folder is archived.')
+  await expect(restore.getByRole('button', { name: 'Restore' })).toBeDisabled()
+  await restore.getByRole('button', { name: 'Cancel' }).click()
+
+  await bar.getByRole('button', { name: 'Delete (1)' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Delete this folder?' })
+  await expect(dialog).toContainText('Inside the folder, at any depth: 1 file, 4.0 MB.')
+  await dialog.getByRole('button', { name: 'Delete' }).click()
+  await expect(page.getByRole('status')).toHaveText('Deleted photos.')
+  await expect(page.getByRole('button', { name: 'photos', exact: true })).toBeHidden()
 })
 
 test('sorts the files by name or by date, either way', async ({ page }) => {
   const fileNames = page
     .getByRole('row')
     .filter({ has: page.getByRole('checkbox') })
-    .filter({
-      hasNot: page.getByRole('checkbox', { name: 'Select all files' })
-    })
+    .filter({ hasNot: page.getByRole('checkbox', { name: /^Select (all|folder) / }) })
   await expect(fileNames.first()).toContainText('backup.tar.gz')
   const modified = page.getByRole('columnheader', { name: 'Modified' })
   await modified.getByRole('button').click()

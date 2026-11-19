@@ -155,3 +155,14 @@ describe('TransferRunnerService', () => {
     expect(s3.abortUpload).toHaveBeenCalledWith(ACCESS, 'a/notes.txt', 'upload-1')
   })
 })
+
+describe('TransferRunnerService folder downloads', () => {
+  it('makes the folders a download goes into before it starts', async () => {
+    const targetPath = join(dir, 'photos', '2025', 'snow.jpg')
+    s3.downloadFile.mockImplementation(async () => {
+      expect((await stat(join(dir, 'photos', '2025'))).isDirectory()).toBe(true)
+    })
+    await runner().run({ ...downloadRecord(null), targetPath }, context())
+    expect(s3.downloadFile).toHaveBeenCalledOnce()
+  })
+})
