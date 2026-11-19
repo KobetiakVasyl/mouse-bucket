@@ -1,16 +1,20 @@
-// Explains the template form's location as it's typed, and turns the form into what main receives. See docs/UI.md.
+// Explains the template form's location as it's typed, suggests where it may start, and turns the form into what main
+// receives. See docs/UI.md.
 import type {
   EnteredSecrets,
   NewTemplate,
+  Platform,
   Template,
   TemplateEdit
 } from '../../../shared/types/template-types'
 import { kindProblem, parseLocation } from '../../../shared/validation/location-validation'
 import { PERMISSIONS } from '../constants/permission-constants'
 import { ACCESS_HINTS, LOCATION_EXAMPLES } from '../constants/platform-constants'
+import type { Suggestion } from '../types/component-types'
 import type { TemplateFormValues } from '../types/template-form-types'
-import { formatLocation, locationInput } from './location-utils'
-import { selectedTemplate } from './template-utils'
+import { EMPTY_TEMPLATE_FORM } from '../constants/template-constants'
+import { folderLocation, formatLocation, formatS3Location, locationInput } from './location-utils'
+import { selectedTemplate, sortByName } from './template-utils'
 
 export function locationHint(form: TemplateFormValues): string {
   if (form.location.trim() === '') return LOCATION_EXAMPLES[form.platform][form.kind]
@@ -114,4 +118,36 @@ export function templateEdit(
 export function accessHint(form: TemplateFormValues): string {
   if (form.platform === 's3') return `The IAM user needs ${PERMISSIONS[form.kind].summary}`
   return ACCESS_HINTS[form.platform][form.kind]
+}
+
+// The form for a new upload template into a folder Browse has open, named after it, with the download template's keys.
+export function uploadDraft(
+  template: Template,
+  folder: string,
+  folderName: string
+): TemplateFormValues {
+  return {
+    ...EMPTY_TEMPLATE_FORM,
+    platform: template.platform,
+    kind: 'upload',
+    name: folderName,
+    location: folderLocation(template, folder),
+    keySource: 'copied',
+    copyFrom: template.id
+  }
+}
+
+// What the S3 location box suggests as a starting point: each bucket a download template reaches, as s3://bucket/, with
+// those templates' names. Other platforms suggest nothing.
+export function locationSuggestions(platform: Platform, templates: Template[]): Suggestion[] {
+  if (platform !== 's3') return []
+  const byBucket = new Map<string, string[]>()
+  for (const template of sortByName(templates)) {
+    if (template.platform !== 's3' || template.kind !== 'download') continue
+    const url = formatS3Location({ bucket: template.bucket, prefix: '' })
+    byBucket.set(url, [...(byBucket.get(url) ?? []), template.name])
+  }
+  return [...byBucket]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([value, names]) => ({ value, detail: names.join(', ') }))
 }

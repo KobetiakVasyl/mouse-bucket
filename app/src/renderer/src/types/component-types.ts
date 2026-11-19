@@ -10,6 +10,12 @@ export interface ChoiceOption<T extends string> {
   detail?: string
 }
 
+// A value a text box offers to fill in, with an optional line under it, such as the templates it comes from.
+export interface Suggestion {
+  value: string
+  detail?: string
+}
+
 // What every icon takes: extra classes, and filled instead of the default outline.
 export interface IconProps {
   className?: string

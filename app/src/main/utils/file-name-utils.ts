@@ -7,6 +7,7 @@ import {
   RESERVED_NAMES,
   TRAILING_DOTS_AND_SPACES
 } from '../constants/file-name-constants'
+import { isAbsolute, relative } from 'node:path'
 
 export function saveNameFor(key: string): string {
   const parts = key.split('/').filter((part) => part !== '')
@@ -25,4 +26,10 @@ export function numberedName(name: string, copy: number): string {
   const match = EXTENSION_PATTERN.exec(name)
   const end = match === null || match.index === 0 ? name.length : match.index
   return `${name.slice(0, end)} (${copy})${name.slice(end)}`
+}
+
+// Whether a path lies inside a folder, and isn't the folder itself.
+export function isInside(folder: string, path: string): boolean {
+  const inner = relative(folder, path)
+  return inner !== '' && !inner.startsWith('..') && !isAbsolute(inner)
 }

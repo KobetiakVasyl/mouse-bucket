@@ -1,11 +1,13 @@
 // Which files the Browse page offers to download, restore times, and the choices of a restore. See docs/UI.md.
 import type {
   FileAccess,
+  FolderListing,
   RehydratePriority,
   RehydrateTier,
   RestoreTier
 } from '../../../shared/types/storage-types'
 import type { ChoiceOption } from '../types/component-types'
+import type { FileSort, FileSortKey, SortDirection } from '../types/download-types'
 
 export const DOWNLOADABLE_STATES: ReadonlySet<FileAccess['state']> = new Set([
   'available',
@@ -15,8 +17,18 @@ export const DOWNLOADABLE_STATES: ReadonlySet<FileAccess['state']> = new Set([
 // The archive classes, slowest to restore first.
 export const ARCHIVE_CLASSES_SLOWEST_FIRST = ['DEEP_ARCHIVE', 'GLACIER']
 
+// Files start sorted by name, A to Z. A column's first click sorts names A to Z, and dates newest first.
+export const DEFAULT_FILE_SORT: FileSort = { by: 'name', direction: 'ascending' }
+export const FIRST_SORT_DIRECTIONS: Record<FileSortKey, SortDirection> = {
+  name: 'ascending',
+  modified: 'descending'
+}
+
 // No file is selected.
 export const NO_SELECTION: ReadonlySet<string> = new Set()
+
+// What the table holds while a folder hasn't loaded.
+export const EMPTY_LISTING: FolderListing = { folders: [], files: [], nextToken: null }
 
 // How many names the Delete dialog lists before "and N more".
 export const LISTED_NAMES = 5

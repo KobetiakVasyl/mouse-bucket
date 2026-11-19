@@ -1,20 +1,27 @@
 // The Browse page: pick a download template, browse its bucket, container or Drive folder, then download, restore or
-// delete one file or the selected ones. See docs/UI.md.
-import { useCallback, useEffect, useState } from 'react'
+// delete one file or the selected ones. The open folder's location can be copied, or start a new upload template. See
+// docs/UI.md.
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useState } from 'react'
 import type {
+  FolderDownload,
   FolderEntry,
   FolderListing,
   RestoreOptions,
   RestoreTier,
   StoredFile
 } from '../../../shared/types/storage-types'
+import { DRIVE_ROOT_ID } from '../../../shared/constants/location-constants'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
-import { NO_SELECTION } from '../constants/download-constants'
+import { DEFAULT_FILE_SORT, EMPTY_LISTING, NO_SELECTION } from '../constants/download-constants'
 import { STORAGE_HEADINGS } from '../constants/platform-constants'
+import { appService } from '../services/app-service'
 import { downloadService } from '../services/download-service'
+import { Button } from '../theme/components/Button'
+import { CopyButton } from '../theme/components/CopyButton'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
 import { PageLayout } from '../theme/components/PageLayout'
+import { SearchField } from '../theme/components/SearchField'
 import { Section } from '../theme/components/Section'
 import { StatusMessage } from '../theme/components/StatusMessage'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
@@ -25,35 +32,46 @@ import { RestoreDialog } from '../theme/compositions/RestoreDialog'
 import { SelectionBar } from '../theme/compositions/SelectionBar'
 import { TemplatePicker } from '../theme/compositions/TemplatePicker'
 import { TransferList } from '../theme/compositions/TransferList'
-import type { FileDialog, FolderPlace, ShownFolder } from '../types/download-types'
+import type { FileDialog, FileSort, FolderPlace, ShownFolder } from '../types/download-types'
 import {
+  addSummaries,
   appendListing,
+  deleteTitle,
   deletedMessage,
   deleteWarning,
   downloadsStartedMessage,
   downloadStartedMessage,
-  fileCount,
+  filterListing,
+  folderDownloadMessage,
   folderOf,
+  insideLine,
+  isEmptyFolder,
   namesWithMore,
+  nextSort,
   restoringMessage,
   samePlace,
   selectedFiles
 } from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
-import { rootLabel } from '../utils/location-utils'
+import { isSearching } from '../utils/search-utils'
+import { folderLocation, rootLabel } from '../utils/location-utils'
+import { uploadDraft } from '../utils/template-form-utils'
+import type { TemplateFormValues } from '../types/template-form-types'
 import { selectedTemplate, sortByName } from '../utils/template-utils'
 import { transfersOfKind } from '../utils/transfer-utils'
-import { DeleteIcon } from '../theme/components/icons'
+import { AddIcon, DeleteIcon } from '../theme/components/icons'
 
 // Shown only while at least one download template exists.
 export function DownloadPage({
   templates,
   transfers,
-  restoreDefaults
+  restoreDefaults,
+  onNewUploadTemplate
 }: {
   templates: Template[]
   transfers: Transfer[]
   restoreDefaults: { tier: RestoreTier; days: number }
+  onNewUploadTemplate: (draft: TemplateFormValues) => void
 }): React.JSX.Element {
   const [place, setPlace] = useState<FolderPlace>(() => ({
     templateId: sortByName(templates)[0].id,
@@ -62,6 +80,11 @@ export function DownloadPage({
   const [shown, setShown] = useState<ShownFolder | null>(null)
   const [loadingMore, setLoadingMore] = useState(false)
   const [selected, setSelected] = useState<ReadonlySet<string>>(NO_SELECTION)
+  const [selectedFolders, setSelectedFolders] = useState<ReadonlySet<string>>(NO_SELECTION)
+  // The sort stays while other folders and templates open.
+  const [sort, setSort] = useState<FileSort>(DEFAULT_FILE_SORT)
+  // The search covers the open folder, and empties when another opens.
+  const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<FileDialog>({ kind: 'none' })
   const [dialogBusy, setDialogBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string>()
@@ -69,7 +92,17 @@ export function DownloadPage({
   const [error, setError] = useState<string>()
   const template = selectedTemplate(templates, place.templateId)
   const current = shown !== null && samePlace(shown.place, place) ? shown : null
-  const files = current !== null && current.state === 'loaded' ? current.listing.files : []
+  const listing = current !== null && current.state === 'loaded' ? current.listing : EMPTY_LISTING
+  const { files, folders } = listing
+  const found = filterListing(listing, search)
+  const folder = folderOf(place)
+  const folderName =
+    place.path.length === 0 ? rootLabel(template) : place.path[place.path.length - 1].name
+  // My Drive has no link to copy.
+  const copyable = !(
+    template.platform === 'google-drive' &&
+    (folder === '' ? template.folderId : folder) === DRIVE_ROOT_ID
+  )
 
   useEffect(() => {
     let active = true
@@ -96,83 +129,171 @@ export function DownloadPage({
     setMessage(undefined)
     setError(undefined)
     setSelected(NO_SELECTION)
+    setSelectedFolders(NO_SELECTION)
+    setSearch('')
     setPlace(next)
   }
   const openPath = (path: FolderEntry[]): void => goTo({ templateId: place.templateId, path })
-  const openFolder = (folder: FolderEntry): void => openPath([...place.path, folder])
+  const openFolder = (entry: FolderEntry): void => openPath([...place.path, entry])
 
-  const changeFiles = (change: (files: StoredFile[]) => StoredFile[]): void =>
+  const changeListing = (change: (listing: FolderListing) => FolderListing): void =>
     setShown((previous) =>
       previous !== null && previous.state === 'loaded'
-        ? { ...previous, listing: { ...previous.listing, files: change(previous.listing.files) } }
+        ? { ...previous, listing: change(previous.listing) }
         : previous
     )
 
-  const select = (key: string, on: boolean): void =>
-    setSelected((previous) => {
+  const toggle =
+    (set: Dispatch<SetStateAction<ReadonlySet<string>>>) =>
+    (key: string, on: boolean): void =>
+      set((previous) => {
+        const next = new Set(previous)
+        if (on) next.add(key)
+        else next.delete(key)
+        return next
+      })
+
+  // Selects or clears the entries shown, and keeps the choice for those the search hides.
+  const withShown =
+    (keys: string[], on: boolean) =>
+    (previous: ReadonlySet<string>): ReadonlySet<string> => {
       const next = new Set(previous)
-      if (on) next.add(key)
-      else next.delete(key)
+      for (const key of keys) {
+        if (on) next.add(key)
+        else next.delete(key)
+      }
       return next
-    })
+    }
 
   const closeDialog = useCallback((): void => {
     setDialog({ kind: 'none' })
     setDialogError(undefined)
   }, [])
 
-  // Acts on each file in turn. If one fails, the files done so far are shown as done, and the dialog stays open with the rest.
-  const runOnEach = async (
+  // Opens the Delete or Restore dialog. With folders in it, it first counts what they hold, at any depth.
+  const openDialog = (
+    kind: 'delete' | 'restore',
     targets: StoredFile[],
-    act: (file: StoredFile) => Promise<void>,
-    showDone: (keys: ReadonlySet<string>) => void,
-    reopen: (rest: StoredFile[]) => void,
-    done: string
+    targetFolders: FolderEntry[]
+  ): void => {
+    setDialogError(undefined)
+    setDialog({
+      kind,
+      files: targets,
+      folders: targetFolders,
+      inside: targetFolders.length === 0 ? addSummaries([]) : null
+    })
+    if (targetFolders.length === 0) return
+    Promise.all(
+      targetFolders.map((entry) =>
+        downloadService.summarizeFolder({ templateId: template.id, folder: entry.id })
+      )
+    ).then(
+      (summaries) =>
+        setDialog((open) =>
+          open.kind === kind && open.folders === targetFolders
+            ? { ...open, inside: addSummaries(summaries) }
+            : open
+        ),
+      (reason: unknown) => setDialogError(messageOf(reason))
+    )
+  }
+
+  // Acts on each file, then each folder, in turn. If one fails, what's done so far shows as done, and the dialog stays
+  // open with the rest.
+  const runOnEach = async (
+    targets: { files: StoredFile[]; folders: FolderEntry[] },
+    act: {
+      file: (file: StoredFile) => Promise<void>
+      folder: (entry: FolderEntry) => Promise<void>
+    },
+    showDone: (keys: ReadonlySet<string>, folderIds: ReadonlySet<string>) => void,
+    done: () => string
   ): Promise<void> => {
     setDialogBusy(true)
     setDialogError(undefined)
     const finished = new Set<string>()
+    const finishedFolders = new Set<string>()
     try {
-      for (const file of targets) {
-        await act(file)
+      for (const file of targets.files) {
+        await act.file(file)
         finished.add(file.key)
       }
+      for (const entry of targets.folders) {
+        await act.folder(entry)
+        finishedFolders.add(entry.id)
+      }
       closeDialog()
-      setMessage(done)
+      setMessage(done())
     } catch (reason) {
-      reopen(targets.filter((file) => !finished.has(file.key)))
+      setDialog((open) =>
+        open.kind === 'none'
+          ? open
+          : {
+              ...open,
+              files: targets.files.filter((file) => !finished.has(file.key)),
+              folders: targets.folders.filter((entry) => !finishedFolders.has(entry.id))
+            }
+      )
       setDialogError(messageOf(reason))
     } finally {
-      showDone(finished)
+      showDone(finished, finishedFolders)
       setDialogBusy(false)
     }
   }
 
-  const deleteFiles = (targets: StoredFile[]): Promise<void> =>
+  const without = (keys: ReadonlySet<string>) => (previous: ReadonlySet<string>) =>
+    new Set([...previous].filter((key) => !keys.has(key)))
+
+  const deleteSelection = (targets: StoredFile[], targetFolders: FolderEntry[]): Promise<void> =>
     runOnEach(
-      targets,
-      (file) => downloadService.delete({ templateId: template.id, key: file.key }),
-      (keys) => {
-        changeFiles((listed) => listed.filter((file) => !keys.has(file.key)))
-        setSelected((previous) => new Set([...previous].filter((key) => !keys.has(key))))
+      { files: targets, folders: targetFolders },
+      {
+        file: (file) => downloadService.delete({ templateId: template.id, key: file.key }),
+        folder: (entry) =>
+          downloadService.deleteFolder({ templateId: template.id, folder: entry.id })
       },
-      (rest) => setDialog({ kind: 'delete', files: rest }),
-      deletedMessage(targets, template.platform)
+      (keys, folderIds) => {
+        changeListing((listing) => ({
+          ...listing,
+          files: listing.files.filter((file) => !keys.has(file.key)),
+          folders: listing.folders.filter((entry) => !folderIds.has(entry.id))
+        }))
+        setSelected(without(keys))
+        setSelectedFolders(without(folderIds))
+      },
+      () => deletedMessage(targets, template.platform, targetFolders)
     )
 
-  const restoreFiles = (targets: StoredFile[], options: RestoreOptions): Promise<void> =>
-    runOnEach(
-      targets,
-      (file) => downloadService.restore({ templateId: template.id, key: file.key, options }),
+  const restoreSelection = (
+    targets: StoredFile[],
+    targetFolders: FolderEntry[],
+    options: RestoreOptions
+  ): Promise<void> => {
+    let inFolders = 0
+    return runOnEach(
+      { files: targets, folders: targetFolders },
+      {
+        file: (file) =>
+          downloadService.restore({ templateId: template.id, key: file.key, options }),
+        folder: async (entry) => {
+          inFolders += await downloadService.restoreFolder({
+            templateId: template.id,
+            folder: entry.id,
+            options
+          })
+        }
+      },
       (keys) =>
-        changeFiles((listed) =>
-          listed.map((file) =>
+        changeListing((listing) => ({
+          ...listing,
+          files: listing.files.map((file) =>
             keys.has(file.key) ? { ...file, access: { state: 'restoring' } } : file
           )
-        ),
-      (rest) => setDialog({ kind: 'restore', files: rest }),
-      restoringMessage(targets, template.platform)
+        })),
+      () => restoringMessage(targets, template.platform, inFolders)
     )
+  }
 
   const loadMore = async (listing: FolderListing, continuationToken: string): Promise<void> => {
     setLoadingMore(true)
@@ -190,8 +311,8 @@ export function DownloadPage({
     }
   }
 
-  // Queues each file in turn, and stops at the first one main refuses.
-  const download = async (targets: StoredFile[]): Promise<void> => {
+  // Queues each file, then each folder's files, in turn, and stops at the first one main refuses.
+  const download = async (targets: StoredFile[], targetFolders: FolderEntry[]): Promise<void> => {
     setMessage(undefined)
     setError(undefined)
     try {
@@ -199,11 +320,20 @@ export function DownloadPage({
       for (const file of targets) {
         savedAs.push(await downloadService.download({ templateId: template.id, key: file.key }))
       }
-      setMessage(
-        targets.length === 1
-          ? downloadStartedMessage(targets[0].name, savedAs[0])
-          : downloadsStartedMessage(targets.length)
-      )
+      const results: FolderDownload[] = []
+      for (const entry of targetFolders) {
+        results.push(
+          await downloadService.downloadFolder({ templateId: template.id, folder: entry.id })
+        )
+      }
+      if (results.length > 0) setMessage(folderDownloadMessage(targets.length, results))
+      else {
+        setMessage(
+          targets.length === 1
+            ? downloadStartedMessage(targets[0].name, savedAs[0])
+            : downloadsStartedMessage(targets.length)
+        )
+      }
     } catch (reason) {
       setError(messageOf(reason))
     }
@@ -212,7 +342,7 @@ export function DownloadPage({
   return (
     <PageLayout
       title="Browse"
-      description="Open folders to find a file. Download saves it in your download folder; archived files need a restore first. Select several files to act on them together."
+      description="Open folders to find a file. Download saves it in your download folder; archived files need a restore first. Select files and folders to act on them together."
     >
       <TemplatePicker
         templates={templates}
@@ -224,32 +354,80 @@ export function DownloadPage({
         description={
           <FolderBreadcrumb root={rootLabel(template)} path={place.path} onOpenPath={openPath} />
         }
+        actions={
+          <>
+            {copyable && (
+              <CopyButton
+                text={folderLocation(template, folder)}
+                label={template.platform === 'google-drive' ? 'Copy link' : 'Copy URL'}
+                className="text-sm"
+                onCopy={(text) => appService.copy(text)}
+              />
+            )}
+            <Button
+              className="text-sm"
+              onClick={() => onNewUploadTemplate(uploadDraft(template, folder, folderName))}
+            >
+              <AddIcon />
+              New upload template here
+            </Button>
+          </>
+        }
         className="mt-10"
       >
         {current === null && <p className="text-muted">Loading…</p>}
         {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
         {current !== null && current.state === 'loaded' && (
           <>
+            {!isEmptyFolder(current.listing) && (
+              <SearchField
+                label="Search this folder"
+                value={search}
+                className="mb-4"
+                onChange={setSearch}
+              />
+            )}
             <SelectionBar
               files={selectedFiles(files, selected)}
-              onDownload={(targets) => void download(targets)}
-              onRestore={(targets) => setDialog({ kind: 'restore', files: targets })}
-              onDelete={(targets) => setDialog({ kind: 'delete', files: targets })}
-              onClear={() => setSelected(NO_SELECTION)}
+              folders={folders.filter((entry) => selectedFolders.has(entry.id))}
+              foldersRestore={template.platform !== 'google-drive'}
+              onDownload={(targets, targetFolders) => void download(targets, targetFolders)}
+              onRestore={(targets, targetFolders) => openDialog('restore', targets, targetFolders)}
+              onDelete={(targets, targetFolders) => openDialog('delete', targets, targetFolders)}
+              onClear={() => {
+                setSelected(NO_SELECTION)
+                setSelectedFolders(NO_SELECTION)
+              }}
             />
             <FolderTable
-              listing={current.listing}
+              listing={found}
               storageHeading={STORAGE_HEADINGS[template.platform]}
+              sort={sort}
+              searching={isSearching(search)}
+              onSort={(by) => setSort((previous) => nextSort(previous, by))}
               loadingMore={loadingMore}
               selected={selected}
-              onSelect={select}
-              onSelectAll={(on) =>
-                setSelected(on ? new Set(files.map((file) => file.key)) : NO_SELECTION)
-              }
+              selectedFolders={selectedFolders}
+              onSelect={toggle(setSelected)}
+              onSelectFolder={toggle(setSelectedFolders)}
+              onSelectAll={(on) => {
+                setSelected(
+                  withShown(
+                    found.files.map((file) => file.key),
+                    on
+                  )
+                )
+                setSelectedFolders(
+                  withShown(
+                    found.folders.map((entry) => entry.id),
+                    on
+                  )
+                )
+              }}
               onOpenFolder={openFolder}
-              onDownload={(file) => void download([file])}
-              onRestore={(file) => setDialog({ kind: 'restore', files: [file] })}
-              onDelete={(file) => setDialog({ kind: 'delete', files: [file] })}
+              onDownload={(file) => void download([file], [])}
+              onRestore={(file) => openDialog('restore', [file], [])}
+              onDelete={(file) => openDialog('delete', [file], [])}
               onLoadMore={(token) => void loadMore(current.listing, token)}
             />
           </>
@@ -262,32 +440,43 @@ export function DownloadPage({
 
       {dialog.kind === 'delete' && (
         <ConfirmDialog
-          title={
-            dialog.files.length === 1
-              ? 'Delete this file?'
-              : `Delete ${fileCount(dialog.files.length)}?`
-          }
+          title={deleteTitle(dialog.files, dialog.folders)}
           message={
-            <p>
-              <strong>{namesWithMore(dialog.files)}</strong>{' '}
-              {deleteWarning(template.platform, rootLabel(template), dialog.files.length)}
-            </p>
+            <>
+              <p>
+                <strong>{namesWithMore([...dialog.folders, ...dialog.files])}</strong>{' '}
+                {deleteWarning(
+                  template.platform,
+                  rootLabel(template),
+                  dialog.files.length + dialog.folders.length
+                )}
+              </p>
+              {dialog.folders.length > 0 && (
+                <p className="mt-3">{insideLine(dialog.folders, dialog.inside)}</p>
+              )}
+            </>
           }
           confirmLabel="Delete"
           confirmIcon={<DeleteIcon />}
-          busy={dialogBusy}
+          busy={dialogBusy || dialog.inside === null}
           error={dialogError}
-          onConfirm={() => void deleteFiles(dialog.files)}
+          onConfirm={() => void deleteSelection(dialog.files, dialog.folders)}
           onCancel={closeDialog}
         />
       )}
       {dialog.kind === 'restore' && template.platform === 'azure' && (
         <RehydrateDialog
           files={dialog.files}
+          folders={dialog.folders}
+          inside={dialog.inside}
           busy={dialogBusy}
           error={dialogError}
           onRestore={(tier, priority) =>
-            void restoreFiles(dialog.files, { platform: 'azure', tier, priority })
+            void restoreSelection(dialog.files, dialog.folders, {
+              platform: 'azure',
+              tier,
+              priority
+            })
           }
           onCancel={closeDialog}
         />
@@ -295,12 +484,14 @@ export function DownloadPage({
       {dialog.kind === 'restore' && template.platform === 's3' && (
         <RestoreDialog
           files={dialog.files}
+          folders={dialog.folders}
+          inside={dialog.inside}
           defaultTier={restoreDefaults.tier}
           defaultDays={restoreDefaults.days}
           busy={dialogBusy}
           error={dialogError}
           onRestore={(tier, days) =>
-            void restoreFiles(dialog.files, { platform: 's3', tier, days })
+            void restoreSelection(dialog.files, dialog.folders, { platform: 's3', tier, days })
           }
           onCancel={closeDialog}
         />

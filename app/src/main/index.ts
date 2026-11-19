@@ -1,7 +1,16 @@
 // Starts the app: one copy per data folder, main's services wired together, and the main window. See docs/ARCHITECTURE.md and docs/SECURITY.md.
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { app, ipcMain, powerSaveBlocker, safeStorage, screen, session, shell } from 'electron'
+import {
+  app,
+  clipboard,
+  ipcMain,
+  powerSaveBlocker,
+  safeStorage,
+  screen,
+  session,
+  shell
+} from 'electron'
 import { autoUpdater } from 'electron-updater'
 import { OAuth2Client } from 'google-auth-library'
 import icon from '../../resources/icon.png?asset'
@@ -122,6 +131,7 @@ async function start(): Promise<void> {
   )
   new IpcService(ipcMain, appUrl, process.platform).register({
     vault,
+    clipboard,
     settings,
     templates,
     google,

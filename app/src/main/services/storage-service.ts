@@ -1,13 +1,16 @@
 // Sends each storage call to the platform it's for: S3, Azure Blob Storage or Google Drive. See docs/ARCHITECTURE.md.
 import type { StorageLocation } from '../../shared/types/location-types'
-import type { FolderListing, RestoreOptions } from '../../shared/types/storage-types'
+import type { FolderListing, FolderSummary, RestoreOptions } from '../../shared/types/storage-types'
+import { FOLDER_REQUESTS_AT_ONCE } from '../constants/folder-constants'
 import type { Credentials, StorageAccess } from '../types/credential-types'
 import type {
   DownloadFileOptions,
   TemplateTarget,
+  TreeFile,
   UploadFileOptions
 } from '../types/storage-service-types'
 import { UserError } from '../utils/error-utils'
+import { forEachLimited } from '../utils/poll-utils'
 import type { AzureBlobService } from './azure-blob-service'
 import type { GoogleDriveService } from './google-drive-service'
 import type { S3Service } from './s3-service'
@@ -75,6 +78,52 @@ export class StorageService {
     if (access.platform === 's3') return this.s3.fileName(access, key)
     if (access.platform === 'azure') return this.azure.fileName(access, key)
     return this.drive.fileName(access, key)
+  }
+
+  folderFiles(access: StorageAccess, folder: string): Promise<TreeFile[]> {
+    if (access.platform === 's3') return this.s3.folderFiles(access, folder)
+    if (access.platform === 'azure') return this.azure.folderFiles(access, folder)
+    return this.drive.folderFiles(access, folder)
+  }
+
+  folderName(access: StorageAccess, folder: string): Promise<string> {
+    if (access.platform === 's3') return this.s3.folderName(access, folder)
+    if (access.platform === 'azure') return this.azure.folderName(access, folder)
+    return this.drive.folderName(access, folder)
+  }
+
+  deleteFolder(access: StorageAccess, folder: string): Promise<void> {
+    if (access.platform === 's3') return this.s3.deleteFolder(access, folder)
+    if (access.platform === 'azure') return this.azure.deleteFolder(access, folder)
+    return this.drive.deleteFolder(access, folder)
+  }
+
+  // How many files a folder holds at any depth, their total size, and how many are archived.
+  async summarizeFolder(access: StorageAccess, folder: string): Promise<FolderSummary> {
+    const files = await this.folderFiles(access, folder)
+    return {
+      files: files.length,
+      bytes: files.reduce((total, file) => total + file.size, 0),
+      archived: files.filter((file) => file.access.state === 'archived').length
+    }
+  }
+
+  // Restores every archived file in a folder, several at a time, and returns how many. Others need nothing.
+  async restoreFolder(
+    access: StorageAccess,
+    folder: string,
+    options: RestoreOptions
+  ): Promise<number> {
+    if (access.platform === 'google-drive') {
+      throw new UserError("Files on Google Drive don't need a restore.")
+    }
+    const archived = (await this.folderFiles(access, folder)).filter(
+      (file) => file.access.state === 'archived'
+    )
+    await forEachLimited(archived, FOLDER_REQUESTS_AT_ONCE, (file) =>
+      this.restoreFile(access, file.key, options)
+    )
+    return archived.length
   }
 
   // S3 restores a temporary copy for some days; Azure rehydrates the blob into another tier for good.

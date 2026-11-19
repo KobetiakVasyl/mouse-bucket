@@ -7,13 +7,19 @@ import type {
   RehydratePriority,
   RehydrateTier
 } from '../../shared/types/storage-types'
-import { LISTING_PAGE_SIZE, UNREACHABLE_CODES } from '../constants/azure-constants'
+import {
+  FOLDER_MARKER_METADATA,
+  LISTING_PAGE_SIZE,
+  UNREACHABLE_CODES
+} from '../constants/azure-constants'
+import { FOLDER_REQUESTS_AT_ONCE } from '../constants/folder-constants'
 import { PARTS_AT_ONCE } from '../constants/part-constants'
 import type { ConnectContainer } from '../types/azure-types'
 import type { AzureAccess } from '../types/credential-types'
 import type {
   DownloadFileOptions,
   PlatformStorage,
+  TreeFile,
   UploadFileOptions
 } from '../types/storage-service-types'
 import { azureFilesOf, azureFoldersOf, blockId } from '../utils/azure-utils'
@@ -22,7 +28,7 @@ import { httpStatusOf, stringField, UploadExpiredError, UserError } from '../uti
 import { readRange } from '../utils/file-utils'
 import { partNumbers, partRange, partsBytes } from '../utils/part-utils'
 import { forEachLimited } from '../utils/poll-utils'
-import { accessTierOf } from '../utils/storage-utils'
+import { accessTierOf, checkFolderPrefix, prefixName } from '../utils/storage-utils'
 
 // Azure checks each block, and a small file sent whole, against its MD5.
 function md5Of(body: Buffer): Buffer {
@@ -158,6 +164,48 @@ export class AzureBlobService implements PlatformStorage<AzureAccess> {
   // The blob's name is its path in the container, so Azure needs no other name for the file.
   async fileName(_access: AzureAccess, key: string): Promise<string> {
     return key
+  }
+
+  // Every blob under the prefix, at any depth, without folder markers.
+  async folderFiles(access: AzureAccess, prefix: string): Promise<TreeFile[]> {
+    checkFolderPrefix(prefix)
+    const pages = this.connect(access)
+      .listBlobsFlat({ prefix, includeMetadata: true })
+      .byPage({ maxPageSize: LISTING_PAGE_SIZE })
+    const files: TreeFile[] = []
+    for await (const page of pages) {
+      for (const file of azureFilesOf(page.segment.blobItems, prefix)) {
+        if (!file.key.endsWith('/')) files.push({ ...file, path: file.name })
+      }
+    }
+    return files
+  }
+
+  async folderName(_access: AzureAccess, prefix: string): Promise<string> {
+    return prefixName(prefix)
+  }
+
+  // Deletes every blob under the prefix with its snapshots, several at a time. Accounts with a hierarchical namespace
+  // keep folders as marker blobs, which go last, deepest first, once what's in them is gone.
+  async deleteFolder(access: AzureAccess, prefix: string): Promise<void> {
+    checkFolderPrefix(prefix)
+    const container = this.connect(access)
+    const pages = container
+      .listBlobsFlat({ prefix, includeMetadata: true })
+      .byPage({ maxPageSize: LISTING_PAGE_SIZE })
+    const files: string[] = []
+    const markers: string[] = []
+    for await (const page of pages) {
+      for (const item of page.segment.blobItems) {
+        if (item.metadata?.[FOLDER_MARKER_METADATA] === 'true') markers.push(item.name)
+        else files.push(item.name)
+      }
+    }
+    const remove = async (name: string): Promise<void> => {
+      await container.getBlockBlobClient(name).delete({ deleteSnapshots: 'include' })
+    }
+    await forEachLimited(files, FOLDER_REQUESTS_AT_ONCE, remove)
+    for (const marker of markers.sort((a, b) => b.length - a.length)) await remove(marker)
   }
 
   // Azure rejects the list when blocks in it are gone, such as after a week uncommitted; the upload then starts over.

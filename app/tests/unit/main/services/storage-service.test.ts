@@ -130,3 +130,35 @@ describe('StorageService', () => {
     )
   })
 })
+
+describe('StorageService folders', () => {
+  const treeFile = (key: string, state: 'available' | 'archived', size: number): unknown => ({
+    key,
+    name: key,
+    path: key,
+    size,
+    lastModified: '',
+    storageClass: '',
+    access: { state }
+  })
+
+  it("counts a folder's files, size and archived ones, and restores only the archived ones", async () => {
+    const { storage, s3 } = setup()
+    s3.folderFiles = vi.fn(async () => [
+      treeFile('a', 'archived', 5),
+      treeFile('b', 'available', 7),
+      treeFile('c', 'archived', 1)
+    ])
+    expect(await storage.summarizeFolder(S3_ACCESS, 'x/')).toEqual({
+      files: 3,
+      bytes: 13,
+      archived: 2
+    })
+    const options = { platform: 's3', tier: 'Bulk', days: 2 } as const
+    expect(await storage.restoreFolder(S3_ACCESS, 'x/', options)).toBe(2)
+    expect(s3.restoreFile.mock.calls.map((call) => call[1]).sort()).toEqual(['a', 'c'])
+    await expect(storage.restoreFolder(DRIVE_ACCESS, 'f1', options)).rejects.toThrow(
+      "don't need a restore"
+    )
+  })
+})

@@ -61,6 +61,11 @@ export function driveFilesOf(files: drive_v3.Schema$File[]): StoredFile[] {
     }))
 }
 
+// Drive allows a slash in a name, which a file or folder on this computer can't have.
+export function driveSafeName(name: string): string {
+  return name.replace(/[/\\]/g, '_')
+}
+
 // The bytes a session has, from its Range header, such as "bytes=0-1048575"; none without one.
 export function receivedBytes(range: string | null): number {
   const match = range === null ? null : /^bytes=0-(\d+)$/.exec(range)

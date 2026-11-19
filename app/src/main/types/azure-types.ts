@@ -5,7 +5,7 @@ import type { AzureAccess } from './credential-types'
 
 export type AzureContainer = Pick<
   ContainerClient,
-  'getProperties' | 'listBlobsByHierarchy' | 'getBlockBlobClient'
+  'getProperties' | 'listBlobsByHierarchy' | 'listBlobsFlat' | 'getBlockBlobClient'
 >
 
 export type ConnectContainer = (access: AzureAccess) => AzureContainer

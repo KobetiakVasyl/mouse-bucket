@@ -6,8 +6,10 @@ import {
   CompleteMultipartUploadCommand,
   CreateMultipartUploadCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   type GetObjectCommandOutput,
+  type _Object,
   HeadBucketCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -22,11 +24,13 @@ import type {
   UploadStorageClass
 } from '../../shared/types/storage-types'
 import { PARTS_AT_ONCE } from '../constants/part-constants'
+import { S3_DELETE_BATCH } from '../constants/folder-constants'
 import { DISCOVERY_REGION } from '../constants/s3-constants'
 import type { S3Access, S3Credentials } from '../types/credential-types'
 import type {
   DownloadFileOptions,
   PlatformStorage,
+  TreeFile,
   UploadFileOptions
 } from '../types/storage-service-types'
 import type { UploadPart } from '../types/transfer-queue-types'
@@ -36,7 +40,7 @@ import { readRange } from '../utils/file-utils'
 import { partNumbers, partRange, partsBytes } from '../utils/part-utils'
 import { forEachLimited } from '../utils/poll-utils'
 import { bucketRegionHeader, filesOf, foldersOf } from '../utils/s3-utils'
-import { s3ClassOf } from '../utils/storage-utils'
+import { checkFolderPrefix, prefixName, s3ClassOf } from '../utils/storage-utils'
 
 export class S3Service implements PlatformStorage<S3Access> {
   // S3 names the bucket's region even to keys that may not list it, so upload-only keys work too.
@@ -170,6 +174,50 @@ export class S3Service implements PlatformStorage<S3Access> {
     return key
   }
 
+  // Every file under the prefix, at any depth, without the empty folder markers the S3 console makes.
+  async folderFiles(access: S3Access, prefix: string): Promise<TreeFile[]> {
+    checkFolderPrefix(prefix)
+    return this.withBucket(access, async (client) => {
+      const files: TreeFile[] = []
+      for await (const contents of this.objectPages(client, access.bucket, prefix)) {
+        for (const file of filesOf(contents, prefix)) {
+          if (!file.key.endsWith('/')) files.push({ ...file, path: file.name })
+        }
+      }
+      return files
+    })
+  }
+
+  async folderName(_access: S3Access, prefix: string): Promise<string> {
+    return prefixName(prefix)
+  }
+
+  // Deletes every object under the prefix, folder markers too, a thousand at a time. A versioned bucket keeps the older
+  // versions.
+  async deleteFolder(access: S3Access, prefix: string): Promise<void> {
+    checkFolderPrefix(prefix)
+    return this.withBucket(access, async (client) => {
+      for await (const contents of this.objectPages(client, access.bucket, prefix)) {
+        const keys = contents.flatMap((object) => (object.Key === undefined ? [] : [object.Key]))
+        for (let start = 0; start < keys.length; start += S3_DELETE_BATCH) {
+          const batch = keys.slice(start, start + S3_DELETE_BATCH).map((Key) => ({ Key }))
+          const output = await client.send(
+            new DeleteObjectsCommand({
+              Bucket: access.bucket,
+              Delete: { Objects: batch, Quiet: true }
+            })
+          )
+          const failed = output.Errors?.[0]
+          if (failed !== undefined) {
+            throw Object.assign(new Error("S3 didn't delete every file."), {
+              name: failed.Code ?? 'DeleteFailed'
+            })
+          }
+        }
+      }
+    })
+  }
+
   // S3 forgets an unfinished upload when a lifecycle rule or an abort removes it; the upload then starts over.
   private async uploadParts(
     client: S3Client,
@@ -277,6 +325,27 @@ export class S3Service implements PlatformStorage<S3Access> {
     return client.send(new GetObjectCommand({ Bucket: bucket, Key: key, ...resume }), {
       abortSignal: signal
     })
+  }
+
+  // Every object under the prefix, one listing page at a time.
+  private async *objectPages(
+    client: S3Client,
+    bucket: string,
+    prefix: string
+  ): AsyncGenerator<_Object[]> {
+    let token: string | undefined
+    do {
+      const output = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: token,
+          OptionalObjectAttributes: ['RestoreStatus']
+        })
+      )
+      yield output.Contents ?? []
+      token = output.IsTruncated === true ? output.NextContinuationToken : undefined
+    } while (token !== undefined)
   }
 
   private withBucket<T>(access: S3Access, work: (client: S3Client) => Promise<T>): Promise<T> {

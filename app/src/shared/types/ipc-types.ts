@@ -2,8 +2,12 @@
 import type { Channel } from '../constants/ipc-constants'
 import type {
   DownloadRequest,
+  FolderDownload,
   FolderListing,
   FolderRequest,
+  FolderRestoreRequest,
+  FolderSummary,
+  FolderTargetRequest,
   RestoreRequest,
   UploadPathsRequest,
   UploadRequest
@@ -25,6 +29,7 @@ export interface AppStatus {
 // What the renderer sends on each invoke channel.
 export interface Requests {
   'app:status': undefined
+  'app:copyText': string
   'settings:get': undefined
   'settings:update': SettingsUpdate
   'settings:chooseDownloadFolder': undefined
@@ -40,6 +45,10 @@ export interface Requests {
   'download:file': DownloadRequest
   'download:delete': DownloadRequest
   'download:restore': RestoreRequest
+  'download:folderSummary': FolderTargetRequest
+  'download:folder': FolderTargetRequest
+  'download:deleteFolder': FolderTargetRequest
+  'download:restoreFolder': FolderRestoreRequest
   'transfers:list': undefined
   'transfers:pause': string
   'transfers:resume': string
@@ -52,6 +61,8 @@ export interface Requests {
 
 export interface Responses {
   'app:status': AppStatus
+  // Main writes the text to the clipboard, which the page itself may not.
+  'app:copyText': void
   'settings:get': Settings
   'settings:update': Settings
   // The settings with the chosen folder, or unchanged when the picker was cancelled.
@@ -71,6 +82,12 @@ export interface Responses {
   'download:file': string
   'download:delete': void
   'download:restore': void
+  'download:folderSummary': FolderSummary
+  'download:folder': FolderDownload
+  // Google Drive moves the folder to its trash; S3 and Azure delete everything inside.
+  'download:deleteFolder': void
+  // How many archived files inside a restore started for.
+  'download:restoreFolder': number
   'transfers:list': Transfer[]
   'transfers:pause': void
   'transfers:resume': void
@@ -86,6 +103,7 @@ export interface Responses {
 // window.api, which the preload exposes to the renderer.
 export interface Api {
   getStatus(): Promise<AppStatus>
+  copyText(text: string): Promise<void>
   getSettings(): Promise<Settings>
   updateSettings(update: SettingsUpdate): Promise<Settings>
   chooseDownloadFolder(): Promise<Settings>
@@ -102,6 +120,10 @@ export interface Api {
   downloadFile(request: DownloadRequest): Promise<string>
   deleteFile(request: DownloadRequest): Promise<void>
   restoreFile(request: RestoreRequest): Promise<void>
+  summarizeFolder(request: FolderTargetRequest): Promise<FolderSummary>
+  downloadFolder(request: FolderTargetRequest): Promise<FolderDownload>
+  deleteFolder(request: FolderTargetRequest): Promise<void>
+  restoreFolder(request: FolderRestoreRequest): Promise<number>
   listTransfers(): Promise<Transfer[]>
   pauseTransfer(id: string): Promise<void>
   resumeTransfer(id: string): Promise<void>

@@ -31,10 +31,16 @@ test('shows six template tiles and the rest in a drop-down', async ({ page }) =>
   await expect(page.getByText('s3://example-bucket/a12/').last()).toBeVisible()
 })
 
-test('shows the settings every upload uses', async ({ page }) => {
-  for (const value of ["The bucket's default encryption", 'CRC64NVME']) {
-    await expect(page.getByText(value, { exact: true })).toBeVisible()
-  }
+test('shows the settings every upload uses, as tags with their names above', async ({ page }) => {
+  const settings = page.getByRole('region', { name: 'Upload settings' })
+  const tag = (name: string): ReturnType<typeof page.locator> =>
+    settings.locator('dl > div').filter({ has: page.getByText(name, { exact: true }) })
+  await expect(tag('Encryption')).toContainText("The bucket's default encryption")
+  await expect(tag('Checksum')).toContainText('CRC64NVME')
+  await expect(tag('Tags')).toContainText('None')
+  await expect(tag('Metadata')).toContainText('None')
+  await expect(settings.getByRole('textbox')).toHaveCount(0)
+  await expect(settings.getByText('Soon')).toHaveCount(0)
 })
 
 test('starts with Deep Archive and can switch to Standard', async ({ page }) => {

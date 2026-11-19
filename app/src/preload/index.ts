@@ -13,6 +13,7 @@ async function invoke<T>(channel: string, payload?: unknown): Promise<T> {
 
 const api: Api = {
   getStatus: () => invoke(Channel.appStatus),
+  copyText: (text) => invoke(Channel.appCopyText, text),
   getSettings: () => invoke(Channel.settingsGet),
   updateSettings: (update) => invoke(Channel.settingsUpdate, update),
   chooseDownloadFolder: () => invoke(Channel.settingsChooseDownloadFolder),
@@ -32,6 +33,10 @@ const api: Api = {
   downloadFile: (request) => invoke(Channel.downloadFile, request),
   deleteFile: (request) => invoke(Channel.downloadDelete, request),
   restoreFile: (request) => invoke(Channel.downloadRestore, request),
+  summarizeFolder: (request) => invoke(Channel.downloadFolderSummary, request),
+  downloadFolder: (request) => invoke(Channel.downloadFolder, request),
+  deleteFolder: (request) => invoke(Channel.downloadDeleteFolder, request),
+  restoreFolder: (request) => invoke(Channel.downloadRestoreFolder, request),
   listTransfers: () => invoke(Channel.transfersList),
   pauseTransfer: (id) => invoke(Channel.transfersPause, id),
   resumeTransfer: (id) => invoke(Channel.transfersResume, id),

@@ -3,6 +3,7 @@ import type { Template } from '../../../../../src/shared/types/template-types'
 import { PICKER_TILES } from '../../../../../src/renderer/src/constants/template-constants'
 import {
   hasKind,
+  matchesTemplate,
   selectedTemplate,
   sortByName,
   splitForPicker,
@@ -17,6 +18,19 @@ const template = (name: string, kind: Template['kind'] = 'upload'): Template => 
   bucket: 'b1',
   prefix: '',
   region: 'eu-west-1'
+})
+
+describe('matchesTemplate', () => {
+  it('matches the name, type, platform, location or S3 region', () => {
+    const archive = template('Archive', 'download')
+    expect(matchesTemplate(archive, 'arch')).toBe(true)
+    expect(matchesTemplate(archive, 'download')).toBe(true)
+    expect(matchesTemplate(archive, 'amazon s3')).toBe(true)
+    expect(matchesTemplate(archive, 's3://b1/')).toBe(true)
+    expect(matchesTemplate(archive, 'eu-west-1')).toBe(true)
+    expect(matchesTemplate(archive, 'upload')).toBe(false)
+    expect(matchesTemplate(archive, 'archive azure')).toBe(false)
+  })
 })
 
 describe('sortByName', () => {

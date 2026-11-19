@@ -1,6 +1,7 @@
 // Runs one upload or download on its platform from where it stopped, and throws away what a cancelled one moved. See
 // docs/ARCHITECTURE.md.
-import { rm, stat } from 'node:fs/promises'
+import { mkdir, rm, stat } from 'node:fs/promises'
+import { dirname } from 'node:path'
 import type { StorageAccess } from '../types/credential-types'
 import type {
   DownloadRecord,
@@ -51,6 +52,8 @@ export class TransferRunnerService implements TransferRunner {
     access: StorageAccess,
     { signal, progress, save }: TransferRunContext
   ): Promise<void> {
+    // A file of a folder download goes into folders that may not exist yet.
+    await mkdir(dirname(record.targetPath), { recursive: true })
     await this.storage.downloadFile(access, {
       key: record.key,
       targetPath: record.targetPath,

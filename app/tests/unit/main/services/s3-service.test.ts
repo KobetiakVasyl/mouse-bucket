@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   HeadBucketCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -178,5 +179,65 @@ describe('restoreFile', () => {
       .restoreFile(BUCKET, 'cold.zip', 'Standard', 1)
       .catch((error: unknown) => describeError(error))
     expect(failed).toBe('A restore of this file is already in progress.')
+  })
+})
+
+describe('folders', () => {
+  it('lists every file under a prefix at any depth, page by page, without folder markers', async () => {
+    s3.on(ListObjectsV2Command, { Prefix: 'photos/', ContinuationToken: undefined }).resolves({
+      Contents: [
+        { Key: 'photos/', Size: 0, LastModified: MODIFIED },
+        { Key: 'photos/beach.jpg', Size: 3, LastModified: MODIFIED, StorageClass: 'STANDARD' }
+      ],
+      IsTruncated: true,
+      NextContinuationToken: 'page-2'
+    })
+    s3.on(ListObjectsV2Command, { Prefix: 'photos/', ContinuationToken: 'page-2' }).resolves({
+      Contents: [
+        { Key: 'photos/2025/', Size: 0, LastModified: MODIFIED },
+        {
+          Key: 'photos/2025/snow.jpg',
+          Size: 4,
+          LastModified: MODIFIED,
+          StorageClass: 'DEEP_ARCHIVE'
+        }
+      ],
+      IsTruncated: false
+    })
+    const files = await service.folderFiles(BUCKET, 'photos/')
+    expect(files.map((file) => [file.key, file.path, file.access.state])).toEqual([
+      ['photos/beach.jpg', 'beach.jpg', 'available'],
+      ['photos/2025/snow.jpg', '2025/snow.jpg', 'archived']
+    ])
+    expect(await service.folderName(BUCKET, 'photos/2025/')).toBe('2025')
+  })
+
+  it('deletes everything under a prefix, markers too, and says when S3 kept something', async () => {
+    s3.on(ListObjectsV2Command).resolves({
+      Contents: [
+        { Key: 'photos/', Size: 0, LastModified: MODIFIED },
+        { Key: 'photos/beach.jpg', Size: 3, LastModified: MODIFIED }
+      ],
+      IsTruncated: false
+    })
+    s3.on(DeleteObjectsCommand)
+      .resolvesOnce({})
+      .resolves({
+        Errors: [{ Key: 'photos/beach.jpg', Code: 'AccessDenied' }]
+      })
+    await service.deleteFolder(BUCKET, 'photos/')
+    expect(s3.commandCalls(DeleteObjectsCommand)[0].args[0].input).toEqual({
+      Bucket: 'b1',
+      Delete: { Objects: [{ Key: 'photos/' }, { Key: 'photos/beach.jpg' }], Quiet: true }
+    })
+    await expect(service.deleteFolder(BUCKET, 'photos/')).rejects.toMatchObject({
+      name: 'AccessDenied'
+    })
+  })
+
+  it("refuses the top of the bucket, which isn't a folder", async () => {
+    await expect(service.deleteFolder(BUCKET, '')).rejects.toThrow("isn't a folder")
+    await expect(service.folderFiles(BUCKET, '/')).rejects.toThrow("isn't a folder")
+    expect(s3.commandCalls(ListObjectsV2Command)).toHaveLength(0)
   })
 })

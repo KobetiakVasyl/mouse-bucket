@@ -12,12 +12,13 @@ const file = (
   key: string,
   size: number,
   storageClass: string,
-  access: StoredFile['access']
+  access: StoredFile['access'],
+  lastModified = '2026-11-01T09:30:00.000Z'
 ): StoredFile => ({
   key,
   name: key.slice(key.lastIndexOf('/') + 1),
   size,
-  lastModified: '2026-11-01T09:30:00.000Z',
+  lastModified,
   storageClass,
   access
 })
@@ -27,13 +28,34 @@ export const SAMPLE: SampleStorage = {
     '': {
       folders: [{ id: 'photos/', name: 'photos' }],
       files: [
-        file('backup.tar.gz', 3_435_973_837, 'DEEP_ARCHIVE', { state: 'archived' }),
-        file('contracts.zip', 545_259_520, 'GLACIER', {
-          state: 'restored',
-          until: '2026-12-01T00:00:00.000Z'
-        }),
-        file('invoice.pdf', 250_880, 'STANDARD', { state: 'available' }),
-        file('photos-2025.zip', 1_181_116_006, 'DEEP_ARCHIVE', { state: 'restoring' })
+        file(
+          'backup.tar.gz',
+          3_435_973_837,
+          'DEEP_ARCHIVE',
+          { state: 'archived' },
+          '2026-10-01T09:30:00.000Z'
+        ),
+        file(
+          'contracts.zip',
+          545_259_520,
+          'GLACIER',
+          { state: 'restored', until: '2026-12-01T00:00:00.000Z' },
+          '2026-11-05T09:30:00.000Z'
+        ),
+        file(
+          'invoice.pdf',
+          250_880,
+          'STANDARD',
+          { state: 'available' },
+          '2026-11-10T09:30:00.000Z'
+        ),
+        file(
+          'photos-2025.zip',
+          1_181_116_006,
+          'DEEP_ARCHIVE',
+          { state: 'restoring' },
+          '2026-09-15T09:30:00.000Z'
+        )
       ],
       nextToken: null
     },
@@ -102,6 +124,58 @@ export function installSampleStorage(
     publish()
     return key.slice(key.lastIndexOf('/') + 1)
   })
+  // A folder's files at any depth, from the listings of it and of the folders inside it.
+  const filesUnder = (folder: string): StoredFile[] =>
+    Object.entries(listings)
+      .filter(([prefix]) => prefix.startsWith(folder))
+      .flatMap(([, listing]) => listing.files)
+  const nameOf = (folder: string): string =>
+    folder
+      .split('/')
+      .filter((part) => part !== '')
+      .at(-1) ?? folder
+  replace('download:folderSummary', (payload) => {
+    const inside = filesUnder(field(payload, 'folder'))
+    return {
+      files: inside.length,
+      bytes: inside.reduce((total, found) => total + found.size, 0),
+      archived: inside.filter((found) => found.access.state === 'archived').length
+    }
+  })
+  replace('download:folder', (payload) => {
+    const folder = field(payload, 'folder')
+    const inside = filesUnder(folder)
+    const ready = inside.filter((found) => ['available', 'restored'].includes(found.access.state))
+    for (const found of ready) {
+      transfers.push({
+        id: `download-${transfers.length}`,
+        kind: 'download',
+        templateName: 'Sample',
+        name: `${nameOf(folder)}/${found.key.slice(folder.length)}`,
+        bytesDone: found.size,
+        bytesTotal: found.size,
+        status: 'done'
+      })
+    }
+    publish()
+    return { queued: ready.length, skipped: inside.length - ready.length, savedAs: nameOf(folder) }
+  })
+  replace('download:deleteFolder', (payload) => {
+    const folder = field(payload, 'folder')
+    for (const listing of Object.values(listings)) {
+      listing.folders = listing.folders.filter((entry) => entry.id !== folder)
+    }
+    for (const prefix of Object.keys(listings)) {
+      if (prefix.startsWith(folder)) Reflect.deleteProperty(listings, prefix)
+    }
+    return undefined
+  })
+  replace(
+    'download:restoreFolder',
+    (payload) =>
+      filesUnder(field(payload, 'folder')).filter((found) => found.access.state === 'archived')
+        .length
+  )
   replace('upload:chooseFiles', () => {
     transfers.push(
       {
@@ -163,6 +237,11 @@ export function installSampleStorage(
   replace('transfers:pause', (payload) => changeTransfer(payload, 'paused'))
   replace('transfers:resume', (payload) => changeTransfer(payload, 'running'))
   replace('transfers:cancel', (payload) => changeTransfer(payload, 'cancelled'))
+  // Copied text is kept for the test to read, instead of going to the computer's clipboard.
+  replace('app:copyText', (payload) => {
+    Reflect.set(globalThis, 'sampleClipboard', payload)
+    return undefined
+  })
   // CI's Linux runner has no keyring, so the app would refuse to store keys. The tests need the forms enabled.
   replace('app:status', () => ({ encryptionAvailable: true, version: app.getVersion() }))
   // A new template as main would save it, without asking the platform; Google's sign-in is skipped too.

@@ -1,6 +1,6 @@
-// The defaults new uploads and restores start with: the storage class, the restore speed and the days a restored copy
-// stays. See docs/UI.md.
-import { useState } from 'react'
+// The defaults uploads, restores and downloads start with: the storage class and access tier, the restore speed, the
+// days a restored copy stays, and the download folder. See docs/UI.md.
+import { type ReactNode, useState } from 'react'
 import { RESTORE_DAYS } from '../../../../shared/constants/storage-constants'
 import type { Settings, SettingsUpdate } from '../../../../shared/types/settings-types'
 import { RESTORE_TIER_HINTS, RESTORE_TIER_OPTIONS } from '../../constants/download-constants'
@@ -18,15 +18,18 @@ import { RestoreDaysPicker } from './RestoreDaysPicker'
 
 export function DefaultsSettings({
   settings,
+  downloadFolder,
   onChange
 }: {
   settings: Settings
+  // The download folder's setting, which main changes through its own picker.
+  downloadFolder: ReactNode
   onChange: (update: SettingsUpdate) => void
 }): React.JSX.Element {
   // Days that aren't valid yet show as such, and aren't saved.
   const [days, setDays] = useState<number | null>(settings.defaultRestoreDays)
   return (
-    <Section title="Defaults" description="Uploads and restores start with these.">
+    <Section title="Defaults" description="Uploads, restores and downloads start with these.">
       <div className="space-y-6">
         <Select
           label="S3 storage class for new uploads"
@@ -59,6 +62,7 @@ export function DefaultsSettings({
             if (next !== null) onChange({ defaultRestoreDays: next })
           }}
         />
+        {downloadFolder}
       </div>
     </Section>
   )

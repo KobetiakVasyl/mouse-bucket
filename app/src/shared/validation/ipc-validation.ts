@@ -5,6 +5,8 @@ import type { InvokeChannel, Requests } from '../types/ipc-types'
 import {
   DownloadRequestSchema,
   FolderRequestSchema,
+  FolderRestoreRequestSchema,
+  FolderTargetRequestSchema,
   RestoreRequestSchema,
   UploadPathsRequestSchema,
   UploadRequestSchema
@@ -14,10 +16,12 @@ import { NewTemplateSchema, TemplateEditSchema, TemplateIdSchema } from './templ
 
 const NoPayload = z.undefined()
 const TransferIdSchema = z.string().min(1).max(100)
+const CopiedTextSchema = z.string().min(1).max(20_000)
 
 // Its type ties every schema to the channel's entry in Requests, so the two can't drift apart.
 export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } = {
   [Channel.appStatus]: NoPayload,
+  [Channel.appCopyText]: CopiedTextSchema,
   [Channel.settingsGet]: NoPayload,
   [Channel.settingsUpdate]: SettingsUpdateSchema,
   [Channel.settingsChooseDownloadFolder]: NoPayload,
@@ -33,6 +37,10 @@ export const REQUEST_SCHEMAS: { [C in InvokeChannel]: z.ZodType<Requests[C]> } =
   [Channel.downloadFile]: DownloadRequestSchema,
   [Channel.downloadDelete]: DownloadRequestSchema,
   [Channel.downloadRestore]: RestoreRequestSchema,
+  [Channel.downloadFolderSummary]: FolderTargetRequestSchema,
+  [Channel.downloadFolder]: FolderTargetRequestSchema,
+  [Channel.downloadDeleteFolder]: FolderTargetRequestSchema,
+  [Channel.downloadRestoreFolder]: FolderRestoreRequestSchema,
   [Channel.transfersList]: NoPayload,
   [Channel.transfersPause]: TransferIdSchema,
   [Channel.transfersResume]: TransferIdSchema,

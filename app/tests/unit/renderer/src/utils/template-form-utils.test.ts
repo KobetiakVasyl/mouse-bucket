@@ -8,9 +8,11 @@ import {
   formFor,
   isCopyingKeys,
   locationHint,
+  locationSuggestions,
   newTemplate,
   signsIn,
-  templateEdit
+  templateEdit,
+  uploadDraft
 } from '../../../../../src/renderer/src/utils/template-form-utils'
 
 const form = (change: Partial<TemplateFormValues>): TemplateFormValues => ({
@@ -27,6 +29,35 @@ const saved: Template = {
   prefix: 'reports/',
   region: 'eu-west-1'
 }
+
+describe('locationSuggestions', () => {
+  const download = (name: string, bucket: string, prefix = ''): Template => ({
+    ...saved,
+    id: crypto.randomUUID(),
+    name,
+    kind: 'download',
+    bucket,
+    prefix
+  })
+
+  it("suggests each S3 download template's bucket once, with the templates' names", () => {
+    const templates = [
+      download('Zeta', 'b-bucket'),
+      download('Alpha', 'b-bucket', 'old/'),
+      download('Photos', 'a-bucket'),
+      saved
+    ]
+    expect(locationSuggestions('s3', templates)).toEqual([
+      { value: 's3://a-bucket/', detail: 'Photos' },
+      { value: 's3://b-bucket/', detail: 'Alpha, Zeta' }
+    ])
+  })
+
+  it('suggests nothing on other platforms, or without download templates', () => {
+    expect(locationSuggestions('azure', [download('Photos', 'a-bucket')])).toEqual([])
+    expect(locationSuggestions('s3', [saved])).toEqual([])
+  })
+})
 
 describe('locationHint', () => {
   it('gives an example until something is typed', () => {
@@ -176,6 +207,29 @@ describe('formFor and templateEdit', () => {
     expect(templateEdit(copied, saved.id, [other]).keys).toEqual({
       source: 'copied',
       templateId: other.id
+    })
+  })
+})
+
+describe('uploadDraft', () => {
+  it("starts an upload template into a folder, with the download template's keys", () => {
+    const archive: Template = {
+      id: '8c4f6e0a-6e5f-4a7b-9c1d-3e4f5a6b7c8d',
+      name: 'Archive',
+      kind: 'download',
+      platform: 's3',
+      bucket: 'example-archive',
+      prefix: '',
+      region: 'eu-west-1'
+    }
+    expect(uploadDraft(archive, 'photos/', 'photos')).toEqual({
+      ...EMPTY_TEMPLATE_FORM,
+      platform: 's3',
+      kind: 'upload',
+      name: 'photos',
+      location: 's3://example-archive/photos/',
+      keySource: 'copied',
+      copyFrom: archive.id
     })
   })
 })

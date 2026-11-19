@@ -1,5 +1,12 @@
 import { downloadTemplate, expect, menuItem, test, uploadTemplate } from '../../support/app'
 
+test('opens with the splash screen for a second', async ({ app }) => {
+  const window = await app.firstWindow()
+  await menuItem(window, 'Home').waitFor()
+  // The splash screen starts with the page, so the side menu can't show before a second has passed.
+  expect(await window.evaluate(() => performance.now())).toBeGreaterThanOrEqual(1000)
+})
+
 test.describe('with no templates', () => {
   test('lands on Home, which leads to Templates', async ({ page }) => {
     await expect(page.getByRole('heading', { level: 1, name: 'Home' })).toBeVisible()

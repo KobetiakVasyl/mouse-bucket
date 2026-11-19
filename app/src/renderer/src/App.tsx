@@ -1,7 +1,8 @@
-// The app shell: the first data load from main, the side menu, the pages, the updates dialog and the welcome page. See
-// docs/UI.md.
+// The app shell: the splash screen during the first data load from main, the side menu, the pages, the updates dialog
+// and the welcome page. See docs/UI.md.
 import { useEffect, useState } from 'react'
 import type { SettingsUpdate } from '../../shared/types/settings-types'
+import { SPLASH_MS } from './constants/app-constants'
 import { DownloadPage } from './pages/DownloadPage'
 import { HomePage } from './pages/HomePage'
 import { HowItWorksPage } from './pages/HowItWorksPage'
@@ -15,9 +16,11 @@ import { templateService } from './services/template-service'
 import { themeService } from './services/theme-service'
 import { useTransfers } from './services/transfer-service'
 import { SideMenu } from './theme/compositions/SideMenu'
+import { SplashScreen } from './theme/compositions/SplashScreen'
 import { UpdatesDialog } from './theme/compositions/UpdatesDialog'
 import type { AppData, AppLoad } from './types/app-types'
 import type { Page } from './types/navigation-types'
+import type { TemplateFormValues } from './types/template-form-types'
 import { messageOf } from './utils/error-utils'
 import { pageToShow } from './utils/navigation-utils'
 import { templatesOfKind } from './utils/template-utils'
@@ -25,9 +28,17 @@ import { templatesOfKind } from './utils/template-utils'
 export default function App(): React.JSX.Element {
   const [load, setLoad] = useState<AppLoad>({ state: 'loading' })
   const [page, setPage] = useState<Page>('home')
+  // A new template Browse started for a folder; it's dropped as soon as the user goes anywhere else.
+  const [draft, setDraft] = useState<TemplateFormValues | null>(null)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [updatesOpen, setUpdatesOpen] = useState(false)
+  const [splashOver, setSplashOver] = useState(false)
   const transfers = useTransfers()
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSplashOver(true), SPLASH_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     Promise.all([appService.status(), settingsService.get(), templateService.list()]).then(
@@ -44,7 +55,7 @@ export default function App(): React.JSX.Element {
     )
   }, [])
 
-  if (load.state === 'loading') return <p className="p-8 text-muted">Loading…</p>
+  if (!splashOver || load.state === 'loading') return <SplashScreen />
   if (load.state === 'failed') {
     return (
       <p role="alert" className="p-8">
@@ -71,10 +82,15 @@ export default function App(): React.JSX.Element {
     if (!settings.welcomeSeen) updateSettings({ welcomeSeen: true }).catch(() => undefined)
   }
 
+  const navigate = (next: Page): void => {
+    setDraft(null)
+    setPage(next)
+  }
+
   const shown = pageToShow(page, templates)
 
   const pages: Record<Page, () => React.JSX.Element> = {
-    home: () => <HomePage templates={templates} transfers={transfers} onNavigate={setPage} />,
+    home: () => <HomePage templates={templates} transfers={transfers} onNavigate={navigate} />,
     upload: () => (
       <UploadPage
         templates={templatesOfKind(templates, 'upload')}
@@ -88,6 +104,10 @@ export default function App(): React.JSX.Element {
         templates={templatesOfKind(templates, 'download')}
         transfers={transfers}
         restoreDefaults={{ tier: settings.defaultRestoreTier, days: settings.defaultRestoreDays }}
+        onNewUploadTemplate={(next) => {
+          setDraft(next)
+          setPage('templates')
+        }}
       />
     ),
     templates: () => (
@@ -95,9 +115,11 @@ export default function App(): React.JSX.Element {
         templates={templates}
         encryptionAvailable={status.encryptionAvailable}
         firstRun={templates.length === 0}
+        draft={draft}
         onCreated={(template) => {
           changeData((data) => ({ ...data, templates: [...data.templates, template] }))
-          if (templates.length === 0) setPage('home')
+          setDraft(null)
+          if (templates.length === 0) navigate('home')
         }}
         onUpdated={(template) =>
           changeData((data) => ({
@@ -132,7 +154,7 @@ export default function App(): React.JSX.Element {
     <div className="flex h-screen">
       <SideMenu
         current={shown}
-        onNavigate={setPage}
+        onNavigate={navigate}
         onCheckForUpdates={() => setUpdatesOpen(true)}
         onShowWelcome={() => setWelcomeOpen(true)}
       />
@@ -145,7 +167,7 @@ export default function App(): React.JSX.Element {
           onClose={closeWelcome}
           onShowHowItWorks={() => {
             closeWelcome()
-            setPage('how-it-works')
+            navigate('how-it-works')
           }}
         />
       )}

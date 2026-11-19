@@ -15,12 +15,23 @@ export class IpcService {
   ) {}
 
   register(services: IpcServices): void {
-    const { vault, settings, templates, google, uploads, downloads, transfers, updates, version } =
-      services
+    const {
+      vault,
+      clipboard,
+      settings,
+      templates,
+      google,
+      uploads,
+      downloads,
+      transfers,
+      updates,
+      version
+    } = services
     this.handle(Channel.appStatus, async () => ({
       encryptionAvailable: await vault.available(),
       version
     }))
+    this.handle(Channel.appCopyText, async (text) => clipboard.writeText(text))
     this.handle(Channel.settingsGet, () => settings.get())
     this.handle(Channel.settingsUpdate, (update) => settings.update(update))
     this.handle(Channel.settingsChooseDownloadFolder, (_input, event) =>
@@ -42,6 +53,10 @@ export class IpcService {
     this.handle(Channel.downloadFile, (request) => downloads.downloadFile(request))
     this.handle(Channel.downloadDelete, (request) => downloads.deleteFile(request))
     this.handle(Channel.downloadRestore, (request) => downloads.restoreFile(request))
+    this.handle(Channel.downloadFolderSummary, (request) => downloads.summarizeFolder(request))
+    this.handle(Channel.downloadFolder, (request) => downloads.downloadFolder(request))
+    this.handle(Channel.downloadDeleteFolder, (request) => downloads.deleteFolder(request))
+    this.handle(Channel.downloadRestoreFolder, (request) => downloads.restoreFolder(request))
     this.handle(Channel.transfersList, async () => transfers.list())
     this.handle(Channel.transfersPause, async (id) => transfers.pause(id))
     this.handle(Channel.transfersResume, async (id) => transfers.resume(id))

@@ -2,20 +2,31 @@ import { describe, expect, it } from 'vitest'
 import type { FolderListing, StoredFile } from '../../../../../src/shared/types/storage-types'
 import {
   accessNote,
+  addSummaries,
   appendListing,
   archivedFiles,
+  archivedInsideLine,
   deletedMessage,
+  deleteTitle,
   deleteWarning,
   downloadableFiles,
   fileCount,
+  filterListing,
+  folderDownloadMessage,
   folderOf,
+  insideLine,
   isDownloadable,
   isEmptyFolder,
+  loadedSoFarNote,
   namesWithMore,
+  nextSort,
   restoreTimesFor,
+  restoreWhat,
   restoringMessage,
   samePlace,
-  selectedFiles
+  selectedFiles,
+  selectionLabel,
+  sortFiles
 } from '../../../../../src/renderer/src/utils/download-utils'
 
 const file = (key: string, access: StoredFile['access'] = { state: 'available' }): StoredFile => ({
@@ -134,5 +145,149 @@ describe('selected files', () => {
     })
     expect(restoreTimesFor([flexible, file('g')])?.Bulk).toBe('within 48 hours')
     expect(restoreTimesFor([{ ...file('h'), storageClass: 'STANDARD' }])).toBeUndefined()
+  })
+})
+
+describe('filterListing and loadedSoFarNote', () => {
+  it('keeps the folders and files whose names match, and the next page', () => {
+    const listing: FolderListing = {
+      folders: [
+        { id: 'photos/', name: 'photos' },
+        { id: 'music/', name: 'music' }
+      ],
+      files: [file('photos-2025.zip'), file('invoice.pdf')],
+      nextToken: 'next'
+    }
+    expect(filterListing(listing, 'Photo')).toEqual({
+      folders: [{ id: 'photos/', name: 'photos' }],
+      files: [file('photos-2025.zip')],
+      nextToken: 'next'
+    })
+    expect(filterListing(listing, '')).toEqual(listing)
+  })
+
+  it('says what covers only the entries loaded so far', () => {
+    expect(loadedSoFarNote({ by: 'name', direction: 'ascending' }, false)).toBeNull()
+    expect(loadedSoFarNote({ by: 'modified', direction: 'descending' }, false)).toBe(
+      'The sort covers the entries loaded so far.'
+    )
+    expect(loadedSoFarNote({ by: 'name', direction: 'ascending' }, true)).toBe(
+      'The search covers the entries loaded so far.'
+    )
+    expect(loadedSoFarNote({ by: 'modified', direction: 'ascending' }, true)).toBe(
+      'The sort and the search cover the entries loaded so far.'
+    )
+  })
+})
+
+describe('selected folders', () => {
+  const photos = { id: 'photos/', name: 'photos' }
+  const music = { id: 'music/', name: 'music' }
+
+  it('counts folders and files together', () => {
+    expect(selectionLabel(0, 2)).toBe('2 folders')
+    expect(selectionLabel(3, 0)).toBe('3 files')
+    expect(selectionLabel(4, 1)).toBe('1 folder and 4 files')
+    expect(deleteTitle([], [photos])).toBe('Delete this folder?')
+    expect(deleteTitle([file('a')], [])).toBe('Delete this file?')
+    expect(deleteTitle([file('a')], [photos])).toBe('Delete 1 folder and 1 file?')
+  })
+
+  it('adds up what the folders hold, and says so', () => {
+    const total = addSummaries([
+      { files: 1, bytes: 4_200_000, archived: 0 },
+      { files: 2, bytes: 0, archived: 2 }
+    ])
+    expect(total).toEqual({ files: 3, bytes: 4_200_000, archived: 2 })
+    expect(insideLine([photos], null)).toBe("Counting what's inside 1 folder…")
+    expect(insideLine([photos], { files: 1, bytes: 4_200_000, archived: 0 })).toBe(
+      'Inside the folder, at any depth: 1 file, 4.0 MB.'
+    )
+    expect(insideLine([photos, music], total)).toMatch(/^Inside the folders, at any depth: 3 files/)
+    expect(archivedInsideLine([photos], null)).toBe('Counting the archived files inside…')
+    expect(archivedInsideLine([photos], { files: 1, bytes: 1, archived: 0 })).toBe(
+      'Nothing inside the folder is archived.'
+    )
+    expect(archivedInsideLine([photos, music], { files: 1, bytes: 1, archived: 0 })).toBe(
+      'Nothing inside the folders is archived.'
+    )
+    expect(archivedInsideLine([photos, music], total)).toBe('2 files inside are archived.')
+  })
+
+  it('names what a restore, a delete and a download covered', () => {
+    expect(restoreWhat([file('a')], [])).toBe('a')
+    expect(restoreWhat([], [photos])).toBe('the archived files inside 1 folder')
+    expect(restoreWhat([file('a'), file('b')], [photos, music])).toBe(
+      '2 files and the archived files inside 2 folders'
+    )
+    expect(deletedMessage([], 's3', [photos])).toBe('Deleted photos.')
+    expect(deletedMessage([file('a')], 'google-drive', [photos])).toBe(
+      'Moved 1 folder and 1 file to the trash.'
+    )
+    expect(restoringMessage([], 's3', 1)).toBe(
+      'S3 is restoring 1 file. Download it once the list shows it as restored.'
+    )
+    expect(restoringMessage([file('a')], 'azure', 2)).toMatch(/^Azure is rehydrating 3 files\./)
+    expect(folderDownloadMessage(0, [{ queued: 1, skipped: 0, savedAs: 'photos' }])).toBe(
+      'Downloading 1 file into your download folder, with folders saved as photos.'
+    )
+    expect(
+      folderDownloadMessage(2, [
+        { queued: 3, skipped: 1, savedAs: 'photos (2)' },
+        { queued: 1, skipped: 0, savedAs: 'music' },
+        { queued: 0, skipped: 0, savedAs: 'empty' }
+      ])
+    ).toBe(
+      "Downloading 6 files into your download folder, with folders saved as photos (2) and music. 1 file that can't be downloaded now, such as an archived one, was skipped."
+    )
+    expect(folderDownloadMessage(1, [{ queued: 0, skipped: 0, savedAs: 'empty' }])).toBe(
+      'Downloading 1 file into your download folder.'
+    )
+    expect(folderDownloadMessage(0, [{ queued: 0, skipped: 2, savedAs: 'photos' }])).toBe(
+      "Nothing was downloaded. 2 files that can't be downloaded now, such as archived ones, were skipped."
+    )
+  })
+})
+
+describe('sortFiles and nextSort', () => {
+  const dated = (name: string, lastModified: string): StoredFile => ({
+    ...file(name),
+    lastModified
+  })
+  const files = [
+    dated('b10.txt', '2026-11-03T00:00:00.000Z'),
+    dated('B2.txt', '2026-11-01T00:00:00.000Z'),
+    dated('a.txt', '2026-11-03T00:00:00.000Z'),
+    dated('no-date.txt', '')
+  ]
+  const names = (sorted: StoredFile[]): string[] => sorted.map((sortedFile) => sortedFile.name)
+
+  it('sorts names naturally, ignoring case, either way', () => {
+    expect(names(sortFiles(files, { by: 'name', direction: 'ascending' }))).toEqual([
+      'a.txt',
+      'B2.txt',
+      'b10.txt',
+      'no-date.txt'
+    ])
+    expect(names(sortFiles(files, { by: 'name', direction: 'descending' }))[0]).toBe('no-date.txt')
+  })
+
+  it('sorts by date, keeping name order for the same date, with undated files oldest', () => {
+    expect(names(sortFiles(files, { by: 'modified', direction: 'descending' }))).toEqual([
+      'a.txt',
+      'b10.txt',
+      'B2.txt',
+      'no-date.txt'
+    ])
+    expect(names(sortFiles(files, { by: 'modified', direction: 'ascending' }))[0]).toBe(
+      'no-date.txt'
+    )
+  })
+
+  it('turns the sorted column round, and starts another column its own first way', () => {
+    const byName = { by: 'name', direction: 'ascending' } as const
+    expect(nextSort(byName, 'name')).toEqual({ by: 'name', direction: 'descending' })
+    expect(nextSort(byName, 'modified')).toEqual({ by: 'modified', direction: 'descending' })
+    expect(nextSort({ by: 'modified', direction: 'descending' }, 'name')).toEqual(byName)
   })
 })

@@ -1,12 +1,21 @@
-// One folder of a bucket, container or Drive folder: its subfolders, and its files with a checkbox, size, storage class or
-// access tier where the platform has one, date and actions. See docs/UI.md.
+// One folder of a bucket, container or Drive folder: its subfolders, and its files with their size, storage class or
+// access tier where the platform has one, date and actions, sorted by name or date, and only those that match the
+// search while there is one. Each folder and file has a checkbox. See docs/UI.md.
 import type { FolderEntry, FolderListing, StoredFile } from '../../../../shared/types/storage-types'
 import { formatBytes, formatDate } from '../../utils/format-utils'
-import { accessNote, isDownloadable, isEmptyFolder } from '../../utils/download-utils'
+import type { FileSort, FileSortKey } from '../../types/download-types'
+import {
+  accessNote,
+  isDownloadable,
+  isEmptyFolder,
+  loadedSoFarNote,
+  sortFiles
+} from '../../utils/download-utils'
 import { storageClassLabel } from '../../utils/storage-utils'
 import { Button } from '../components/Button'
 import { Checkbox } from '../components/Checkbox'
 import { LinkButton } from '../components/LinkButton'
+import { SortHeader } from '../components/SortHeader'
 import { TableFrame } from '../components/TableFrame'
 import { CELL, TABLE_HEAD_ROW, TABLE_ROW } from '../styles/style-constants'
 import {
@@ -21,54 +30,103 @@ import {
 export function FolderTable({
   listing,
   storageHeading,
+  sort,
+  searching,
   loadingMore,
   selected,
+  selectedFolders,
   onSelect,
+  onSelectFolder,
   onSelectAll,
   onOpenFolder,
   onDownload,
   onRestore,
   onDelete,
+  onSort,
   onLoadMore
 }: {
   listing: FolderListing
   // The storage column's heading, or null for a platform without storage classes, which shows file notes by the name.
   storageHeading: string | null
+  sort: FileSort
+  // Whether the listing holds only the entries that match a search.
+  searching: boolean
   loadingMore: boolean
   selected: ReadonlySet<string>
+  selectedFolders: ReadonlySet<string>
   onSelect: (key: string, selected: boolean) => void
+  onSelectFolder: (id: string, selected: boolean) => void
   onSelectAll: (selected: boolean) => void
   onOpenFolder: (folder: FolderEntry) => void
   onDownload: (file: StoredFile) => void
   onRestore: (file: StoredFile) => void
   onDelete: (file: StoredFile) => void
+  onSort: (by: FileSortKey) => void
   onLoadMore: (continuationToken: string) => void
 }): React.JSX.Element {
-  if (isEmptyFolder(listing)) return <p className="text-muted">This folder is empty.</p>
   const { nextToken } = listing
+  const note = loadedSoFarNote(sort, searching)
+  const loadMoreRow = nextToken !== null && (
+    <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+      {note !== null && <span className="text-sm text-muted">{note}</span>}
+      <Button disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
+        <LoadMoreIcon />
+        Load more
+      </Button>
+    </div>
+  )
+  if (isEmptyFolder(listing)) {
+    return (
+      <>
+        <p className="text-muted">
+          {searching ? 'Nothing loaded so far matches the search.' : 'This folder is empty.'}
+        </p>
+        {loadMoreRow}
+      </>
+    )
+  }
   const allSelected =
-    listing.files.length > 0 && listing.files.every((file) => selected.has(file.key))
+    listing.files.every((file) => selected.has(file.key)) &&
+    listing.folders.every((folder) => selectedFolders.has(folder.id))
+  const directionOf = (by: FileSortKey): FileSort['direction'] | null =>
+    sort.by === by ? sort.direction : null
   return (
     <>
       <TableFrame>
         <thead>
           <tr className={TABLE_HEAD_ROW}>
             <th className={`${CELL} w-10`}>
-              {listing.files.length > 0 && (
-                <Checkbox label="Select all files" checked={allSelected} onChange={onSelectAll} />
-              )}
+              <Checkbox
+                label="Select all files and folders"
+                checked={allSelected}
+                onChange={onSelectAll}
+              />
             </th>
-            <th className={CELL}>Name</th>
+            <SortHeader
+              label="Name"
+              direction={directionOf('name')}
+              onSort={() => onSort('name')}
+            />
             <th className={CELL}>Size</th>
             {storageHeading !== null && <th className={CELL}>{storageHeading}</th>}
-            <th className={CELL}>Modified</th>
+            <SortHeader
+              label="Modified"
+              direction={directionOf('modified')}
+              onSort={() => onSort('modified')}
+            />
             <th className={CELL} />
           </tr>
         </thead>
         <tbody>
           {listing.folders.map((folder) => (
             <tr key={folder.id} className={TABLE_ROW}>
-              <td className={CELL} />
+              <td className={CELL}>
+                <Checkbox
+                  label={`Select folder ${folder.name}`}
+                  checked={selectedFolders.has(folder.id)}
+                  onChange={(checked) => onSelectFolder(folder.id, checked)}
+                />
+              </td>
               <td className={CELL}>
                 <LinkButton onClick={() => onOpenFolder(folder)}>
                   <FolderIcon className="text-muted" />
@@ -81,7 +139,7 @@ export function FolderTable({
               <td className={CELL} />
             </tr>
           ))}
-          {listing.files.map((file) => (
+          {sortFiles(listing.files, sort).map((file) => (
             <tr key={file.key} className={TABLE_ROW}>
               <td className={CELL}>
                 <Checkbox
@@ -133,14 +191,7 @@ export function FolderTable({
           ))}
         </tbody>
       </TableFrame>
-      {nextToken !== null && (
-        <div className="mt-4 flex justify-end">
-          <Button disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
-            <LoadMoreIcon />
-            Load more
-          </Button>
-        </div>
-      )}
+      {loadMoreRow}
     </>
   )
 }

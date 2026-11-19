@@ -110,9 +110,16 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
   page: async ({ app }, use) => {
     const page = await app.firstWindow()
     await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
+    // The splash screen shows for a second before the side menu and the pages.
+    await menuItem(page, 'Home').waitFor()
     await use(page)
   }
 })
+
+// The text the app last copied, which the sample handlers keep instead of the clipboard.
+export function copiedText(app: ElectronApplication): Promise<unknown> {
+  return app.evaluate(() => Reflect.get(globalThis, 'sampleClipboard'))
+}
 
 // An item of the side menu, such as 'Templates'.
 export function menuItem(page: Page, name: string): ReturnType<Page['getByRole']> {

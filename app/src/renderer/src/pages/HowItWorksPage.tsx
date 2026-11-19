@@ -4,6 +4,7 @@ import { UPLOAD_CHECKSUM } from '../../../shared/constants/storage-constants'
 import { BETA_LABEL } from '../constants/platform-constants'
 import { Card } from '../theme/components/Card'
 import { PageLayout } from '../theme/components/PageLayout'
+import { CloudShellSetup } from '../theme/compositions/CloudShellSetup'
 import { PolicyExample } from '../theme/compositions/PolicyExample'
 
 export function HowItWorksPage(): React.JSX.Element {
@@ -156,9 +157,15 @@ export function HowItWorksPage(): React.JSX.Element {
           </ul>
         </Card>
 
-        <Card title="Amazon S3: IAM permissions">
+        <Card title="Amazon S3: an IAM user">
           <p>
-            Give each IAM user only what its templates need. Replace BUCKET and FOLDER with yours.
+            The quickest way to keys is an IAM user made with AWS CloudShell, which can read and
+            write every bucket in the account:
+          </p>
+          <CloudShellSetup />
+          <p>
+            For keys that reach only one bucket, give an IAM user one of these policies instead,
+            with BUCKET and FOLDER replaced by yours:
           </p>
           <PolicyExample kind="upload" />
           <PolicyExample kind="download" />

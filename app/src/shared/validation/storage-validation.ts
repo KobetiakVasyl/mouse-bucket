@@ -69,3 +69,15 @@ export const RestoreOptionsSchema = z.discriminatedUnion('platform', [
 export const RestoreRequestSchema = z
   .object({ templateId: TemplateIdSchema, key: KeySchema, options: RestoreOptionsSchema })
   .strict()
+
+// A folder from a listing, with everything inside it at any depth: a prefix ending in "/" on S3 and Azure, or a Google
+// Drive folder's ID. Never the template's own top.
+const FolderIdSchema = z.string().min(1).max(1024)
+
+export const FolderTargetRequestSchema = z
+  .object({ templateId: TemplateIdSchema, folder: FolderIdSchema })
+  .strict()
+
+export const FolderRestoreRequestSchema = FolderTargetRequestSchema.extend({
+  options: RestoreOptionsSchema
+}).strict()
