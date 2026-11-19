@@ -1,10 +1,16 @@
 // One folder of a bucket, container or Drive folder: its subfolders, and its files with their size, storage class or
-// access tier where the platform has one, date and actions, sorted by name or date. Each folder and file has a
-// checkbox. See docs/UI.md.
+// access tier where the platform has one, date and actions, sorted by name or date, and only those that match the
+// search while there is one. Each folder and file has a checkbox. See docs/UI.md.
 import type { FolderEntry, FolderListing, StoredFile } from '../../../../shared/types/storage-types'
 import { formatBytes, formatDate } from '../../utils/format-utils'
 import type { FileSort, FileSortKey } from '../../types/download-types'
-import { accessNote, isDownloadable, isEmptyFolder, sortFiles } from '../../utils/download-utils'
+import {
+  accessNote,
+  isDownloadable,
+  isEmptyFolder,
+  loadedSoFarNote,
+  sortFiles
+} from '../../utils/download-utils'
 import { storageClassLabel } from '../../utils/storage-utils'
 import { Button } from '../components/Button'
 import { Checkbox } from '../components/Checkbox'
@@ -25,6 +31,7 @@ export function FolderTable({
   listing,
   storageHeading,
   sort,
+  searching,
   loadingMore,
   selected,
   selectedFolders,
@@ -42,6 +49,8 @@ export function FolderTable({
   // The storage column's heading, or null for a platform without storage classes, which shows file notes by the name.
   storageHeading: string | null
   sort: FileSort
+  // Whether the listing holds only the entries that match a search.
+  searching: boolean
   loadingMore: boolean
   selected: ReadonlySet<string>
   selectedFolders: ReadonlySet<string>
@@ -55,8 +64,27 @@ export function FolderTable({
   onSort: (by: FileSortKey) => void
   onLoadMore: (continuationToken: string) => void
 }): React.JSX.Element {
-  if (isEmptyFolder(listing)) return <p className="text-muted">This folder is empty.</p>
   const { nextToken } = listing
+  const note = loadedSoFarNote(sort, searching)
+  const loadMoreRow = nextToken !== null && (
+    <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
+      {note !== null && <span className="text-sm text-muted">{note}</span>}
+      <Button disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
+        <LoadMoreIcon />
+        Load more
+      </Button>
+    </div>
+  )
+  if (isEmptyFolder(listing)) {
+    return (
+      <>
+        <p className="text-muted">
+          {searching ? 'Nothing loaded so far matches the search.' : 'This folder is empty.'}
+        </p>
+        {loadMoreRow}
+      </>
+    )
+  }
   const allSelected =
     listing.files.every((file) => selected.has(file.key)) &&
     listing.folders.every((folder) => selectedFolders.has(folder.id))
@@ -163,17 +191,7 @@ export function FolderTable({
           ))}
         </tbody>
       </TableFrame>
-      {nextToken !== null && (
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-3">
-          {sort.by === 'modified' && (
-            <span className="text-sm text-muted">The sort covers the files loaded so far.</span>
-          )}
-          <Button disabled={loadingMore} onClick={() => onLoadMore(nextToken)}>
-            <LoadMoreIcon />
-            Load more
-          </Button>
-        </div>
-      )}
+      {loadMoreRow}
     </>
   )
 }

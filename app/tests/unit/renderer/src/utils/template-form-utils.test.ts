@@ -8,6 +8,7 @@ import {
   formFor,
   isCopyingKeys,
   locationHint,
+  locationSuggestions,
   newTemplate,
   signsIn,
   templateEdit,
@@ -28,6 +29,35 @@ const saved: Template = {
   prefix: 'reports/',
   region: 'eu-west-1'
 }
+
+describe('locationSuggestions', () => {
+  const download = (name: string, bucket: string, prefix = ''): Template => ({
+    ...saved,
+    id: crypto.randomUUID(),
+    name,
+    kind: 'download',
+    bucket,
+    prefix
+  })
+
+  it("suggests each S3 download template's bucket once, with the templates' names", () => {
+    const templates = [
+      download('Zeta', 'b-bucket'),
+      download('Alpha', 'b-bucket', 'old/'),
+      download('Photos', 'a-bucket'),
+      saved
+    ]
+    expect(locationSuggestions('s3', templates)).toEqual([
+      { value: 's3://a-bucket/', detail: 'Photos' },
+      { value: 's3://b-bucket/', detail: 'Alpha, Zeta' }
+    ])
+  })
+
+  it('suggests nothing on other platforms, or without download templates', () => {
+    expect(locationSuggestions('azure', [download('Photos', 'a-bucket')])).toEqual([])
+    expect(locationSuggestions('s3', [saved])).toEqual([])
+  })
+})
 
 describe('locationHint', () => {
   it('gives an example until something is typed', () => {

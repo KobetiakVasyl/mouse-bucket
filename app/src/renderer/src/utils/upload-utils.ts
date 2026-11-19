@@ -11,7 +11,9 @@ export function uploadSettingsRows(template: Template): [string, string][] {
       ['Encryption', "The bucket's default encryption"],
       ['Checksum', UPLOAD_CHECKSUM],
       ['Versioning', "The bucket's own setting, which the app never changes"],
-      ['Same file name', 'The file in the bucket is replaced']
+      ['Same file name', 'The file in the bucket is replaced'],
+      ['Tags', 'None'],
+      ['Metadata', 'None']
     ]
   }
   if (template.platform === 'azure') {

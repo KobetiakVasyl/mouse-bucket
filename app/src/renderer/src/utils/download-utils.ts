@@ -18,6 +18,7 @@ import {
 } from '../constants/download-constants'
 import type { FileSort, FileSortKey, FolderPlace } from '../types/download-types'
 import { formatBytes, formatDate } from './format-utils'
+import { matchesSearch } from './search-utils'
 
 // The folder a place lists: the last one opened, or '' for the template's top.
 export function folderOf(place: FolderPlace): string {
@@ -231,4 +232,22 @@ export function deleteTitle(files: StoredFile[], folders: FolderEntry[]): string
   if (files.length + folders.length > 1)
     return `Delete ${selectionLabel(files.length, folders.length)}?`
   return folders.length === 1 ? 'Delete this folder?' : 'Delete this file?'
+}
+
+// The loaded folders and files whose names match the search, keeping the token for the next page.
+export function filterListing(listing: FolderListing, query: string): FolderListing {
+  return {
+    folders: listing.folders.filter((entry) => matchesSearch([entry.name], query)),
+    files: listing.files.filter((file) => matchesSearch([file.name], query)),
+    nextToken: listing.nextToken
+  }
+}
+
+// What the Load more row says while the sort or the search covers only the entries loaded so far.
+export function loadedSoFarNote(sort: FileSort, searching: boolean): string | null {
+  const byDate = sort.by === 'modified'
+  if (byDate && searching) return 'The sort and the search cover the entries loaded so far.'
+  if (byDate) return 'The sort covers the entries loaded so far.'
+  if (searching) return 'The search covers the entries loaded so far.'
+  return null
 }

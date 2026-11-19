@@ -1,7 +1,8 @@
-// The app shell: the first data load from main, the side menu, the pages, the updates dialog and the welcome page. See
-// docs/UI.md.
+// The app shell: the splash screen during the first data load from main, the side menu, the pages, the updates dialog
+// and the welcome page. See docs/UI.md.
 import { useEffect, useState } from 'react'
 import type { SettingsUpdate } from '../../shared/types/settings-types'
+import { SPLASH_MS } from './constants/app-constants'
 import { DownloadPage } from './pages/DownloadPage'
 import { HomePage } from './pages/HomePage'
 import { HowItWorksPage } from './pages/HowItWorksPage'
@@ -15,6 +16,7 @@ import { templateService } from './services/template-service'
 import { themeService } from './services/theme-service'
 import { useTransfers } from './services/transfer-service'
 import { SideMenu } from './theme/compositions/SideMenu'
+import { SplashScreen } from './theme/compositions/SplashScreen'
 import { UpdatesDialog } from './theme/compositions/UpdatesDialog'
 import type { AppData, AppLoad } from './types/app-types'
 import type { Page } from './types/navigation-types'
@@ -30,7 +32,13 @@ export default function App(): React.JSX.Element {
   const [draft, setDraft] = useState<TemplateFormValues | null>(null)
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [updatesOpen, setUpdatesOpen] = useState(false)
+  const [splashOver, setSplashOver] = useState(false)
   const transfers = useTransfers()
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setSplashOver(true), SPLASH_MS)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     Promise.all([appService.status(), settingsService.get(), templateService.list()]).then(
@@ -47,7 +55,7 @@ export default function App(): React.JSX.Element {
     )
   }, [])
 
-  if (load.state === 'loading') return <p className="p-8 text-muted">Loading…</p>
+  if (!splashOver || load.state === 'loading') return <SplashScreen />
   if (load.state === 'failed') {
     return (
       <p role="alert" className="p-8">

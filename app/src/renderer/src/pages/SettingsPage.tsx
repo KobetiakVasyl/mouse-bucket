@@ -1,4 +1,4 @@
-// The Settings page: the theme, the defaults for uploads and restores, and the download folder. See docs/UI.md.
+// The Settings page: the theme, and the defaults for uploads, restores and downloads. See docs/UI.md.
 import { useState } from 'react'
 import type { Settings, SettingsUpdate } from '../../../shared/types/settings-types'
 import { THEME_OPTIONS } from '../constants/settings-constants'
@@ -43,11 +43,16 @@ export function SettingsPage({
             onChange={(theme) => change({ theme })}
           />
         </Section>
-        <DefaultsSettings settings={settings} onChange={change} />
-        <DownloadFolderSetting
-          folder={settings.downloadFolder}
-          busy={choosing}
-          onChange={chooseDownloadFolder}
+        <DefaultsSettings
+          settings={settings}
+          downloadFolder={
+            <DownloadFolderSetting
+              folder={settings.downloadFolder}
+              busy={choosing}
+              onChange={chooseDownloadFolder}
+            />
+          }
+          onChange={change}
         />
       </div>
       <ErrorMessage message={error} />

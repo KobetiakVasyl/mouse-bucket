@@ -5,12 +5,14 @@ import { FIRST_TEMPLATE_MESSAGE } from '../constants/template-constants'
 import { templateService } from '../services/template-service'
 import { Notice } from '../theme/components/Notice'
 import { PageLayout } from '../theme/components/PageLayout'
+import { SearchField } from '../theme/components/SearchField'
 import { Section } from '../theme/components/Section'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
 import { TemplateForm } from '../theme/compositions/TemplateForm'
-import { TemplateTable } from '../theme/compositions/TemplateTable'
+import { TemplateCards } from '../theme/compositions/TemplateCards'
 import type { TemplateFormValues } from '../types/template-form-types'
 import { messageOf } from '../utils/error-utils'
+import { matchesTemplate } from '../utils/template-utils'
 import { DeleteIcon } from '../theme/components/icons'
 
 export function TemplatesPage({
@@ -35,6 +37,8 @@ export function TemplatesPage({
   const [deleting, setDeleting] = useState<Template | null>(null)
   const [deleteBusy, setDeleteBusy] = useState(false)
   const [deleteError, setDeleteError] = useState<string>()
+  const [search, setSearch] = useState('')
+  const found = templates.filter((template) => matchesTemplate(template, search))
 
   const create = async (newTemplate: NewTemplate): Promise<void> => {
     setMessage(undefined)
@@ -87,8 +91,15 @@ export function TemplatesPage({
 
       {templates.length > 0 && (
         <Section title="Saved templates" className="mb-12">
-          <TemplateTable
-            templates={templates}
+          <SearchField
+            label="Search templates"
+            value={search}
+            className="mb-4"
+            onChange={setSearch}
+          />
+          {found.length === 0 && <p className="text-muted">No templates match the search.</p>}
+          <TemplateCards
+            templates={found}
             onEdit={(template) => {
               setMessage(undefined)
               setEditing(template)

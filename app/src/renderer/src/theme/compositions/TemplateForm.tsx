@@ -1,5 +1,6 @@
 // The form that adds a template, or changes one: platform, type, name, location, and the keys, typed in, copied from a
-// template on the same platform, or kept when changing. See docs/UI.md.
+// template on the same platform, or kept when changing. It spans the page, and its fields wrap into as many columns as
+// fit. See docs/UI.md.
 import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 import type {
   NewTemplate,
@@ -31,6 +32,7 @@ import {
   formFor,
   isCopyingKeys,
   locationHint,
+  locationSuggestions,
   newTemplate,
   signsIn,
   templateEdit
@@ -42,6 +44,7 @@ import { Field } from '../components/Field'
 import { Section } from '../components/Section'
 import { Select } from '../components/Select'
 import { StatusMessage } from '../components/StatusMessage'
+import { SuggestInput } from '../components/SuggestInput'
 import { ToggleGroup } from '../components/ToggleGroup'
 import { INPUT_CLASS } from '../styles/style-constants'
 import { AddIcon, CancelIcon, SaveIcon } from '../components/icons'
@@ -85,6 +88,7 @@ export function TemplateForm({
     .map((option) => (option.value === 'entered' ? { ...option, label: enteredLabel } : option))
   const needsEncryption = !samePlatform || form.keySource !== 'kept'
   const waitingForGoogle = saving && signsIn(form, copySources)
+  const suggestions = locationSuggestions(form.platform, templates)
 
   // Scrolls to the section, so its title shows above the form.
   useEffect(() => {
@@ -132,34 +136,50 @@ export function TemplateForm({
       <form
         ref={formRef}
         aria-label={editing === null ? 'New template' : `Edit ${editing.name}`}
-        className="max-w-2xl space-y-6"
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-6"
         onSubmit={(event) => void submit(event)}
       >
-        <ToggleGroup
-          label="Platform"
-          options={PLATFORM_OPTIONS}
-          value={form.platform}
-          hint={BETA_HINT[form.platform]}
-          onChange={choosePlatform}
-        />
-        <ToggleGroup
-          label="Type"
-          options={TEMPLATE_KIND_OPTIONS}
-          value={form.kind}
-          hint={accessHint(form)}
-          onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
-        />
+        {/* Type sits beside Platform while at least 20rem is left for it, and its hint wraps within that. */}
+        <div className="col-span-full flex flex-wrap gap-x-12 gap-y-6">
+          <div className="max-w-xl">
+            <ToggleGroup
+              label="Platform"
+              options={PLATFORM_OPTIONS}
+              value={form.platform}
+              hint={BETA_HINT[form.platform]}
+              onChange={choosePlatform}
+            />
+          </div>
+          <div className="max-w-xl grow basis-80">
+            <ToggleGroup
+              label="Type"
+              options={TEMPLATE_KIND_OPTIONS}
+              value={form.kind}
+              hint={accessHint(form)}
+              onChange={(kind) => setForm((previous) => ({ ...previous, kind }))}
+            />
+          </div>
+        </div>
         <Field label="Name" hint="Shown when you choose a template, for example Reports.">
           <input className={INPUT_CLASS} value={form.name} onChange={update('name')} required />
         </Field>
         <Field label={LOCATION_LABELS[form.platform]} hint={locationHint(form)}>
-          <input
-            className={INPUT_CLASS}
-            value={form.location}
-            onChange={update('location')}
-            spellCheck={false}
-            required
-          />
+          {suggestions.length > 0 ? (
+            <SuggestInput
+              value={form.location}
+              suggestions={suggestions}
+              required
+              onChange={(location) => setForm((previous) => ({ ...previous, location }))}
+            />
+          ) : (
+            <input
+              className={INPUT_CLASS}
+              value={form.location}
+              onChange={update('location')}
+              spellCheck={false}
+              required
+            />
+          )}
         </Field>
 
         {keyOptions.length > 1 && (
@@ -190,7 +210,7 @@ export function TemplateForm({
           <TemplateKeyFields form={form} onChange={update} />
         )}
 
-        <div className="flex flex-wrap justify-end gap-3">
+        <div className="col-span-full flex flex-wrap justify-end gap-3">
           {waitingForGoogle && (
             <Button onClick={() => void templateService.cancelSignIn()}>
               <CancelIcon />
@@ -207,9 +227,9 @@ export function TemplateForm({
             {saving ? savingLabel : editing === null ? 'Add template' : 'Save changes'}
           </Button>
         </div>
-        <StatusMessage message={message} />
-        <ErrorMessage message={error} />
       </form>
+      <StatusMessage message={message} className="mt-4" />
+      <ErrorMessage message={error} />
     </Section>
   )
 }

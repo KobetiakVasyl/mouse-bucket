@@ -13,7 +13,7 @@ import type {
 import { DRIVE_ROOT_ID } from '../../../shared/constants/location-constants'
 import type { Template } from '../../../shared/types/template-types'
 import type { Transfer } from '../../../shared/types/transfer-types'
-import { DEFAULT_FILE_SORT, NO_SELECTION } from '../constants/download-constants'
+import { DEFAULT_FILE_SORT, EMPTY_LISTING, NO_SELECTION } from '../constants/download-constants'
 import { STORAGE_HEADINGS } from '../constants/platform-constants'
 import { appService } from '../services/app-service'
 import { downloadService } from '../services/download-service'
@@ -21,6 +21,7 @@ import { Button } from '../theme/components/Button'
 import { CopyButton } from '../theme/components/CopyButton'
 import { ErrorMessage } from '../theme/components/ErrorMessage'
 import { PageLayout } from '../theme/components/PageLayout'
+import { SearchField } from '../theme/components/SearchField'
 import { Section } from '../theme/components/Section'
 import { StatusMessage } from '../theme/components/StatusMessage'
 import { ConfirmDialog } from '../theme/compositions/ConfirmDialog'
@@ -40,9 +41,11 @@ import {
   deleteWarning,
   downloadsStartedMessage,
   downloadStartedMessage,
+  filterListing,
   folderDownloadMessage,
   folderOf,
   insideLine,
+  isEmptyFolder,
   namesWithMore,
   nextSort,
   restoringMessage,
@@ -50,6 +53,7 @@ import {
   selectedFiles
 } from '../utils/download-utils'
 import { messageOf } from '../utils/error-utils'
+import { isSearching } from '../utils/search-utils'
 import { folderLocation, rootLabel } from '../utils/location-utils'
 import { uploadDraft } from '../utils/template-form-utils'
 import type { TemplateFormValues } from '../types/template-form-types'
@@ -79,6 +83,8 @@ export function DownloadPage({
   const [selectedFolders, setSelectedFolders] = useState<ReadonlySet<string>>(NO_SELECTION)
   // The sort stays while other folders and templates open.
   const [sort, setSort] = useState<FileSort>(DEFAULT_FILE_SORT)
+  // The search covers the open folder, and empties when another opens.
+  const [search, setSearch] = useState('')
   const [dialog, setDialog] = useState<FileDialog>({ kind: 'none' })
   const [dialogBusy, setDialogBusy] = useState(false)
   const [dialogError, setDialogError] = useState<string>()
@@ -86,8 +92,9 @@ export function DownloadPage({
   const [error, setError] = useState<string>()
   const template = selectedTemplate(templates, place.templateId)
   const current = shown !== null && samePlace(shown.place, place) ? shown : null
-  const files = current !== null && current.state === 'loaded' ? current.listing.files : []
-  const folders = current !== null && current.state === 'loaded' ? current.listing.folders : []
+  const listing = current !== null && current.state === 'loaded' ? current.listing : EMPTY_LISTING
+  const { files, folders } = listing
+  const found = filterListing(listing, search)
   const folder = folderOf(place)
   const folderName =
     place.path.length === 0 ? rootLabel(template) : place.path[place.path.length - 1].name
@@ -123,6 +130,7 @@ export function DownloadPage({
     setError(undefined)
     setSelected(NO_SELECTION)
     setSelectedFolders(NO_SELECTION)
+    setSearch('')
     setPlace(next)
   }
   const openPath = (path: FolderEntry[]): void => goTo({ templateId: place.templateId, path })
@@ -144,6 +152,18 @@ export function DownloadPage({
         else next.delete(key)
         return next
       })
+
+  // Selects or clears the entries shown, and keeps the choice for those the search hides.
+  const withShown =
+    (keys: string[], on: boolean) =>
+    (previous: ReadonlySet<string>): ReadonlySet<string> => {
+      const next = new Set(previous)
+      for (const key of keys) {
+        if (on) next.add(key)
+        else next.delete(key)
+      }
+      return next
+    }
 
   const closeDialog = useCallback((): void => {
     setDialog({ kind: 'none' })
@@ -359,6 +379,14 @@ export function DownloadPage({
         {current !== null && current.state === 'failed' && <ErrorMessage message={current.error} />}
         {current !== null && current.state === 'loaded' && (
           <>
+            {!isEmptyFolder(current.listing) && (
+              <SearchField
+                label="Search this folder"
+                value={search}
+                className="mb-4"
+                onChange={setSearch}
+              />
+            )}
             <SelectionBar
               files={selectedFiles(files, selected)}
               folders={folders.filter((entry) => selectedFolders.has(entry.id))}
@@ -372,9 +400,10 @@ export function DownloadPage({
               }}
             />
             <FolderTable
-              listing={current.listing}
+              listing={found}
               storageHeading={STORAGE_HEADINGS[template.platform]}
               sort={sort}
+              searching={isSearching(search)}
               onSort={(by) => setSort((previous) => nextSort(previous, by))}
               loadingMore={loadingMore}
               selected={selected}
@@ -382,8 +411,18 @@ export function DownloadPage({
               onSelect={toggle(setSelected)}
               onSelectFolder={toggle(setSelectedFolders)}
               onSelectAll={(on) => {
-                setSelected(on ? new Set(files.map((file) => file.key)) : NO_SELECTION)
-                setSelectedFolders(on ? new Set(folders.map((entry) => entry.id)) : NO_SELECTION)
+                setSelected(
+                  withShown(
+                    found.files.map((file) => file.key),
+                    on
+                  )
+                )
+                setSelectedFolders(
+                  withShown(
+                    found.folders.map((entry) => entry.id),
+                    on
+                  )
+                )
               }}
               onOpenFolder={openFolder}
               onDownload={(file) => void download([file], [])}

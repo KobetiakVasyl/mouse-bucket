@@ -1,3 +1,4 @@
+import type { Locator, Page } from '@playwright/test'
 import {
   copiedText,
   downloadTemplate,
@@ -14,15 +15,65 @@ test.use({
   }
 })
 
+// A saved template's card, named by the template.
+const templateCard = (page: Page, name: string): Locator =>
+  page.getByRole('region', { name, exact: true })
+
 test.beforeEach(async ({ page }) => {
   await menuItem(page, 'Templates').click()
 })
 
-test('lists the templates by name', async ({ page }) => {
-  const rows = page.getByRole('row')
-  await expect(rows.nth(1)).toContainText('Alpha')
-  await expect(rows.nth(1)).toContainText('s3://example-archive/')
-  await expect(rows.nth(2)).toContainText('Zeta')
+test('lists the templates by name, as cards', async ({ page }) => {
+  const cards = page.getByRole('region', { name: 'Saved templates' }).getByRole('region')
+  await expect(cards.nth(0)).toContainText('Alpha')
+  await expect(cards.nth(0)).toContainText('Download template')
+  await expect(cards.nth(0)).toContainText('s3://example-archive/')
+  await expect(cards.nth(1)).toContainText('Zeta')
+  await expect(cards.nth(1)).toContainText('Upload template')
+})
+
+test('finds templates by name, type, platform or location', async ({ page }) => {
+  const search = page.getByRole('searchbox', { name: 'Search templates' })
+  await search.fill('download')
+  await expect(templateCard(page, 'Alpha')).toBeVisible()
+  await expect(templateCard(page, 'Zeta')).toBeHidden()
+  await search.fill('ZETA example-bucket')
+  await expect(templateCard(page, 'Zeta')).toBeVisible()
+  await expect(templateCard(page, 'Alpha')).toBeHidden()
+  await search.fill('nothing like this')
+  await expect(page.getByText('No templates match the search.')).toBeVisible()
+  await search.press('Escape')
+  await expect(search).toHaveValue('')
+  await expect(templateCard(page, 'Alpha')).toBeVisible()
+  await expect(templateCard(page, 'Zeta')).toBeVisible()
+})
+
+test('suggests the buckets of download templates as an S3 location', async ({ page }) => {
+  const location = page.getByRole('combobox', { name: /S3 location/ })
+  const suggestions = page.getByRole('listbox', { name: 'Suggestions' })
+  await location.click()
+  await expect(suggestions.getByRole('option')).toHaveCount(1)
+  await expect(suggestions.getByRole('option')).toContainText('s3://example-archive/')
+  await expect(suggestions.getByRole('option')).toContainText('Alpha')
+  await location.press('ArrowDown')
+  await location.press('Enter')
+  await expect(location).toHaveValue('s3://example-archive/')
+  await expect(suggestions).toBeHidden()
+  await expect(page.getByRole('status')).toBeHidden()
+  await location.pressSequentially('reports/')
+  await expect(page.getByText('Uploads go to s3://example-archive/reports/')).toBeVisible()
+
+  await location.fill('s3://other')
+  await expect(suggestions).toBeHidden()
+  await location.fill('')
+  await suggestions.getByRole('option').click()
+  await expect(location).toHaveValue('s3://example-archive/')
+
+  await page
+    .getByRole('group', { name: 'Platform' })
+    .getByRole('button', { name: /Azure Blob Storage/ })
+    .click()
+  await expect(page.getByRole('combobox', { name: /Container URL/ })).toHaveCount(0)
 })
 
 test('adds a template', async ({ page }) => {
@@ -33,7 +84,7 @@ test('adds a template', async ({ page }) => {
   await page.getByLabel('Secret access key').fill('example-secret')
   await page.getByRole('button', { name: 'Add template' }).click()
   await expect(page.getByRole('status')).toHaveText('Added "Invoices".')
-  await expect(page.getByRole('row', { name: /Invoices/ })).toBeVisible()
+  await expect(templateCard(page, 'Invoices')).toBeVisible()
 })
 
 test('offers to copy the keys of another template', async ({ page }) => {
@@ -46,7 +97,7 @@ test('offers to copy the keys of another template', async ({ page }) => {
 })
 
 test('deletes a template only after confirming', async ({ page }) => {
-  const row = page.getByRole('row', { name: /Alpha/ })
+  const row = templateCard(page, 'Alpha')
   const dialog = page.getByRole('dialog', { name: 'Delete this template?' })
   await row.getByRole('button', { name: 'Delete' }).click()
   await dialog.getByRole('button', { name: 'Cancel' }).click()
@@ -58,12 +109,12 @@ test('deletes a template only after confirming', async ({ page }) => {
   await page.reload()
   await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
   await menuItem(page, 'Templates').click()
-  await expect(page.getByRole('row', { name: /Zeta/ })).toBeVisible()
-  await expect(page.getByRole('row', { name: /Alpha/ })).toBeHidden()
+  await expect(templateCard(page, 'Zeta')).toBeVisible()
+  await expect(templateCard(page, 'Alpha')).toBeHidden()
 })
 
 test('renames a template, keeping its keys, and keeps the change', async ({ page }) => {
-  await page.getByRole('row', { name: /Zeta/ }).getByRole('button', { name: 'Edit' }).click()
+  await templateCard(page, 'Zeta').getByRole('button', { name: 'Edit' }).click()
   const form = page.getByRole('form', { name: 'Edit Zeta' })
   await expect(form.getByLabel('S3 location')).toHaveValue('s3://example-bucket/zeta/')
   await expect(form.getByRole('button', { name: 'Keep the current keys' })).toHaveAttribute(
@@ -78,11 +129,11 @@ test('renames a template, keeping its keys, and keeps the change', async ({ page
   await page.reload()
   await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
   await menuItem(page, 'Templates').click()
-  await expect(page.getByRole('row', { name: /Zeta reports/ })).toBeVisible()
+  await expect(templateCard(page, 'Zeta reports')).toBeVisible()
 })
 
 test('stops editing with Cancel', async ({ page }) => {
-  await page.getByRole('row', { name: /Alpha/ }).getByRole('button', { name: 'Edit' }).click()
+  await templateCard(page, 'Alpha').getByRole('button', { name: 'Edit' }).click()
   await page
     .getByRole('form', { name: 'Edit Alpha' })
     .getByRole('button', { name: 'Cancel' })
@@ -106,7 +157,7 @@ test('adds an Azure template with its account key, marked as beta', async ({ pag
   await page.getByLabel('Account key').fill(`${'A'.repeat(86)}==`)
   await page.getByRole('button', { name: 'Add template' }).click()
   await expect(page.getByRole('status')).toHaveText('Added "Backups".')
-  const row = page.getByRole('row', { name: /Backups/ })
+  const row = templateCard(page, 'Backups')
   await expect(row).toContainText('Azure Blob Storage')
   await expect(row).toContainText('Beta')
   await expect(row).toContainText('https://myaccount.blob.core.windows.net/backups/photos/')
@@ -125,7 +176,7 @@ test('adds a Google Drive template with an OAuth client of your own', async ({ p
   await expect(page.getByText("Saving opens Google's sign-in page in your browser.")).toBeVisible()
   await page.getByRole('button', { name: 'Add template' }).click()
   await expect(page.getByRole('status')).toHaveText('Added "Family".')
-  await expect(page.getByRole('row', { name: /Family/ })).toContainText('Google Drive')
+  await expect(templateCard(page, 'Family')).toContainText('Google Drive')
 })
 
 test('copies keys only from templates on the same platform', async ({ page }) => {

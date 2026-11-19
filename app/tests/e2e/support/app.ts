@@ -110,6 +110,8 @@ export const test = base.extend<{ setup: AppSetup; app: ElectronApplication; pag
   page: async ({ app }, use) => {
     const page = await app.firstWindow()
     await page.waitForFunction(() => document.documentElement.dataset.state === 'ready')
+    // The splash screen shows for a second before the side menu and the pages.
+    await menuItem(page, 'Home').waitFor()
     await use(page)
   }
 })

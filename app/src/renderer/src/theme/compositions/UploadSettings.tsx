@@ -1,5 +1,5 @@
-// The settings of the next upload: S3's storage class or Azure's access tier, the fixed ones, and, on S3, tags and
-// metadata shown as coming soon. Google Drive has no class to choose. See docs/UI.md.
+// The settings of the next upload: S3's storage class or Azure's access tier, then the fixed ones as tags, each a small
+// name above its value. Google Drive has no class to choose. See docs/UI.md.
 import type { AccessTier, UploadStorageClass } from '../../../../shared/types/storage-types'
 import type { Template } from '../../../../shared/types/template-types'
 import {
@@ -9,11 +9,8 @@ import {
   UPLOAD_STORAGE_CLASS_OPTIONS
 } from '../../constants/storage-class-constants'
 import { uploadSettingsRows } from '../../utils/upload-utils'
-import { Badge } from '../components/Badge'
 import { Card } from '../components/Card'
-import { Field } from '../components/Field'
 import { Select } from '../components/Select'
-import { INPUT_CLASS } from '../styles/style-constants'
 
 export function UploadSettings({
   template,
@@ -50,36 +47,14 @@ export function UploadSettings({
           onChange={onAccessTierChange}
         />
       )}
-      <dl className="grid grid-cols-[10rem_1fr] gap-x-4 gap-y-2">
+      <dl className="flex flex-wrap gap-3">
         {uploadSettingsRows(template).map(([name, value]) => (
-          <div key={name} className="contents">
-            <dt className="text-muted">{name}</dt>
-            <dd className="break-all">{value}</dd>
+          <div key={name} className="min-w-0 max-w-full rounded-lg border border-line px-3 py-2">
+            <dt className="text-xs text-muted">{name}</dt>
+            <dd className="break-words">{value}</dd>
           </div>
         ))}
       </dl>
-      {template.platform === 's3' && (
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <Field
-            label={
-              <>
-                Tags <Badge label="Soon" />
-              </>
-            }
-          >
-            <input className={INPUT_CLASS} placeholder="project=reports" disabled />
-          </Field>
-          <Field
-            label={
-              <>
-                Metadata <Badge label="Soon" />
-              </>
-            }
-          >
-            <input className={INPUT_CLASS} placeholder="x-amz-meta-owner=me" disabled />
-          </Field>
-        </div>
-      )}
     </Card>
   )
 }

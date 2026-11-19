@@ -19,7 +19,7 @@ export function TemplateKeyFields({
   if (form.platform === 's3') {
     return (
       <>
-        <div>
+        <div className="col-span-full">
           <LinkButton onClick={() => setSettingUp((open) => !open)}>
             {settingUp
               ? 'Hide the IAM user setup'
@@ -96,7 +96,7 @@ export function TemplateKeyFields({
           required
         />
       </Field>
-      <p className="text-sm text-muted">
+      <p className="col-span-full text-sm text-muted">
         Saving opens Google&apos;s sign-in page in your browser. Sign in with the account whose
         Drive this is, and allow access to it.
       </p>

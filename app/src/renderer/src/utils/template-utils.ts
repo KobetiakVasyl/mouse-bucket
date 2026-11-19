@@ -1,6 +1,10 @@
-// Orders templates by name, splits them into the picker's tiles and its drop-down, and picks them by type. See docs/UI.md.
+// Orders templates by name, splits them into the picker's tiles and its drop-down, picks them by type, and matches
+// them to a search. See docs/UI.md.
 import type { Template, TemplateKind } from '../../../shared/types/template-types'
-import { PICKER_TILES } from '../constants/template-constants'
+import { PLATFORM_LABELS } from '../constants/platform-constants'
+import { PICKER_TILES, TEMPLATE_KIND_LABELS } from '../constants/template-constants'
+import { templateLocation } from './location-utils'
+import { matchesSearch } from './search-utils'
 
 export function sortByName(templates: Template[]): Template[] {
   return [...templates].sort((a, b) =>
@@ -25,4 +29,18 @@ export function templatesOfKind(templates: Template[], kind: TemplateKind): Temp
 
 export function hasKind(templates: Template[], kind: TemplateKind): boolean {
   return templates.some((template) => template.kind === kind)
+}
+
+// Whether a template matches the Templates search: its name, type, platform, location or S3 region.
+export function matchesTemplate(template: Template, query: string): boolean {
+  return matchesSearch(
+    [
+      template.name,
+      TEMPLATE_KIND_LABELS[template.kind],
+      PLATFORM_LABELS[template.platform],
+      templateLocation(template),
+      template.platform === 's3' ? template.region : ''
+    ],
+    query
+  )
 }

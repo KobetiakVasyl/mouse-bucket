@@ -11,11 +11,13 @@ import {
   deleteWarning,
   downloadableFiles,
   fileCount,
+  filterListing,
   folderDownloadMessage,
   folderOf,
   insideLine,
   isDownloadable,
   isEmptyFolder,
+  loadedSoFarNote,
   namesWithMore,
   nextSort,
   restoreTimesFor,
@@ -143,6 +145,38 @@ describe('selected files', () => {
     })
     expect(restoreTimesFor([flexible, file('g')])?.Bulk).toBe('within 48 hours')
     expect(restoreTimesFor([{ ...file('h'), storageClass: 'STANDARD' }])).toBeUndefined()
+  })
+})
+
+describe('filterListing and loadedSoFarNote', () => {
+  it('keeps the folders and files whose names match, and the next page', () => {
+    const listing: FolderListing = {
+      folders: [
+        { id: 'photos/', name: 'photos' },
+        { id: 'music/', name: 'music' }
+      ],
+      files: [file('photos-2025.zip'), file('invoice.pdf')],
+      nextToken: 'next'
+    }
+    expect(filterListing(listing, 'Photo')).toEqual({
+      folders: [{ id: 'photos/', name: 'photos' }],
+      files: [file('photos-2025.zip')],
+      nextToken: 'next'
+    })
+    expect(filterListing(listing, '')).toEqual(listing)
+  })
+
+  it('says what covers only the entries loaded so far', () => {
+    expect(loadedSoFarNote({ by: 'name', direction: 'ascending' }, false)).toBeNull()
+    expect(loadedSoFarNote({ by: 'modified', direction: 'descending' }, false)).toBe(
+      'The sort covers the entries loaded so far.'
+    )
+    expect(loadedSoFarNote({ by: 'name', direction: 'ascending' }, true)).toBe(
+      'The search covers the entries loaded so far.'
+    )
+    expect(loadedSoFarNote({ by: 'modified', direction: 'ascending' }, true)).toBe(
+      'The sort and the search cover the entries loaded so far.'
+    )
   })
 })
 

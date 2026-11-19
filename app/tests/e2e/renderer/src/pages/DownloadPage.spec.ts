@@ -155,6 +155,33 @@ test('sorts the files by name or by date, either way', async ({ page }) => {
   await expect(fileNames.first()).toContainText('backup.tar.gz')
 })
 
+test('finds files and folders in the open folder by name, keeping the selection', async ({
+  page
+}) => {
+  const search = page.getByRole('searchbox', { name: 'Search this folder' })
+  await search.fill('PHOTOS')
+  await expect(page.getByRole('button', { name: 'photos', exact: true })).toBeVisible()
+  await expect(page.getByRole('row', { name: /photos-2025\.zip/ })).toBeVisible()
+  await expect(page.getByRole('row', { name: /invoice\.pdf/ })).toBeHidden()
+
+  await page.getByRole('checkbox', { name: 'Select all files and folders' }).check()
+  const bar = page.getByRole('toolbar', { name: 'Selected files' })
+  await expect(bar).toContainText('1 folder and 1 file selected')
+  await search.fill('invoice')
+  await page.getByRole('checkbox', { name: 'Select invoice.pdf' }).check()
+  await expect(bar).toContainText('1 folder and 2 files selected')
+
+  await search.fill('nothing like this')
+  await expect(page.getByText('Nothing loaded so far matches the search.')).toBeVisible()
+  await search.press('Escape')
+  await expect(page.getByRole('row', { name: /invoice\.pdf/ })).toBeVisible()
+
+  await search.fill('photos')
+  await page.getByRole('button', { name: 'photos', exact: true }).click()
+  await expect(page.getByRole('row', { name: /beach\.jpg/ })).toBeVisible()
+  await expect(search).toHaveValue('')
+})
+
 test("copies the open folder's URL, and starts an upload template for it", async ({
   app,
   page

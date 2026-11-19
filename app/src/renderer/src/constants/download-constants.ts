@@ -1,6 +1,7 @@
 // Which files the Browse page offers to download, restore times, and the choices of a restore. See docs/UI.md.
 import type {
   FileAccess,
+  FolderListing,
   RehydratePriority,
   RehydrateTier,
   RestoreTier
@@ -25,6 +26,9 @@ export const FIRST_SORT_DIRECTIONS: Record<FileSortKey, SortDirection> = {
 
 // No file is selected.
 export const NO_SELECTION: ReadonlySet<string> = new Set()
+
+// What the table holds while a folder hasn't loaded.
+export const EMPTY_LISTING: FolderListing = { folders: [], files: [], nextToken: null }
 
 // How many names the Delete dialog lists before "and N more".
 export const LISTED_NAMES = 5
